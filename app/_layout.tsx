@@ -36,6 +36,12 @@ export default function RootLayout() {
               title: 'Event Details',
             }} 
           />
+          <Stack.Screen 
+            name="chat" 
+            options={{ 
+              presentation: 'card',
+            }} 
+          />
         </Stack>
         <StatusBar style="auto" />
       </ThemeProvider>

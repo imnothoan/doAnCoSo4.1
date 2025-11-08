@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, Text, FlatList, TouchableOpacity, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { MOCK_CHATS } from '@/src/services/mockData';
 import { Chat } from '@/src/types';
 import { getRelativeTime } from '@/src/utils/date';
 
 export default function InboxScreen() {
+  const router = useRouter();
   const [chats, setChats] = useState<Chat[]>([]);
   const [activeTab, setActiveTab] = useState<'all' | 'events' | 'users'>('all');
 
@@ -26,7 +28,10 @@ export default function InboxScreen() {
     const isUnread = (item.unreadCount ?? 0) > 0;
 
     return (
-      <TouchableOpacity style={styles.chatItem}>
+      <TouchableOpacity 
+        style={styles.chatItem}
+        onPress={() => router.push(`/chat?id=${item.id}`)}
+      >
         <View style={styles.avatarContainer}>
           {item.type === 'event' ? (
             <View style={styles.eventAvatarPlaceholder}>
