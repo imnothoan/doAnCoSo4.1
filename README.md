@@ -1,50 +1,291 @@
-# Welcome to your Expo app 👋
+# ConnectSphere - Social Networking Mobile App
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+A comprehensive React Native mobile application built with Expo that replicates the core functionality of the UniVini social networking app. Connect with people, attend events, join communities, and make new friends around the world.
 
-## Get started
+## 🎯 Project Overview
 
-1. Install dependencies
+ConnectSphere is a feature-rich social networking app designed to help users:
+- Find and connect with people nearby or globally
+- Discover and join events
+- Participate in community discussions
+- Chat with other users in real-time
+- Manage their social profile and connections
 
+## 🚀 Tech Stack
+
+- **React Native** with **Expo** (~54.0.20)
+- **TypeScript** for type safety
+- **Expo Router** for file-based navigation
+- **React Navigation** for bottom tabs and stack navigation
+- **AsyncStorage** for local data persistence
+- **Axios** for API communication
+- **date-fns** for date formatting
+- **React Native Paper** for UI components
+- **Expo Location** for geolocation features
+- **@expo/vector-icons** (Ionicons) for icons
+
+## ✨ Features Implemented
+
+### Authentication
+- ✅ Login screen with email/password
+- ✅ Signup screen with validation
+- ✅ Social login UI (Google, Facebook, Apple)
+- ✅ Protected routes based on auth state
+- ✅ Token management with AsyncStorage
+
+### Main Tabs
+
+#### 1. Hang Out Tab
+- Toggle availability to hang out
+- Display status with selected activities
+- Sliding tabs for "Open hangouts" and "My hangouts"
+- Notification icon with badge in header
+
+#### 2. My Events Tab
+- Event cards with images, distance, and details
+- Event detail screen with:
+  - Full event information
+  - Participants list
+  - Comments section
+  - Join/interested functionality
+  - Chat and invite buttons
+
+#### 3. Discussion Tab
+- Browse communities
+- Search communities
+- Upload to communities
+- Community cards with member counts
+
+#### 4. Connection Tab
+- User cards with complete profiles
+- Availability badges
+- Interest tags
+- Search functionality
+- View mode toggle (Users/Events)
+- Navigate to user profiles
+
+#### 5. Inbox Tab
+- Chat list with avatars
+- Last message preview
+- Unread message counts and badges
+- Filter tabs (All/Events/Users)
+- Navigate to chat screens
+
+#### 6. Account Tab
+- Profile header with avatar
+- Profile completion progress bar
+- Bio, languages, and summary statistics
+- Interests display
+- Settings menu
+- Sign out functionality
+
+### Additional Screens
+
+- **Notification Screen**: View all notifications with type-based icons
+- **Event Detail Screen**: Complete event information and interactions
+- **Chat Screen**: Full messaging UI with quick messages
+- **Profile Screen**: View other users' profiles with all details
+
+## 📁 Project Structure
+
+```
+doAnCoSo4.1/
+├── app/                          # App screens (Expo Router)
+│   ├── (tabs)/                   # Bottom tab screens
+│   │   ├── hangout.tsx
+│   │   ├── my-events.tsx
+│   │   ├── discussion.tsx
+│   │   ├── connection.tsx
+│   │   ├── inbox.tsx
+│   │   └── account.tsx
+│   ├── index.tsx                 # Auth router
+│   ├── login.tsx                 # Login screen
+│   ├── signup.tsx                # Signup screen
+│   ├── notification.tsx          # Notifications
+│   ├── event-detail.tsx          # Event details
+│   ├── chat.tsx                  # Chat/messaging
+│   ├── profile.tsx               # User profile
+│   └── _layout.tsx               # Root layout
+├── src/
+│   ├── constants/                # App constants
+│   │   └── options.ts
+│   ├── context/                  # React Context
+│   │   └── AuthContext.tsx
+│   ├── services/                 # API and services
+│   │   ├── api.ts
+│   │   └── mockData.ts
+│   ├── types/                    # TypeScript types
+│   │   └── index.ts
+│   └── utils/                    # Utility functions
+│       ├── distance.ts
+│       └── date.ts
+├── components/                   # Reusable components
+├── constants/                    # Theme and colors
+├── assets/                       # Images and fonts
+├── app.json                      # Expo configuration
+├── package.json                  # Dependencies
+└── tsconfig.json                 # TypeScript config
+```
+
+## 🛠️ Installation & Setup
+
+### Prerequisites
+- Node.js (v16 or higher)
+- npm or yarn
+- Expo CLI (`npm install -g expo-cli`)
+- iOS Simulator (for Mac) or Android Emulator
+
+### Installation Steps
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/imnothoan/doAnCoSo4.1.git
+   cd doAnCoSo4.1
+   ```
+
+2. **Install dependencies**
    ```bash
    npm install
    ```
 
-2. Start the app
-
+3. **Start the development server**
    ```bash
    npx expo start
    ```
 
-In the output, you'll find options to open the app in a
+4. **Run on device/emulator**
+   - Press `i` for iOS Simulator
+   - Press `a` for Android Emulator
+   - Scan QR code with Expo Go app on physical device
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+## 📱 Usage
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+### Running the App
 
 ```bash
-npm run reset-project
+# Start development server
+npm start
+
+# Run on iOS
+npm run ios
+
+# Run on Android
+npm run android
+
+# Run on web
+npm run web
+
+# Lint code
+npm run lint
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+### Mock Data
 
-## Learn more
+The app currently uses mock data defined in `src/services/mockData.ts`. This includes:
+- Mock users with complete profiles
+- Mock events with participants and details
+- Mock chats and messages
+- Mock communities
+- Mock notifications
 
-To learn more about developing your project with Expo, look at the following resources:
+### Authentication Flow
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+1. App starts at `index.tsx` which checks auth state
+2. If not authenticated → redirects to `login.tsx`
+3. After login/signup → redirects to main tabs
+4. All tab screens are protected and require authentication
 
-## Join the community
+## 🔧 Configuration
 
-Join our community of developers creating universal apps.
+### Location Permissions
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+Location permissions are configured in `app.json`:
+- iOS: `NSLocationWhenInUseUsageDescription`
+- Android: `ACCESS_FINE_LOCATION`, `ACCESS_COARSE_LOCATION`
+
+### API Configuration
+
+Update the API base URL in `src/services/api.ts`:
+```typescript
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://api.example.com';
+```
+
+## 📝 Key Features Details
+
+### Quick Messages in Chat
+- Type `/x` for "Xin chào"
+- Type `/h` for "Hello!"
+- Type `/t` for "Thank you!"
+- Type `/s` for "See you soon!"
+
+### Distance Calculation
+- Uses Haversine formula for accurate distance
+- Filters: Under 1km, 2km, 5km, 10km, 20km, 50km
+
+### Event Management
+- Join/leave events
+- View participants
+- Add comments
+- See event details and schedule
+
+## 🎨 Design & UI
+
+- **Primary Color**: #007AFF (iOS Blue)
+- **Success**: #4CAF50 (Green)
+- **Error**: #FF3B30 (Red)
+- **Background**: #f5f5f5 (Light Gray)
+- **Cards**: White with subtle shadows
+- **Icons**: Ionicons from @expo/vector-icons
+
+## 🔐 Security
+
+- Passwords are handled securely (ready for backend integration)
+- Tokens stored in AsyncStorage
+- Protected routes with auth guards
+- Input validation on all forms
+
+## 🚧 Next Steps / Roadmap
+
+### High Priority
+- [ ] Connect to real backend API
+- [ ] Implement WebSocket for real-time chat
+- [ ] Add image upload functionality
+- [ ] Implement filters (languages, distance, age)
+- [ ] Create edit profile screen
+- [ ] Build settings screens
+
+### Medium Priority
+- [ ] Add pull-to-refresh on lists
+- [ ] Implement pagination
+- [ ] Add skeleton loading states
+- [ ] Offline support
+- [ ] Push notifications
+
+### Future Enhancements
+- [ ] AI-based user matching
+- [ ] Message translation
+- [ ] Image sharing in chat
+- [ ] Real-time location sharing
+- [ ] Video/voice calls
+- [ ] AI Gemini integration
+
+## 🤝 Contributing
+
+This is a client-side repository. The server-side code is at:
+https://github.com/imnothoan/doAnCoSo4.1.server
+
+## 📄 License
+
+This project is part of a university thesis project.
+
+## 👥 Credits
+
+Built as a client app for the UniVini-like social networking platform.
+
+## 📞 Support
+
+For issues or questions, please open an issue on GitHub.
+
+---
+
+**Status**: ✅ MVP Complete - Ready for API integration and deployment!
