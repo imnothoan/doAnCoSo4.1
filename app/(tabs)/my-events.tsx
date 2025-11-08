@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, Text, FlatList, TouchableOpacity, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { MOCK_EVENTS } from '@/src/services/mockData';
 import { Event } from '@/src/types';
@@ -8,6 +9,7 @@ import { formatDate } from '@/src/utils/date';
 import { formatDistance } from '@/src/utils/distance';
 
 export default function MyEventsScreen() {
+  const router = useRouter();
   const [events, setEvents] = useState<Event[]>([]);
 
   useEffect(() => {
@@ -16,7 +18,10 @@ export default function MyEventsScreen() {
   }, []);
 
   const renderEventCard = ({ item }: { item: Event }) => (
-    <TouchableOpacity style={styles.eventCard}>
+    <TouchableOpacity 
+      style={styles.eventCard}
+      onPress={() => router.push(`/event-detail?id=${item.id}`)}
+    >
       {item.image && (
         <Image source={{ uri: item.image }} style={styles.eventImage} />
       )}
