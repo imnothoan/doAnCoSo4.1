@@ -42,6 +42,12 @@ export default function RootLayout() {
               presentation: 'card',
             }} 
           />
+          <Stack.Screen 
+            name="profile" 
+            options={{ 
+              presentation: 'card',
+            }} 
+          />
         </Stack>
         <StatusBar style="auto" />
       </ThemeProvider>

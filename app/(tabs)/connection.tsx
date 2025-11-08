@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, Text, FlatList, TouchableOpacity, Image, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { MOCK_USERS } from '@/src/services/mockData';
 import { User } from '@/src/types';
 
 export default function ConnectionScreen() {
+  const router = useRouter();
   const [users, setUsers] = useState<User[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'users' | 'events'>('users');
@@ -15,7 +17,10 @@ export default function ConnectionScreen() {
   }, []);
 
   const renderUserCard = ({ item }: { item: User }) => (
-    <TouchableOpacity style={styles.userCard}>
+    <TouchableOpacity 
+      style={styles.userCard}
+      onPress={() => router.push(`/profile?id=${item.id}`)}
+    >
       <Image source={{ uri: item.avatar }} style={styles.userAvatar} />
       <View style={styles.userContent}>
         <View style={styles.userHeader}>
