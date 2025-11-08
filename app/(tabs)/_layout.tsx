@@ -64,7 +64,7 @@ export default function TabLayout() {
       />
       {/* Hide old tabs but keep files for reference */}
       <Tabs.Screen
-        name="index"
+        name="index-old"
         options={{
           href: null,
         }}
