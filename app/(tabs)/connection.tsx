@@ -1,18 +1,55 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { StyleSheet, View, Text, FlatList, TouchableOpacity, Image, TextInput, RefreshControl, ActivityIndicator } from 'react-native';
+import { StyleSheet, View, Text, FlatList, TouchableOpacity, Image, TextInput, RefreshControl, ActivityIndicator, Alert, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { User } from '@/src/types';
 import ApiService from '@/src/services/api';
+import LocationService from '@/src/services/location';
 
 export default function ConnectionScreen() {
   const router = useRouter();
   const [users, setUsers] = useState<User[]>([]);
+  const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'users' | 'events'>('users');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
+  const [currentLocation, setCurrentLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  
+  // Filters
+  const [selectedDistance, setSelectedDistance] = useState<number | null>(null);
+  const [selectedGender, setSelectedGender] = useState<'Male' | 'Female' | null>(null);
+  const [ageRange, setAgeRange] = useState<[number, number]>([18, 65]);
+
+  useEffect(() => {
+    // Request location permission on mount
+    requestLocation();
+  }, []);
+
+  const requestLocation = async () => {
+    const hasPermission = await LocationService.hasPermissions();
+    if (!hasPermission) {
+      const granted = await LocationService.requestPermissions();
+      if (!granted) {
+        Alert.alert(
+          'Location Permission',
+          'Location permission is needed to show nearby users. You can still use the app without it.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+    }
+    
+    const location = await LocationService.getCurrentLocation();
+    if (location) {
+      setCurrentLocation({
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+      });
+    }
+  };
 
   const loadUsers = useCallback(async () => {
     try {
@@ -31,6 +68,43 @@ export default function ConnectionScreen() {
     }
   }, [searchQuery]);
 
+  // Apply filters to users
+  useEffect(() => {
+    let result = [...users];
+
+    // Filter by distance
+    if (selectedDistance && currentLocation) {
+      result = result.filter(user => {
+        if (!user.location) return false;
+        const distance = LocationService.calculateDistance(
+          currentLocation.latitude,
+          currentLocation.longitude,
+          user.location.latitude,
+          user.location.longitude
+        );
+        return distance <= selectedDistance;
+      });
+    }
+
+    // Filter by gender
+    if (selectedGender) {
+      result = result.filter(user => user.gender === selectedGender);
+    }
+
+    // Filter by age
+    result = result.filter(user => {
+      if (!user.age) return true; // Include users without age
+      return user.age >= ageRange[0] && user.age <= ageRange[1];
+    });
+
+    // Sort by distance if location is available
+    if (currentLocation) {
+      result = LocationService.sortByDistance(result, currentLocation.latitude, currentLocation.longitude);
+    }
+
+    setFilteredUsers(result);
+  }, [users, selectedDistance, selectedGender, ageRange, currentLocation]);
+
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       loadUsers();
@@ -45,7 +119,7 @@ export default function ConnectionScreen() {
     setRefreshing(false);
   }, [loadUsers]);
 
-  const renderUserCard = ({ item }: { item: User }) => (
+  const renderUserCard = ({ item }: { item: User & { distance?: number } }) => (
     <TouchableOpacity 
       style={styles.userCard}
       onPress={() => router.push(`/profile?id=${item.id}`)}
@@ -67,6 +141,11 @@ export default function ConnectionScreen() {
           <Text style={styles.userLocation}>
             {item.city}, {item.country}
           </Text>
+          {item.distance !== undefined && (
+            <Text style={styles.distanceText}>
+              • {LocationService.formatDistance(item.distance)}
+            </Text>
+          )}
         </View>
 
         <View style={styles.userInfo}>
@@ -114,6 +193,15 @@ export default function ConnectionScreen() {
           onChangeText={setSearchQuery}
           placeholderTextColor="#999"
         />
+        <TouchableOpacity 
+          style={styles.filterButton}
+          onPress={() => setShowFilters(true)}
+        >
+          <Ionicons name="options-outline" size={24} color="#007AFF" />
+          {(selectedDistance || selectedGender) && (
+            <View style={styles.filterBadge} />
+          )}
+        </TouchableOpacity>
       </View>
 
       <View style={styles.viewModeToggle}>
@@ -142,7 +230,7 @@ export default function ConnectionScreen() {
           </View>
         ) : (
           <FlatList
-            data={users}
+            data={filteredUsers}
             renderItem={renderUserCard}
             keyExtractor={(item) => item.id}
             contentContainerStyle={styles.listContent}
@@ -165,6 +253,90 @@ export default function ConnectionScreen() {
           <Text style={styles.emptyText}>Events view coming soon</Text>
         </View>
       )}
+
+      {/* Filter Modal */}
+      <Modal
+        visible={showFilters}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowFilters(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Filters</Text>
+              <TouchableOpacity onPress={() => setShowFilters(false)}>
+                <Ionicons name="close" size={28} color="#666" />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.filterSection}>
+              <Text style={styles.filterLabel}>Distance</Text>
+              <View style={styles.filterOptions}>
+                {[1, 2, 5, 10, 20, 50].map((dist) => (
+                  <TouchableOpacity
+                    key={dist}
+                    style={[
+                      styles.filterOption,
+                      selectedDistance === dist && styles.filterOptionActive
+                    ]}
+                    onPress={() => setSelectedDistance(selectedDistance === dist ? null : dist)}
+                  >
+                    <Text style={[
+                      styles.filterOptionText,
+                      selectedDistance === dist && styles.filterOptionTextActive
+                    ]}>
+                      {dist}km
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            <View style={styles.filterSection}>
+              <Text style={styles.filterLabel}>Gender</Text>
+              <View style={styles.filterOptions}>
+                {(['Male', 'Female'] as const).map((gender) => (
+                  <TouchableOpacity
+                    key={gender}
+                    style={[
+                      styles.filterOption,
+                      selectedGender === gender && styles.filterOptionActive
+                    ]}
+                    onPress={() => setSelectedGender(selectedGender === gender ? null : gender)}
+                  >
+                    <Text style={[
+                      styles.filterOptionText,
+                      selectedGender === gender && styles.filterOptionTextActive
+                    ]}>
+                      {gender}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            <View style={styles.filterActions}>
+              <TouchableOpacity
+                style={styles.clearButton}
+                onPress={() => {
+                  setSelectedDistance(null);
+                  setSelectedGender(null);
+                  setAgeRange([18, 65]);
+                }}
+              >
+                <Text style={styles.clearButtonText}>Clear All</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.applyButton}
+                onPress={() => setShowFilters(false)}
+              >
+                <Text style={styles.applyButtonText}>Apply Filters</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -337,5 +509,119 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  filterButton: {
+    padding: 8,
+    position: 'relative',
+  },
+  filterBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#FF3B30',
+  },
+  distanceText: {
+    fontSize: 13,
+    color: '#007AFF',
+    marginLeft: 8,
+    fontWeight: '600',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingTop: 20,
+    paddingBottom: 40,
+    maxHeight: '80%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#333',
+  },
+  filterSection: {
+    paddingHorizontal: 20,
+    paddingVertical: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  filterLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 12,
+  },
+  filterOptions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  filterOption: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
+    borderWidth: 2,
+    borderColor: '#e0e0e0',
+  },
+  filterOptionActive: {
+    borderColor: '#007AFF',
+    backgroundColor: '#E3F2FD',
+  },
+  filterOptionText: {
+    fontSize: 14,
+    color: '#666',
+    fontWeight: '500',
+  },
+  filterOptionTextActive: {
+    color: '#007AFF',
+    fontWeight: '600',
+  },
+  filterActions: {
+    flexDirection: 'row',
+    gap: 12,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+  },
+  clearButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#007AFF',
+    alignItems: 'center',
+  },
+  clearButtonText: {
+    fontSize: 16,
+    color: '#007AFF',
+    fontWeight: '600',
+  },
+  applyButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    backgroundColor: '#007AFF',
+    alignItems: 'center',
+  },
+  applyButtonText: {
+    fontSize: 16,
+    color: '#fff',
+    fontWeight: '600',
   },
 });

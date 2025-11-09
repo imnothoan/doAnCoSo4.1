@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, Text, ScrollView, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
+import { StyleSheet, View, Text, ScrollView, TouchableOpacity, Image, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/src/context/AuthContext';
@@ -77,7 +77,7 @@ export default function AccountScreen() {
 
           <TouchableOpacity 
             style={styles.editProfileButton}
-            onPress={() => router.push('/profile?id=' + user.id)}
+            onPress={() => router.push('/edit-profile')}
           >
             <Ionicons name="create-outline" size={20} color="#007AFF" />
             <Text style={styles.editProfileText}>Edit Profile</Text>
@@ -157,10 +157,10 @@ export default function AccountScreen() {
         {/* Settings */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Settings</Text>
-          {renderInfoRow('notifications-outline', 'Notifications', '', () => {})}
-          {renderInfoRow('settings-outline', 'Manage Account', '', () => {})}
-          {renderInfoRow('card-outline', 'Payment & Pro Features', '', () => {})}
-          {renderInfoRow('information-circle-outline', 'About', '', () => {})}
+          {renderInfoRow('notifications-outline', 'Notifications', '', () => router.push('/settings'))}
+          {renderInfoRow('settings-outline', 'Manage Account', '', () => router.push('/settings'))}
+          {renderInfoRow('card-outline', 'Payment & Pro Features', '', () => Alert.alert('Coming Soon', 'Payment features will be available soon.'))}
+          {renderInfoRow('information-circle-outline', 'About', '', () => Alert.alert('ConnectSphere', 'Version 1.0.0\n\nA social networking app to connect with people around the world.'))}
         </View>
 
         {/* Sign Out */}

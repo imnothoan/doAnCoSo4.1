@@ -48,6 +48,20 @@ export default function RootLayout() {
               presentation: 'card',
             }} 
           />
+          <Stack.Screen 
+            name="edit-profile" 
+            options={{ 
+              presentation: 'card',
+              title: 'Edit Profile',
+            }} 
+          />
+          <Stack.Screen 
+            name="settings" 
+            options={{ 
+              presentation: 'card',
+              title: 'Settings',
+            }} 
+          />
         </Stack>
         <StatusBar style="auto" />
       </ThemeProvider>
