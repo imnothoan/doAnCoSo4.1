@@ -44,12 +44,24 @@ export default function ChatScreen() {
   const setupWebSocket = () => {
     // Connect to WebSocket if not already connected
     const apiUrl = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
+    
     if (!WebSocketService.isConnected()) {
-      WebSocketService.connect(apiUrl);
+      console.log('Connecting WebSocket in chat screen');
+      const token = currentUser?.username; // This should be the actual auth token
+      WebSocketService.connect(apiUrl, token);
+      
+      // Wait a bit for connection before joining room
+      setTimeout(() => {
+        if (WebSocketService.isConnected()) {
+          WebSocketService.joinConversation(chatId);
+        } else {
+          console.warn('WebSocket not connected after timeout');
+        }
+      }, 1000);
+    } else {
+      // Already connected, just join the room
+      WebSocketService.joinConversation(chatId);
     }
-
-    // Join conversation room
-    WebSocketService.joinConversation(chatId);
 
     // Listen for new messages
     WebSocketService.onNewMessage((message: Message) => {
@@ -134,34 +146,43 @@ export default function ChatScreen() {
     const messageContent = inputText;
     setInputText('');
 
-    // Send via WebSocket for real-time delivery
+    // Create optimistic message
+    const optimisticMessage: Message = {
+      id: `temp-${Date.now()}`,
+      chatId: chat.id,
+      senderId: currentUser.id,
+      sender: currentUser,
+      content: messageContent,
+      timestamp: new Date().toISOString(),
+      read: false,
+    };
+
+    // Add message optimistically
+    setMessages(prev => [...prev, optimisticMessage]);
+
+    // Scroll to bottom
+    setTimeout(() => {
+      flatListRef.current?.scrollToEnd({ animated: true });
+    }, 100);
+
     try {
-      WebSocketService.sendMessage(chatId, currentUser.username, messageContent);
+      // Try WebSocket first if connected
+      if (WebSocketService.isConnected()) {
+        WebSocketService.sendMessage(chatId, currentUser.username, messageContent);
+      }
       
-      // Also send via API as backup
+      // Also send via API as backup and for persistence
       await ApiService.sendMessage(chatId, currentUser.username, messageContent);
       
       // Stop typing indicator
       handleTyping(false);
     } catch (error) {
       console.error('Error sending message:', error);
-      // Add message locally if API fails
-      const newMessage: Message = {
-        id: `m${Date.now()}`,
-        chatId: chat.id,
-        senderId: currentUser.id,
-        sender: currentUser,
-        content: messageContent,
-        timestamp: new Date().toISOString(),
-        read: false,
-      };
-      setMessages(prev => [...prev, newMessage]);
+      Alert.alert('Error', 'Failed to send message. Please try again.');
+      
+      // Remove optimistic message on error
+      setMessages(prev => prev.filter(m => m.id !== optimisticMessage.id));
     }
-
-    // Scroll to bottom
-    setTimeout(() => {
-      flatListRef.current?.scrollToEnd({ animated: true });
-    }, 100);
   };
 
   const handleImagePick = async () => {

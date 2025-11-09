@@ -29,6 +29,38 @@ class ApiService {
         'Content-Type': 'application/json',
       },
     });
+
+    // Add request interceptor for logging
+    this.client.interceptors.request.use(
+      (config) => {
+        console.log(`API Request: ${config.method?.toUpperCase()} ${config.url}`);
+        return config;
+      },
+      (error) => {
+        console.error('API Request Error:', error);
+        return Promise.reject(error);
+      }
+    );
+
+    // Add response interceptor for error handling
+    this.client.interceptors.response.use(
+      (response) => {
+        return response;
+      },
+      (error) => {
+        if (error.response) {
+          // Server responded with error
+          console.error('API Response Error:', error.response.status, error.response.data);
+        } else if (error.request) {
+          // Request made but no response
+          console.error('API No Response:', error.message);
+        } else {
+          // Error in request setup
+          console.error('API Request Setup Error:', error.message);
+        }
+        return Promise.reject(error);
+      }
+    );
   }
 
   setAuthToken(token: string) {
@@ -112,6 +144,16 @@ class ApiService {
 
   async unfollowUser(username: string, followerUsername: string): Promise<void> {
     await this.client.delete(`/users/${username}/follow`, { data: { followerUsername } });
+  }
+
+  async isFollowing(username: string, followerUsername: string): Promise<boolean> {
+    try {
+      const response = await this.client.get(`/users/${username}/following/${followerUsername}`);
+      return response.data.isFollowing || false;
+    } catch (error) {
+      console.error('Error checking follow status:', error);
+      return false;
+    }
   }
 
   async updateHangoutStatus(
