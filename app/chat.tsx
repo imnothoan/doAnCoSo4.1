@@ -167,8 +167,12 @@ export default function ChatScreen() {
 
     try {
       // Try WebSocket first if connected
-      if (WebSocketService.isConnected()) {
-        WebSocketService.sendMessage(chatId, currentUser.username, messageContent);
+      const sentViaWs = WebSocketService.isConnected() 
+        ? WebSocketService.sendMessage(chatId, currentUser.username, messageContent)
+        : false;
+      
+      if (!sentViaWs) {
+        console.log('WebSocket not available, sending via API only');
       }
       
       // Also send via API as backup and for persistence
@@ -232,7 +236,11 @@ export default function ChatScreen() {
     if (!currentUser?.username) return;
 
     setIsTyping(typing);
-    WebSocketService.sendTyping(chatId, currentUser.username, typing);
+    
+    // Only send typing indicator if WebSocket is connected
+    if (WebSocketService.isConnected()) {
+      WebSocketService.sendTyping(chatId, currentUser.username, typing);
+    }
 
     // Clear previous timeout
     if (typingTimeoutRef.current) {
@@ -243,7 +251,7 @@ export default function ChatScreen() {
     if (typing) {
       typingTimeoutRef.current = setTimeout(() => {
         setIsTyping(false);
-        if (currentUser?.username) {
+        if (currentUser?.username && WebSocketService.isConnected()) {
           WebSocketService.sendTyping(chatId, currentUser.username, false);
         }
       }, 3000);

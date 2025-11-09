@@ -77,13 +77,17 @@ class WebSocketService {
 
   // Send a message
   sendMessage(conversationId: string, senderUsername: string, content: string, replyToMessageId?: string) {
-    if (this.socket) {
+    if (this.socket?.connected) {
       this.socket.emit('send_message', {
         conversationId,
         senderUsername,
         content,
         replyToMessageId,
       });
+      return true;
+    } else {
+      console.warn('WebSocket not connected, cannot send message');
+      return false;
     }
   }
 

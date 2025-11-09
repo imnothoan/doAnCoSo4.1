@@ -47,13 +47,32 @@ class ApiService {
       (response) => {
         return response;
       },
-      (error) => {
+      async (error) => {
+        const originalRequest = error.config;
+        
         if (error.response) {
           // Server responded with error
           console.error('API Response Error:', error.response.status, error.response.data);
+          
+          // If 401 Unauthorized, user might need to re-login
+          if (error.response.status === 401 && !originalRequest._retry) {
+            console.warn('Unauthorized - Token may be expired');
+            // Don't retry, let the app handle re-login
+          }
         } else if (error.request) {
-          // Request made but no response
+          // Request made but no response - possibly network issue
           console.error('API No Response:', error.message);
+          
+          // Retry once for network errors
+          if (!originalRequest._retry) {
+            originalRequest._retry = true;
+            try {
+              console.log('Retrying request...');
+              return this.client(originalRequest);
+            } catch (retryError) {
+              console.error('Retry failed:', retryError);
+            }
+          }
         } else {
           // Error in request setup
           console.error('API Request Setup Error:', error.message);
