@@ -25,6 +25,8 @@ export default function InboxScreen() {
       setChats(data);
     } catch (error) {
       console.error('Error loading chats:', error);
+      // Don't show alert on every failed load, just log it
+      // The user can refresh manually if needed
     } finally {
       setLoading(false);
     }
