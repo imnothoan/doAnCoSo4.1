@@ -19,6 +19,7 @@ import {
 // Base API configuration
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://api.example.com';
 
+
 class ApiService {
   private client: AxiosInstance;
 

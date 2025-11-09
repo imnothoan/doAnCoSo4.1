@@ -22,7 +22,7 @@ export default function LoginScreen() {
     setIsLoading(true);
     try {
       await login(email, password);
-      // Navigation will be handled automatically by auth state change
+      router.replace('/(tabs)/hangout');
     } catch (error) {
       Alert.alert('Login Failed', 'Invalid email or password. Please try again.');
       console.error('Login error:', error);
