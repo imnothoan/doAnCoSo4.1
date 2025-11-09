@@ -8,19 +8,21 @@ import { useAuth } from '@/src/context/AuthContext';
 export default function SignupScreen() {
   const router = useRouter();
   const { signup } = useAuth();
+  const [username, setUsername] = useState('');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [country, setCountry] = useState('');
   const [city, setCity] = useState('');
+  const [gender, setGender] = useState<'Male' | 'Female' | 'Other'>('Male');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSignup = async () => {
     // Validation
-    if (!name || !email || !password || !confirmPassword || !country || !city) {
+    if (!username || !name || !email || !password || !confirmPassword || !country || !city) {
       Alert.alert('Error', 'Please fill in all fields');
       return;
     }
@@ -37,7 +39,7 @@ export default function SignupScreen() {
 
     setIsLoading(true);
     try {
-      await signup(name, email, password, country, city);
+      await signup(username, name, email, password, country, city, gender);
       // Navigation will be handled automatically by auth state change
     } catch (error) {
       Alert.alert('Signup Failed', 'Unable to create account. Please try again.');
@@ -69,6 +71,18 @@ export default function SignupScreen() {
             </View>
 
             <View style={styles.formContainer}>
+              <View style={styles.inputContainer}>
+                <Ionicons name="at-outline" size={20} color="#666" style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Username"
+                  value={username}
+                  onChangeText={setUsername}
+                  autoCapitalize="none"
+                  placeholderTextColor="#999"
+                />
+              </View>
+
               <View style={styles.inputContainer}>
                 <Ionicons name="person-outline" size={20} color="#666" style={styles.inputIcon} />
                 <TextInput
