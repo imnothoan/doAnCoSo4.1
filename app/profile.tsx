@@ -1,21 +1,96 @@
-import React from 'react';
-import { StyleSheet, View, Text, ScrollView, TouchableOpacity, Image } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { StyleSheet, View, Text, ScrollView, TouchableOpacity, Image, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { MOCK_USERS } from '@/src/services/mockData';
+import { useAuth } from '@/src/context/AuthContext';
+import ApiService from '@/src/services/api';
+import { User } from '@/src/types';
 
 export default function ProfileScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
+  const { user: currentUser } = useAuth();
   const userId = params.id as string;
   
-  // In a real app, we'd fetch this from the API
-  const user = MOCK_USERS.find(u => u.id === userId) || MOCK_USERS[0];
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [isFollowing, setIsFollowing] = useState(false);
 
-  const handleMessage = () => {
-    router.push(`/chat?id=c${user.id}`);
+  useEffect(() => {
+    const loadUser = async () => {
+      try {
+        setLoading(true);
+        const data = await ApiService.getUserById(userId);
+        setUser(data);
+        // TODO: Check if current user is following this user
+        setIsFollowing(false);
+      } catch (error) {
+        console.error('Error loading user:', error);
+        Alert.alert('Error', 'Failed to load user profile');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadUser();
+  }, [userId]);
+
+  const handleMessage = async () => {
+    if (!user || !currentUser?.username) return;
+    
+    try {
+      // Create or get existing conversation
+      const conversation = await ApiService.createConversation(
+        'dm',
+        currentUser.username,
+        [currentUser.username, user.username || '']
+      );
+      router.push(`/chat?id=${conversation.id}`);
+    } catch (error) {
+      console.error('Error creating conversation:', error);
+      Alert.alert('Error', 'Failed to start chat');
+    }
   };
+
+  const handleFollow = async () => {
+    if (!user?.username || !currentUser?.username) return;
+    
+    try {
+      if (isFollowing) {
+        await ApiService.unfollowUser(user.username, currentUser.username);
+        setIsFollowing(false);
+      } else {
+        await ApiService.followUser(user.username, currentUser.username);
+        setIsFollowing(true);
+      }
+    } catch (error) {
+      console.error('Error following/unfollowing:', error);
+      Alert.alert('Error', 'Failed to update follow status');
+    }
+  };
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <Stack.Screen options={{ title: 'Profile' }} />
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#007AFF" />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (!user) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <Stack.Screen options={{ title: 'Profile Not Found' }} />
+        <View style={styles.loadingContainer}>
+          <Text style={styles.errorText}>User not found</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <>
@@ -60,9 +135,18 @@ export default function ProfileScreen() {
                 <Ionicons name="chatbubble-outline" size={20} color="#fff" />
                 <Text style={styles.primaryButtonText}>Message</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.secondaryButton}>
-                <Ionicons name="person-add-outline" size={20} color="#007AFF" />
-                <Text style={styles.secondaryButtonText}>Connect</Text>
+              <TouchableOpacity 
+                style={[styles.secondaryButton, isFollowing && styles.secondaryButtonActive]}
+                onPress={handleFollow}
+              >
+                <Ionicons 
+                  name={isFollowing ? "checkmark" : "person-add-outline"} 
+                  size={20} 
+                  color={isFollowing ? "#fff" : "#007AFF"} 
+                />
+                <Text style={[styles.secondaryButtonText, isFollowing && styles.secondaryButtonTextActive]}>
+                  {isFollowing ? 'Following' : 'Follow'}
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -191,6 +275,15 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f5f5f5',
   },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  errorText: {
+    fontSize: 16,
+    color: '#666',
+  },
   headerButton: {
     padding: 8,
     marginRight: 8,
@@ -295,10 +388,16 @@ const styles = StyleSheet.create({
     borderColor: '#007AFF',
     gap: 8,
   },
+  secondaryButtonActive: {
+    backgroundColor: '#007AFF',
+  },
   secondaryButtonText: {
     fontSize: 16,
     color: '#007AFF',
     fontWeight: '600',
+  },
+  secondaryButtonTextActive: {
+    color: '#fff',
   },
   section: {
     backgroundColor: '#fff',

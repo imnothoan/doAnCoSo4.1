@@ -1,20 +1,49 @@
-import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, Text, FlatList, TouchableOpacity, Image, TextInput } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { StyleSheet, View, Text, FlatList, TouchableOpacity, Image, TextInput, RefreshControl, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { MOCK_USERS } from '@/src/services/mockData';
 import { User } from '@/src/types';
+import ApiService from '@/src/services/api';
 
 export default function ConnectionScreen() {
   const router = useRouter();
   const [users, setUsers] = useState<User[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'users' | 'events'>('users');
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const loadUsers = useCallback(async () => {
+    try {
+      setLoading(true);
+      if (searchQuery.trim()) {
+        const data = await ApiService.searchUsers(searchQuery);
+        setUsers(data);
+      } else {
+        const data = await ApiService.getUsers();
+        setUsers(data);
+      }
+    } catch (error) {
+      console.error('Error loading users:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [searchQuery]);
 
   useEffect(() => {
-    setUsers(MOCK_USERS);
-  }, []);
+    const timeoutId = setTimeout(() => {
+      loadUsers();
+    }, 300); // Debounce search
+
+    return () => clearTimeout(timeoutId);
+  }, [loadUsers]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await loadUsers();
+    setRefreshing(false);
+  }, [loadUsers]);
 
   const renderUserCard = ({ item }: { item: User }) => (
     <TouchableOpacity 
@@ -107,18 +136,27 @@ export default function ConnectionScreen() {
       </View>
 
       {viewMode === 'users' && (
-        <FlatList
-          data={users}
-          renderItem={renderUserCard}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.listContent}
-          ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <Ionicons name="people-outline" size={64} color="#ccc" />
-              <Text style={styles.emptyText}>No users found</Text>
-            </View>
-          }
-        />
+        loading && !refreshing ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#007AFF" />
+          </View>
+        ) : (
+          <FlatList
+            data={users}
+            renderItem={renderUserCard}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={styles.listContent}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+            }
+            ListEmptyComponent={
+              <View style={styles.emptyContainer}>
+                <Ionicons name="people-outline" size={64} color="#ccc" />
+                <Text style={styles.emptyText}>No users found</Text>
+              </View>
+            }
+          />
+        )
       )}
 
       {viewMode === 'events' && (
@@ -294,5 +332,10 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#999',
     marginTop: 16,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });

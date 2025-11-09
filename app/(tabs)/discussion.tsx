@@ -1,17 +1,46 @@
-import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, Text, FlatList, TouchableOpacity, Image, TextInput } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { StyleSheet, View, Text, FlatList, TouchableOpacity, Image, TextInput, RefreshControl, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { MOCK_COMMUNITIES } from '@/src/services/mockData';
 import { Community } from '@/src/types';
+import ApiService from '@/src/services/api';
 
 export default function DiscussionScreen() {
   const [communities, setCommunities] = useState<Community[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const loadCommunities = useCallback(async () => {
+    try {
+      setLoading(true);
+      if (searchQuery.trim()) {
+        const data = await ApiService.searchCommunities(searchQuery);
+        setCommunities(data);
+      } else {
+        const data = await ApiService.getSuggestedCommunities(20);
+        setCommunities(data);
+      }
+    } catch (error) {
+      console.error('Error loading communities:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [searchQuery]);
 
   useEffect(() => {
-    setCommunities(MOCK_COMMUNITIES);
-  }, []);
+    const timeoutId = setTimeout(() => {
+      loadCommunities();
+    }, 300); // Debounce search
+
+    return () => clearTimeout(timeoutId);
+  }, [loadCommunities]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await loadCommunities();
+    setRefreshing(false);
+  }, [loadCommunities]);
 
   const renderCommunityCard = ({ item }: { item: Community }) => (
     <TouchableOpacity style={styles.communityCard}>
@@ -61,18 +90,27 @@ export default function DiscussionScreen() {
 
       <Text style={styles.sectionTitle}>Suggested Communities</Text>
 
-      <FlatList
-        data={communities}
-        renderItem={renderCommunityCard}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.listContent}
-        ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Ionicons name="people-outline" size={64} color="#ccc" />
-            <Text style={styles.emptyText}>No communities yet</Text>
-          </View>
-        }
-      />
+      {loading && !refreshing ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#007AFF" />
+        </View>
+      ) : (
+        <FlatList
+          data={communities}
+          renderItem={renderCommunityCard}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.listContent}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <Ionicons name="people-outline" size={64} color="#ccc" />
+              <Text style={styles.emptyText}>No communities yet</Text>
+            </View>
+          }
+        />
+      )}
     </SafeAreaView>
   );
 }
@@ -194,5 +232,10 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#999',
     marginTop: 16,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });

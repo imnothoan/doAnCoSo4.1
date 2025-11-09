@@ -1,14 +1,42 @@
-import React from 'react';
-import { StyleSheet, View, Text, ScrollView, TouchableOpacity, Image } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { StyleSheet, View, Text, ScrollView, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/src/context/AuthContext';
-import { MOCK_CURRENT_USER } from '@/src/services/mockData';
+import { useRouter } from 'expo-router';
+import ApiService from '@/src/services/api';
 
 export default function AccountScreen() {
+  const router = useRouter();
   const { user, logout } = useAuth();
-  const currentUser = user || MOCK_CURRENT_USER;
-  const profileCompletion = 40; // Mock profile completion percentage
+  const [profileCompletion, setProfileCompletion] = useState(0);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadProfileCompletion = async () => {
+      if (!user?.username) return;
+      try {
+        const data = await ApiService.getProfileCompletion(user.username);
+        setProfileCompletion(data.completion_percentage || 0);
+      } catch (error) {
+        console.error('Error loading profile completion:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadProfileCompletion();
+  }, [user?.username]);
+
+  if (!user) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#007AFF" />
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   const renderInfoRow = (icon: string, label: string, value: string, onPress?: () => void) => (
     <TouchableOpacity style={styles.infoRow} onPress={onPress} disabled={!onPress}>
@@ -28,52 +56,63 @@ export default function AccountScreen() {
       <ScrollView>
         {/* Profile Header */}
         <View style={styles.profileHeader}>
-          <Image source={{ uri: currentUser.avatar }} style={styles.profileAvatar} />
-          <Text style={styles.profileName}>{currentUser.name}</Text>
+          {user.avatar ? (
+            <Image source={{ uri: user.avatar }} style={styles.profileAvatar} />
+          ) : (
+            <View style={[styles.profileAvatar, styles.placeholderAvatar]}>
+              <Ionicons name="person" size={60} color="#999" />
+            </View>
+          )}
+          <Text style={styles.profileName}>{user.name}</Text>
           <View style={styles.locationRow}>
-            <Text style={styles.flag}>{currentUser.flag}</Text>
+            <Text style={styles.flag}>{user.flag || '🌍'}</Text>
             <Text style={styles.location}>
-              {currentUser.city}, {currentUser.country}
+              {user.city}, {user.country}
             </Text>
           </View>
           
           <View style={styles.statusBadge}>
-            <Text style={styles.statusText}>{currentUser.status}</Text>
+            <Text style={styles.statusText}>{user.status}</Text>
           </View>
 
-          <TouchableOpacity style={styles.editProfileButton}>
+          <TouchableOpacity 
+            style={styles.editProfileButton}
+            onPress={() => router.push('/profile?id=' + user.id)}
+          >
             <Ionicons name="create-outline" size={20} color="#007AFF" />
             <Text style={styles.editProfileText}>Edit Profile</Text>
           </TouchableOpacity>
         </View>
 
         {/* Profile Completion */}
-        <View style={styles.progressSection}>
-          <View style={styles.progressHeader}>
-            <Text style={styles.progressTitle}>Your Profile: {profileCompletion}% completed</Text>
-            <TouchableOpacity>
-              <Ionicons name="chevron-forward" size={20} color="#007AFF" />
-            </TouchableOpacity>
+        {!loading && (
+          <View style={styles.progressSection}>
+            <View style={styles.progressHeader}>
+              <Text style={styles.progressTitle}>Your Profile: {profileCompletion}% completed</Text>
+              <TouchableOpacity>
+                <Ionicons name="chevron-forward" size={20} color="#007AFF" />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.progressBarContainer}>
+              <View style={[styles.progressBar, { width: `${profileCompletion}%` }]} />
+            </View>
+            <Text style={styles.progressHint}>Complete your profile to get more connections</Text>
           </View>
-          <View style={styles.progressBarContainer}>
-            <View style={[styles.progressBar, { width: `${profileCompletion}%` }]} />
-          </View>
-          <Text style={styles.progressHint}>Complete your profile to get more connections</Text>
-        </View>
+        )}
 
         {/* About Section */}
-        {currentUser.bio && (
+        {user.bio && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>About Me</Text>
-            <Text style={styles.bioText}>{currentUser.bio}</Text>
+            <Text style={styles.bioText}>{user.bio}</Text>
           </View>
         )}
 
         {/* Languages Section */}
-        {currentUser.languages && currentUser.languages.length > 0 && (
+        {user.languages && user.languages.length > 0 && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Languages</Text>
-            {currentUser.languages.map((lang, index) => (
+            {user.languages.map((lang, index) => (
               <View key={index} style={styles.languageRow}>
                 <Text style={styles.languageName}>{lang.name}</Text>
                 <Text style={styles.languageLevel}>{lang.level}</Text>
@@ -87,26 +126,26 @@ export default function AccountScreen() {
           <Text style={styles.sectionTitle}>Summary</Text>
           <View style={styles.summaryGrid}>
             <View style={styles.summaryItem}>
-              <Text style={styles.summaryValue}>{currentUser.followersCount || 0}</Text>
+              <Text style={styles.summaryValue}>{user.followersCount || 0}</Text>
               <Text style={styles.summaryLabel}>Followers</Text>
             </View>
             <View style={styles.summaryItem}>
-              <Text style={styles.summaryValue}>{currentUser.gender || 'N/A'}</Text>
+              <Text style={styles.summaryValue}>{user.gender || 'N/A'}</Text>
               <Text style={styles.summaryLabel}>Gender</Text>
             </View>
             <View style={styles.summaryItem}>
-              <Text style={styles.summaryValue}>{currentUser.age || 'N/A'}</Text>
+              <Text style={styles.summaryValue}>{user.age || 'N/A'}</Text>
               <Text style={styles.summaryLabel}>Age</Text>
             </View>
           </View>
         </View>
 
         {/* Interests */}
-        {currentUser.interests && currentUser.interests.length > 0 && (
+        {user.interests && user.interests.length > 0 && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Interests</Text>
             <View style={styles.interestsContainer}>
-              {currentUser.interests.map((interest, index) => (
+              {user.interests.map((interest, index) => (
                 <View key={index} style={styles.interestTag}>
                   <Text style={styles.interestText}>{interest}</Text>
                 </View>
@@ -154,6 +193,11 @@ const styles = StyleSheet.create({
     height: 100,
     borderRadius: 50,
     marginBottom: 12,
+  },
+  placeholderAvatar: {
+    backgroundColor: '#f0f0f0',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   profileName: {
     fontSize: 24,
@@ -343,5 +387,10 @@ const styles = StyleSheet.create({
   },
   footer: {
     height: 40,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });

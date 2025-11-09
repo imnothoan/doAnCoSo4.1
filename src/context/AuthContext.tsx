@@ -5,7 +5,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface AuthContextType extends AuthState {
   login: (email: string, password: string) => Promise<void>;
-  signup: (name: string, email: string, password: string, country: string, city: string) => Promise<void>;
+  signup: (username: string, name: string, email: string, password: string, country: string, city: string, gender?: 'Male' | 'Female' | 'Other') => Promise<void>;
   logout: () => Promise<void>;
   updateUser: (data: Partial<User>) => Promise<void>;
   isLoading: boolean;
@@ -70,14 +70,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const signup = async (name: string, email: string, password: string, country: string, city: string) => {
+  const signup = async (username: string, name: string, email: string, password: string, country: string, city: string, gender?: 'Male' | 'Female' | 'Other') => {
     try {
       const { user, token } = await ApiService.signup({
+        username,
         name,
         email,
         password,
         country,
         city,
+        gender,
       });
       
       // Store auth data

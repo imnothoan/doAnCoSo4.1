@@ -1,6 +1,7 @@
 // User related types
 export interface User {
   id: string;
+  username?: string;
   name: string;
   email: string;
   avatar?: string;
@@ -15,6 +16,8 @@ export interface User {
   age?: number;
   memberSince?: string;
   followersCount?: number;
+  followingCount?: number;
+  postsCount?: number;
   specialties?: {
     from?: string;
     interests?: string[];
@@ -23,10 +26,12 @@ export interface User {
   };
   isAvailableToHangout?: boolean;
   hangoutActivities?: string[];
+  currentActivity?: string;
   location?: {
     latitude: number;
     longitude: number;
   };
+  isOnline?: boolean;
 }
 
 export interface Language {
@@ -178,7 +183,9 @@ export interface LoginCredentials {
 }
 
 export interface SignupData extends LoginCredentials {
+  username: string;
   name: string;
   country: string;
   city: string;
+  gender?: 'Male' | 'Female' | 'Other';
 }

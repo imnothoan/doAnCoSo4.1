@@ -11,9 +11,7 @@ import {
   QuickMessage,
   LoginCredentials,
   SignupData,
-  HangoutFilters,
   ConnectionFilters,
-  EventFilters,
 } from '../types';
 
 // Base API configuration
@@ -62,6 +60,11 @@ class ApiService {
     return response.data;
   }
 
+  async getUserByUsername(username: string): Promise<User> {
+    const response = await this.client.get(`/users/username/${username}`);
+    return response.data;
+  }
+
   async updateUser(userId: string, data: Partial<User>): Promise<User> {
     const response = await this.client.put(`/users/${userId}`, data);
     return response.data;
@@ -82,39 +85,62 @@ class ApiService {
     return response.data;
   }
 
-  async updateHangoutStatus(isAvailable: boolean, activities?: string[]): Promise<void> {
-    await this.client.put('/users/me/hangout-status', {
-      isAvailable,
+  async followUser(username: string, followerUsername: string): Promise<void> {
+    await this.client.post(`/users/${username}/follow`, { followerUsername });
+  }
+
+  async unfollowUser(username: string, followerUsername: string): Promise<void> {
+    await this.client.delete(`/users/${username}/follow`, { data: { followerUsername } });
+  }
+
+  async updateHangoutStatus(username: string, isAvailable: boolean, currentActivity?: string, activities?: string[]): Promise<void> {
+    await this.client.put('/hangouts/status', {
+      username,
+      is_available: isAvailable,
+      current_activity: currentActivity,
       activities,
     });
   }
 
+  async getProfileCompletion(username: string): Promise<any> {
+    const response = await this.client.get(`/users/${username}/profile-completion`);
+    return response.data;
+  }
+
   // Event endpoints
-  async getEvents(filters?: EventFilters): Promise<Event[]> {
+  async getEvents(filters?: any): Promise<Event[]> {
     const response = await this.client.get('/events', { params: filters });
     return response.data;
   }
 
-  async getMyEvents(): Promise<Event[]> {
-    const response = await this.client.get('/events/my');
+  async getMyEvents(username: string, type: 'participating' | 'created' = 'participating'): Promise<Event[]> {
+    const response = await this.client.get(`/events/user/${username}/${type}`);
     return response.data;
   }
 
-  async getEventById(eventId: string): Promise<Event> {
-    const response = await this.client.get(`/events/${eventId}`);
+  async getEventById(eventId: string, viewer?: string): Promise<Event> {
+    const response = await this.client.get(`/events/${eventId}`, { params: { viewer } });
     return response.data;
   }
 
-  async joinEvent(eventId: string): Promise<void> {
-    await this.client.post(`/events/${eventId}/join`);
+  async joinEvent(eventId: string, username: string, status: 'going' | 'interested' = 'going'): Promise<void> {
+    await this.client.post(`/events/${eventId}/participate`, { username, status });
   }
 
   async leaveEvent(eventId: string): Promise<void> {
     await this.client.delete(`/events/${eventId}/leave`);
   }
 
-  async addEventComment(eventId: string, content: string, image?: string): Promise<void> {
-    await this.client.post(`/events/${eventId}/comments`, { content, image });
+  async addEventComment(eventId: string, authorUsername: string, content: string, image?: File): Promise<void> {
+    const formData = new FormData();
+    formData.append('author_username', authorUsername);
+    formData.append('content', content);
+    if (image) {
+      formData.append('image', image);
+    }
+    await this.client.post(`/events/${eventId}/comments`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
   }
 
   async searchEvents(query: string): Promise<Event[]> {
@@ -122,50 +148,87 @@ class ApiService {
     return response.data;
   }
 
+  async inviteToEvent(eventId: string, inviterUsername: string, inviteeUsernames: string[]): Promise<void> {
+    await this.client.post(`/events/${eventId}/invite`, {
+      inviter_username: inviterUsername,
+      invitee_usernames: inviteeUsernames,
+    });
+  }
+
   // Hangout endpoints
-  async getOpenHangouts(filters?: HangoutFilters): Promise<User[]> {
-    const response = await this.client.get('/hangouts/open', { params: filters });
+  async getOpenHangouts(filters?: any): Promise<any[]> {
+    const response = await this.client.get('/hangouts', { params: filters });
     return response.data;
   }
 
-  async getMyHangouts(): Promise<Hangout[]> {
-    const response = await this.client.get('/hangouts/my');
+  async getMyHangouts(username: string): Promise<Hangout[]> {
+    const response = await this.client.get(`/hangouts/connections/${username}`);
     return response.data;
+  }
+
+  async getHangoutStatus(username: string): Promise<any> {
+    const response = await this.client.get(`/hangouts/status/${username}`);
+    return response.data;
+  }
+
+  async createHangout(data: any): Promise<any> {
+    const response = await this.client.post('/hangouts', data);
+    return response.data;
+  }
+
+  async joinHangout(hangoutId: string, username: string): Promise<void> {
+    await this.client.post(`/hangouts/${hangoutId}/join`, { username });
   }
 
   // Chat endpoints
-  async getChats(): Promise<Chat[]> {
-    const response = await this.client.get('/chats');
+  async getConversations(username: string): Promise<Chat[]> {
+    const response = await this.client.get('/messages/conversations', { params: { user: username } });
     return response.data;
   }
 
-  async getChatMessages(chatId: string): Promise<Message[]> {
-    const response = await this.client.get(`/chats/${chatId}/messages`);
+  async getChatMessages(conversationId: string): Promise<Message[]> {
+    const response = await this.client.get(`/messages/conversations/${conversationId}/messages`);
     return response.data;
   }
 
-  async sendMessage(chatId: string, content: string, image?: string): Promise<void> {
-    await this.client.post(`/chats/${chatId}/messages`, { content, image });
+  async sendMessage(conversationId: string, senderUsername: string, content: string, replyToMessageId?: string): Promise<void> {
+    await this.client.post(`/messages/conversations/${conversationId}/messages`, {
+      sender_username: senderUsername,
+      content,
+      reply_to_message_id: replyToMessageId,
+    });
   }
 
-  async createUserChat(userId: string): Promise<Chat> {
-    const response = await this.client.post('/chats/user', { userId });
+  async createConversation(type: 'dm' | 'group', createdBy: string, members: string[], title?: string): Promise<Chat> {
+    const response = await this.client.post('/messages/conversations', {
+      type,
+      created_by: createdBy,
+      members,
+      title,
+    });
     return response.data;
+  }
+
+  async markMessagesAsRead(conversationId: string, username: string, upToMessageId: number): Promise<void> {
+    await this.client.post(`/messages/conversations/${conversationId}/read`, {
+      username,
+      up_to_message_id: upToMessageId,
+    });
   }
 
   // Quick messages
-  async getQuickMessages(): Promise<QuickMessage[]> {
-    const response = await this.client.get('/quick-messages');
+  async getQuickMessages(username: string): Promise<QuickMessage[]> {
+    const response = await this.client.get('/quick-messages', { params: { username } });
     return response.data;
   }
 
-  async createQuickMessage(shortcut: string, message: string): Promise<QuickMessage> {
-    const response = await this.client.post('/quick-messages', { shortcut, message });
+  async createQuickMessage(username: string, shortcut: string, message: string): Promise<QuickMessage> {
+    const response = await this.client.post('/quick-messages', { username, shortcut, message });
     return response.data;
   }
 
-  async updateQuickMessage(id: string, shortcut: string, message: string): Promise<QuickMessage> {
-    const response = await this.client.put(`/quick-messages/${id}`, { shortcut, message });
+  async updateQuickMessage(id: string, username: string, shortcut: string, message: string): Promise<QuickMessage> {
+    const response = await this.client.put(`/quick-messages/${id}`, { username, shortcut, message });
     return response.data;
   }
 
@@ -173,15 +236,39 @@ class ApiService {
     await this.client.delete(`/quick-messages/${id}`);
   }
 
+  async expandQuickMessage(username: string, shortcut: string): Promise<QuickMessage | null> {
+    try {
+      const response = await this.client.get('/quick-messages/expand', {
+        params: { username, shortcut },
+      });
+      return response.data;
+    } catch {
+      return null;
+    }
+  }
+
   // Community/Discussion endpoints
-  async getCommunities(): Promise<Community[]> {
-    const response = await this.client.get('/communities');
+  async getCommunities(query?: string, limit?: number): Promise<Community[]> {
+    const response = await this.client.get('/communities', { params: { q: query, limit } });
+    return response.data;
+  }
+
+  async getSuggestedCommunities(limit?: number): Promise<Community[]> {
+    const response = await this.client.get('/communities/suggested', { params: { limit } });
     return response.data;
   }
 
   async searchCommunities(query: string): Promise<Community[]> {
-    const response = await this.client.get('/communities/search', { params: { q: query } });
+    const response = await this.client.get('/communities', { params: { q: query } });
     return response.data;
+  }
+
+  async joinCommunity(communityId: string, username: string): Promise<void> {
+    await this.client.post(`/communities/${communityId}/join`, { username });
+  }
+
+  async leaveCommunity(communityId: string, username: string): Promise<void> {
+    await this.client.delete(`/communities/${communityId}/leave`, { data: { username } });
   }
 
   async getCommunityPosts(communityId: string): Promise<Post[]> {
@@ -189,34 +276,61 @@ class ApiService {
     return response.data;
   }
 
-  async createPost(communityId: string, content: string, image?: string): Promise<Post> {
-    const response = await this.client.post(`/communities/${communityId}/posts`, {
-      content,
-      image,
+  async createPost(communityId: string, authorUsername: string, content: string, image?: File): Promise<Post> {
+    const formData = new FormData();
+    formData.append('author_username', authorUsername);
+    formData.append('content', content);
+    if (image) {
+      formData.append('image', image);
+    }
+    const response = await this.client.post(`/communities/${communityId}/posts`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
     });
     return response.data;
   }
 
-  async likePost(postId: string): Promise<void> {
-    await this.client.post(`/posts/${postId}/like`);
+  async likePost(communityId: string, postId: string, username: string): Promise<void> {
+    await this.client.post(`/communities/${communityId}/posts/${postId}/like`, { username });
   }
 
-  async addPostComment(postId: string, content: string): Promise<void> {
-    await this.client.post(`/posts/${postId}/comments`, { content });
+  async unlikePost(communityId: string, postId: string, username: string): Promise<void> {
+    await this.client.delete(`/communities/${communityId}/posts/${postId}/like`, { data: { username } });
+  }
+
+  async addPostComment(communityId: string, postId: string, authorUsername: string, content: string, parentId?: string): Promise<void> {
+    await this.client.post(`/communities/${communityId}/posts/${postId}/comments`, {
+      author_username: authorUsername,
+      content,
+      parent_id: parentId,
+    });
   }
 
   // Notification endpoints
-  async getNotifications(): Promise<Notification[]> {
-    const response = await this.client.get('/notifications');
+  async getNotifications(username: string, limit?: number, unreadOnly?: boolean): Promise<Notification[]> {
+    const response = await this.client.get('/notifications', {
+      params: { username, limit, unread_only: unreadOnly },
+    });
     return response.data;
   }
 
-  async markNotificationAsRead(notificationId: string): Promise<void> {
-    await this.client.put(`/notifications/${notificationId}/read`);
+  async getUnreadNotificationCount(username: string): Promise<number> {
+    const response = await this.client.get('/notifications/unread-count', { params: { username } });
+    return response.data.unread_count || 0;
   }
 
-  async markAllNotificationsAsRead(): Promise<void> {
-    await this.client.put('/notifications/read-all');
+  async markNotificationAsRead(username: string, notificationIds?: number[]): Promise<void> {
+    await this.client.put('/notifications/mark-read', {
+      username,
+      notification_ids: notificationIds,
+      all: !notificationIds,
+    });
+  }
+
+  async markAllNotificationsAsRead(username: string): Promise<void> {
+    await this.client.put('/notifications/mark-read', {
+      username,
+      all: true,
+    });
   }
 }
 

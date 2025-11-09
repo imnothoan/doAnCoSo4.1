@@ -1,24 +1,108 @@
-import React, { useState } from 'react';
-import { StyleSheet, View, Text, ScrollView, TouchableOpacity, Image, TextInput } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { StyleSheet, View, Text, ScrollView, TouchableOpacity, Image, TextInput, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { MOCK_EVENTS, MOCK_USERS } from '@/src/services/mockData';
 import { formatDate } from '@/src/utils/date';
+import { useAuth } from '@/src/context/AuthContext';
+import ApiService from '@/src/services/api';
+import { Event } from '@/src/types';
 
 export default function EventDetailScreen() {
   const params = useLocalSearchParams();
+  const { user } = useAuth();
   const eventId = params.id as string;
   
-  // In a real app, we'd fetch this from the API
-  const event = MOCK_EVENTS.find(e => e.id === eventId) || MOCK_EVENTS[0];
-  
+  const [event, setEvent] = useState<Event | null>(null);
+  const [loading, setLoading] = useState(true);
   const [comment, setComment] = useState('');
   const [isInterested, setIsInterested] = useState(false);
+  const [isJoined, setIsJoined] = useState(false);
+  const [submittingComment, setSubmittingComment] = useState(false);
 
-  const handleJoinEvent = () => {
-    setIsInterested(!isInterested);
+  useEffect(() => {
+    const loadEvent = async () => {
+      try {
+        setLoading(true);
+        const data = await ApiService.getEventById(eventId, user?.username);
+        setEvent(data);
+        // TODO: Check if user is participating from server response
+        setIsInterested(false);
+        setIsJoined(false);
+      } catch (error) {
+        console.error('Error loading event:', error);
+        Alert.alert('Error', 'Failed to load event details');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadEvent();
+  }, [eventId, user?.username]);
+
+  const handleJoinEvent = async () => {
+    if (!user?.username || !event) return;
+    
+    try {
+      if (isJoined) {
+        await ApiService.leaveEvent(event.id);
+        setIsJoined(false);
+        setIsInterested(false);
+      } else {
+        const status = isInterested ? 'going' : 'interested';
+        await ApiService.joinEvent(event.id, user.username, status);
+        if (!isInterested) {
+          setIsInterested(true);
+        } else {
+          setIsJoined(true);
+        }
+      }
+    } catch (error) {
+      console.error('Error joining/leaving event:', error);
+      Alert.alert('Error', 'Failed to update event status');
+    }
   };
+
+  const handleAddComment = async () => {
+    if (!user?.username || !event || !comment.trim()) return;
+
+    try {
+      setSubmittingComment(true);
+      await ApiService.addEventComment(event.id, user.username, comment.trim());
+      setComment('');
+      // Reload event to get updated comments
+      const updatedEvent = await ApiService.getEventById(eventId, user.username);
+      setEvent(updatedEvent);
+      Alert.alert('Success', 'Comment added successfully');
+    } catch (error) {
+      console.error('Error adding comment:', error);
+      Alert.alert('Error', 'Failed to add comment');
+    } finally {
+      setSubmittingComment(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <Stack.Screen options={{ title: 'Event Details' }} />
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#007AFF" />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (!event) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <Stack.Screen options={{ title: 'Event Not Found' }} />
+        <View style={styles.loadingContainer}>
+          <Text style={styles.errorText}>Event not found</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <>
@@ -177,11 +261,16 @@ export default function EventDetailScreen() {
                   </TouchableOpacity>
                   <TouchableOpacity 
                     style={[styles.postButton, comment.length > 0 && styles.postButtonActive]}
-                    disabled={comment.length === 0}
+                    disabled={comment.length === 0 || submittingComment}
+                    onPress={handleAddComment}
                   >
-                    <Text style={[styles.postButtonText, comment.length > 0 && styles.postButtonTextActive]}>
-                      Post
-                    </Text>
+                    {submittingComment ? (
+                      <ActivityIndicator size="small" color="#007AFF" />
+                    ) : (
+                      <Text style={[styles.postButtonText, comment.length > 0 && styles.postButtonTextActive]}>
+                        Post
+                      </Text>
+                    )}
                   </TouchableOpacity>
                 </View>
               </View>
@@ -215,6 +304,15 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  errorText: {
+    fontSize: 16,
+    color: '#666',
   },
   eventImage: {
     width: '100%',
