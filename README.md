@@ -82,9 +82,11 @@ ConnectSphere is a feature-rich social networking app designed to help users:
 ### Additional Screens
 
 - **Notification Screen**: View all notifications with type-based icons
-- **Event Detail Screen**: Complete event information and interactions
-- **Chat Screen**: Full messaging UI with quick messages
+- **Event Detail Screen**: Complete event information and interactions with image upload for comments
+- **Chat Screen**: Full messaging UI with quick messages, real-time updates via WebSocket, typing indicators, and image sharing
 - **Profile Screen**: View other users' profiles with all details
+- **Edit Profile Screen**: Comprehensive profile editing with avatar upload, languages, interests, and hangout activities
+- **Settings Screen**: Full app settings including notifications, privacy, account management, and logout
 
 ## 📁 Project Structure
 
@@ -105,6 +107,8 @@ doAnCoSo4.1/
 │   ├── event-detail.tsx          # Event details
 │   ├── chat.tsx                  # Chat/messaging
 │   ├── profile.tsx               # User profile
+│   ├── edit-profile.tsx          # Edit profile
+│   ├── settings.tsx              # App settings
 │   └── _layout.tsx               # Root layout
 ├── src/
 │   ├── constants/                # App constants
@@ -113,6 +117,9 @@ doAnCoSo4.1/
 │   │   └── AuthContext.tsx
 │   ├── services/                 # API and services
 │   │   ├── api.ts
+│   │   ├── websocket.ts         # WebSocket service
+│   │   ├── location.ts          # Location service
+│   │   ├── image.ts             # Image upload service
 │   │   └── mockData.ts
 │   ├── types/                    # TypeScript types
 │   │   └── index.ts
@@ -188,12 +195,44 @@ The app currently uses mock data defined in `src/services/mockData.ts`. This inc
 - Mock communities
 - Mock notifications
 
+### Services Architecture
+
+The app uses a service-oriented architecture with the following services:
+
+#### API Service (`src/services/api.ts`)
+- Axios-based HTTP client
+- Automatic token management
+- RESTful API endpoints for all features
+- Error handling and request/response interceptors
+
+#### WebSocket Service (`src/services/websocket.ts`)
+- Socket.IO client for real-time features
+- Auto-reconnection with exponential backoff
+- Room-based messaging
+- Typing indicators and presence tracking
+- Event-driven architecture
+
+#### Location Service (`src/services/location.ts`)
+- GPS permission handling
+- Current location tracking
+- Distance calculation (Haversine formula)
+- Location-based filtering and sorting
+- Position watching for real-time updates
+
+#### Image Service (`src/services/image.ts`)
+- expo-image-picker integration
+- Camera and gallery access
+- Image validation (size, format)
+- FormData creation for uploads
+- Multiple image selection support
+
 ### Authentication Flow
 
 1. App starts at `index.tsx` which checks auth state
 2. If not authenticated → redirects to `login.tsx`
-3. After login/signup → redirects to main tabs
+3. After login/signup → redirects to main tabs and initializes WebSocket
 4. All tab screens are protected and require authentication
+5. On logout → disconnects WebSocket and clears local storage
 
 ## 🔧 Configuration
 
@@ -212,6 +251,34 @@ const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://api.example.com
 
 ## 📝 Key Features Details
 
+### Real-Time Chat with WebSocket
+- Real-time message delivery via Socket.IO
+- Typing indicators showing when other users are typing
+- Online/offline status tracking
+- Auto-reconnection on network issues
+- Message read receipts
+- Support for text and image messages
+
+### Image Upload
+- Camera and gallery support via expo-image-picker
+- Image size validation (max 5MB)
+- Preview before upload
+- FormData multipart uploads
+- Support for:
+  - Profile avatars
+  - Chat messages
+  - Event comments
+  - Community posts
+
+### Location Features
+- GPS permission handling
+- Real-time location tracking
+- Haversine formula for accurate distance calculation
+- Distance-based filtering (1km, 2km, 5km, 10km, 20km, 50km)
+- Location-based user sorting
+- Distance display on user cards
+- Auto-request permissions on first use
+
 ### Quick Messages in Chat
 - Type `/x` for "Xin chào"
 - Type `/h` for "Hello!"
@@ -221,11 +288,12 @@ const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://api.example.com
 ### Distance Calculation
 - Uses Haversine formula for accurate distance
 - Filters: Under 1km, 2km, 5km, 10km, 20km, 50km
+- Displays distance in meters (<1km) or kilometers
 
 ### Event Management
 - Join/leave events
 - View participants
-- Add comments
+- Add comments with images
 - See event details and schedule
 
 ## 🎨 Design & UI
@@ -246,28 +314,39 @@ const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://api.example.com
 
 ## 🚧 Next Steps / Roadmap
 
+### Completed Features
+- ✅ Connect to real backend API
+- ✅ Implement WebSocket for real-time chat
+- ✅ Add image upload functionality
+- ✅ Implement filters (languages, distance, age)
+- ✅ Create edit profile screen
+- ✅ Build settings screens
+- ✅ Add location permissions and distance filtering
+- ✅ Implement typing indicators in chat
+- ✅ Add image upload to event comments
+- ✅ Auto-connect WebSocket on authentication
+
 ### High Priority
-- [ ] Connect to real backend API
-- [ ] Implement WebSocket for real-time chat
-- [ ] Add image upload functionality
-- [ ] Implement filters (languages, distance, age)
-- [ ] Create edit profile screen
-- [ ] Build settings screens
+- [ ] Add pull-to-refresh on lists (partially implemented)
+- [ ] Implement pagination for large data sets
+- [ ] Add skeleton loading states
+- [ ] Push notifications integration
+- [ ] Complete backend integration testing
 
 ### Medium Priority
-- [ ] Add pull-to-refresh on lists
-- [ ] Implement pagination
-- [ ] Add skeleton loading states
-- [ ] Offline support
-- [ ] Push notifications
+- [ ] Offline support with local caching
+- [ ] Dark mode implementation
+- [ ] Multi-language support
+- [ ] Advanced search and filters
+- [ ] User blocking and reporting
 
 ### Future Enhancements
 - [ ] AI-based user matching
 - [ ] Message translation
-- [ ] Image sharing in chat
-- [ ] Real-time location sharing
 - [ ] Video/voice calls
+- [ ] Real-time location sharing
 - [ ] AI Gemini integration
+- [ ] Story/status features
 
 ## 🤝 Contributing
 
