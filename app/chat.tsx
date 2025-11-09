@@ -1,101 +1,241 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { StyleSheet, View, Text, TextInput, TouchableOpacity, FlatList, KeyboardAvoidingView, Platform, Image } from 'react-native';
+import { StyleSheet, View, Text, TextInput, TouchableOpacity, FlatList, KeyboardAvoidingView, Platform, Image, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { MOCK_CHATS, MOCK_USERS } from '@/src/services/mockData';
 import { Message } from '@/src/types';
 import { formatTime } from '@/src/utils/date';
+import WebSocketService from '@/src/services/websocket';
+import ImageService from '@/src/services/image';
+import ApiService from '@/src/services/api';
+import { useAuth } from '@/src/context/AuthContext';
 
 export default function ChatScreen() {
   const params = useLocalSearchParams();
   const chatId = params.id as string;
+  const { user: currentUser } = useAuth();
   
   const chat = MOCK_CHATS.find(c => c.id === chatId) || MOCK_CHATS[0];
   const otherUser = chat.participants[0];
   
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
+  const [isTyping, setIsTyping] = useState(false);
+  const [otherUserTyping, setOtherUserTyping] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const flatListRef = useRef<FlatList>(null);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    // Load mock messages
+    // Load messages and setup WebSocket
     loadMessages();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    setupWebSocket();
 
-  const loadMessages = () => {
-    // Mock messages for this chat
-    const mockMessages: Message[] = [
-      {
-        id: 'm1',
-        chatId: chat.id,
-        senderId: otherUser.id,
-        sender: otherUser,
-        content: 'Hey! How are you doing?',
-        timestamp: '2025-11-08T09:00:00Z',
-        read: true,
-      },
-      {
-        id: 'm2',
-        chatId: chat.id,
-        senderId: MOCK_USERS[0].id,
-        sender: MOCK_USERS[0],
-        content: "I'm great! How about you?",
-        timestamp: '2025-11-08T09:05:00Z',
-        read: true,
-      },
-      {
-        id: 'm3',
-        chatId: chat.id,
-        senderId: otherUser.id,
-        sender: otherUser,
-        content: 'Doing well! Are you going to the event tonight?',
-        timestamp: '2025-11-08T09:10:00Z',
-        read: true,
-      },
-      {
-        id: 'm4',
-        chatId: chat.id,
-        senderId: MOCK_USERS[0].id,
-        sender: MOCK_USERS[0],
-        content: 'Yes! Looking forward to it. See you there?',
-        timestamp: '2025-11-08T09:15:00Z',
-        read: true,
-      },
-      {
-        id: 'm5',
-        chatId: chat.id,
-        senderId: otherUser.id,
-        sender: otherUser,
-        content: 'Definitely! 😊',
-        timestamp: '2025-11-08T09:20:00Z',
-        read: true,
-      },
-    ];
-    setMessages(mockMessages);
+    return () => {
+      // Cleanup WebSocket
+      WebSocketService.leaveConversation(chatId);
+      WebSocketService.off('new_message');
+      WebSocketService.off('typing');
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chatId]);
+
+  const setupWebSocket = () => {
+    // Connect to WebSocket if not already connected
+    const apiUrl = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
+    if (!WebSocketService.isConnected()) {
+      WebSocketService.connect(apiUrl);
+    }
+
+    // Join conversation room
+    WebSocketService.joinConversation(chatId);
+
+    // Listen for new messages
+    WebSocketService.onNewMessage((message: Message) => {
+      if (message.chatId === chatId) {
+        setMessages(prev => [...prev, message]);
+        setTimeout(() => {
+          flatListRef.current?.scrollToEnd({ animated: true });
+        }, 100);
+      }
+    });
+
+    // Listen for typing indicators
+    WebSocketService.onTyping((data) => {
+      if (data.conversationId === chatId && data.username !== currentUser?.username) {
+        setOtherUserTyping(data.isTyping);
+      }
+    });
   };
 
-  const handleSendMessage = () => {
-    if (!inputText.trim()) return;
+  const loadMessages = async () => {
+    try {
+      // Try to load real messages from API
+      const realMessages = await ApiService.getChatMessages(chatId);
+      setMessages(realMessages);
+    } catch (error) {
+      console.log('Using mock messages', error);
+      // Fall back to mock messages
+      const mockMessages: Message[] = [
+        {
+          id: 'm1',
+          chatId: chat.id,
+          senderId: otherUser.id,
+          sender: otherUser,
+          content: 'Hey! How are you doing?',
+          timestamp: '2025-11-08T09:00:00Z',
+          read: true,
+        },
+        {
+          id: 'm2',
+          chatId: chat.id,
+          senderId: MOCK_USERS[0].id,
+          sender: MOCK_USERS[0],
+          content: "I'm great! How about you?",
+          timestamp: '2025-11-08T09:05:00Z',
+          read: true,
+        },
+        {
+          id: 'm3',
+          chatId: chat.id,
+          senderId: otherUser.id,
+          sender: otherUser,
+          content: 'Doing well! Are you going to the event tonight?',
+          timestamp: '2025-11-08T09:10:00Z',
+          read: true,
+        },
+        {
+          id: 'm4',
+          chatId: chat.id,
+          senderId: MOCK_USERS[0].id,
+          sender: MOCK_USERS[0],
+          content: 'Yes! Looking forward to it. See you there?',
+          timestamp: '2025-11-08T09:15:00Z',
+          read: true,
+        },
+        {
+          id: 'm5',
+          chatId: chat.id,
+          senderId: otherUser.id,
+          sender: otherUser,
+          content: 'Definitely! 😊',
+          timestamp: '2025-11-08T09:20:00Z',
+          read: true,
+        },
+      ];
+      setMessages(mockMessages);
+    }
+  };
 
-    const newMessage: Message = {
-      id: `m${Date.now()}`,
-      chatId: chat.id,
-      senderId: MOCK_USERS[0].id,
-      sender: MOCK_USERS[0],
-      content: inputText,
-      timestamp: new Date().toISOString(),
-      read: false,
-    };
+  const handleSendMessage = async () => {
+    if (!inputText.trim() || !currentUser?.username) return;
 
-    setMessages(prev => [...prev, newMessage]);
+    const messageContent = inputText;
     setInputText('');
-    
+
+    // Send via WebSocket for real-time delivery
+    try {
+      WebSocketService.sendMessage(chatId, currentUser.username, messageContent);
+      
+      // Also send via API as backup
+      await ApiService.sendMessage(chatId, currentUser.username, messageContent);
+      
+      // Stop typing indicator
+      handleTyping(false);
+    } catch (error) {
+      console.error('Error sending message:', error);
+      // Add message locally if API fails
+      const newMessage: Message = {
+        id: `m${Date.now()}`,
+        chatId: chat.id,
+        senderId: currentUser.id,
+        sender: currentUser,
+        content: messageContent,
+        timestamp: new Date().toISOString(),
+        read: false,
+      };
+      setMessages(prev => [...prev, newMessage]);
+    }
+
     // Scroll to bottom
     setTimeout(() => {
       flatListRef.current?.scrollToEnd({ animated: true });
     }, 100);
+  };
+
+  const handleImagePick = async () => {
+    try {
+      const image = await ImageService.pickImageFromGallery({
+        allowsEditing: true,
+        quality: 0.8,
+      });
+
+      if (!image) return;
+
+      // Validate image size (max 5MB)
+      if (!ImageService.validateImageSize(image, 5)) {
+        Alert.alert('Error', 'Image size must be less than 5MB');
+        return;
+      }
+
+      setUploading(true);
+
+      // Create file object for upload
+      const imageFile: any = {
+        uri: image.uri,
+        type: image.type,
+        name: image.name,
+      };
+
+      // Send message with image
+      if (currentUser?.username) {
+        await ApiService.sendMessageWithImage(
+          chatId,
+          currentUser.username,
+          inputText || '📷 Photo',
+          imageFile
+        );
+        setInputText('');
+      }
+
+      setUploading(false);
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      Alert.alert('Error', 'Failed to upload image');
+      setUploading(false);
+    }
+  };
+
+  const handleTyping = (typing: boolean) => {
+    if (!currentUser?.username) return;
+
+    setIsTyping(typing);
+    WebSocketService.sendTyping(chatId, currentUser.username, typing);
+
+    // Clear previous timeout
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+
+    // Stop typing after 3 seconds of inactivity
+    if (typing) {
+      typingTimeoutRef.current = setTimeout(() => {
+        setIsTyping(false);
+        WebSocketService.sendTyping(chatId, currentUser.username, false);
+      }, 3000);
+    }
+  };
+
+  const handleTextChange = (text: string) => {
+    setInputText(text);
+    
+    // Start typing indicator
+    if (text.length > 0 && !isTyping) {
+      handleTyping(true);
+    } else if (text.length === 0 && isTyping) {
+      handleTyping(false);
+    }
   };
 
   const handleQuickMessage = (message: string) => {
@@ -103,7 +243,7 @@ export default function ChatScreen() {
   };
 
   const renderMessage = ({ item }: { item: Message }) => {
-    const isOwnMessage = item.senderId === MOCK_USERS[0].id;
+    const isOwnMessage = item.senderId === (currentUser?.id || MOCK_USERS[0].id);
     
     return (
       <View style={[styles.messageContainer, isOwnMessage && styles.ownMessageContainer]}>
@@ -113,6 +253,9 @@ export default function ChatScreen() {
         <View style={[styles.messageBubble, isOwnMessage && styles.ownMessageBubble]}>
           {!isOwnMessage && (
             <Text style={styles.senderName}>{item.sender.name}</Text>
+          )}
+          {item.image && (
+            <Image source={{ uri: item.image }} style={styles.messageImage} />
           )}
           <Text style={[styles.messageText, isOwnMessage && styles.ownMessageText]}>
             {item.content}
@@ -206,15 +349,23 @@ export default function ChatScreen() {
               <Ionicons name="flash-outline" size={24} color="#666" />
             </TouchableOpacity>
             
-            <TouchableOpacity style={styles.inputIconButton}>
-              <Ionicons name="image-outline" size={24} color="#666" />
+            <TouchableOpacity 
+              style={styles.inputIconButton}
+              onPress={handleImagePick}
+              disabled={uploading}
+            >
+              {uploading ? (
+                <ActivityIndicator size="small" color="#666" />
+              ) : (
+                <Ionicons name="image-outline" size={24} color="#666" />
+              )}
             </TouchableOpacity>
 
             <TextInput
               style={styles.input}
               placeholder="Type a message..."
               value={inputText}
-              onChangeText={setInputText}
+              onChangeText={handleTextChange}
               multiline
               maxLength={1000}
               placeholderTextColor="#999"
@@ -228,6 +379,13 @@ export default function ChatScreen() {
               <Ionicons name="send" size={20} color={inputText.trim().length > 0 ? '#fff' : '#999'} />
             </TouchableOpacity>
           </View>
+
+          {/* Typing Indicator */}
+          {otherUserTyping && (
+            <View style={styles.typingIndicator}>
+              <Text style={styles.typingText}>{otherUser.name} is typing...</Text>
+            </View>
+          )}
         </KeyboardAvoidingView>
       </SafeAreaView>
     </>
@@ -379,5 +537,25 @@ const styles = StyleSheet.create({
   },
   sendButtonActive: {
     backgroundColor: '#007AFF',
+  },
+  messageImage: {
+    width: '100%',
+    height: 200,
+    borderRadius: 12,
+    marginBottom: 8,
+  },
+  typingIndicator: {
+    position: 'absolute',
+    bottom: 70,
+    left: 16,
+    backgroundColor: '#f0f0f0',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
+  typingText: {
+    fontSize: 12,
+    color: '#666',
+    fontStyle: 'italic',
   },
 });

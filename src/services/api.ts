@@ -70,6 +70,27 @@ class ApiService {
     return response.data;
   }
 
+  async uploadAvatar(userId: string, image: any): Promise<{ avatarUrl: string }> {
+    const formData = new FormData();
+    formData.append('avatar', image);
+    const response = await this.client.post(`/users/${userId}/avatar`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
+  }
+
+  async sendMessageWithImage(conversationId: string, senderUsername: string, content: string, image?: any): Promise<void> {
+    const formData = new FormData();
+    formData.append('sender_username', senderUsername);
+    formData.append('content', content);
+    if (image) {
+      formData.append('image', image);
+    }
+    await this.client.post(`/messages/conversations/${conversationId}/messages`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  }
+
   async getUsers(filters?: ConnectionFilters): Promise<User[]> {
     const response = await this.client.get('/users', { params: filters });
     return response.data;
@@ -131,7 +152,7 @@ class ApiService {
     await this.client.delete(`/events/${eventId}/leave`);
   }
 
-  async addEventComment(eventId: string, authorUsername: string, content: string, image?: File): Promise<void> {
+  async addEventComment(eventId: string, authorUsername: string, content: string, image?: any): Promise<void> {
     const formData = new FormData();
     formData.append('author_username', authorUsername);
     formData.append('content', content);
@@ -276,7 +297,7 @@ class ApiService {
     return response.data;
   }
 
-  async createPost(communityId: string, authorUsername: string, content: string, image?: File): Promise<Post> {
+  async createPost(communityId: string, authorUsername: string, content: string, image?: any): Promise<Post> {
     const formData = new FormData();
     formData.append('author_username', authorUsername);
     formData.append('content', content);
