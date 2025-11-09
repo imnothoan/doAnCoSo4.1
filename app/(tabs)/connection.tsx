@@ -159,9 +159,9 @@ export default function ConnectionScreen() {
           )}
           <View style={styles.userInfoItem}>
             <Ionicons name="chatbubble-outline" size={14} color="#666" />
-            <Text style={styles.userInfoText}>
-              {item.languages.map(l => l.name).slice(0, 2).join(', ')}
-            </Text>
+              <Text style={styles.userInfoText}>
+                {(item.languages ?? []).map(l => l.name).slice(0, 2).join(', ') || '—'}
+              </Text>
           </View>
         </View>
 

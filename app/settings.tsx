@@ -269,7 +269,7 @@ export default function SettingsScreen() {
 
           <View style={styles.footer}>
             <Text style={styles.footerText}>ConnectSphere v1.0.0</Text>
-            <Text style={styles.footerSubtext}>Made with &hearts;</Text>
+            <Text style={styles.footerSubtext}>&hearts; Made with 3 chị em cute đáng yêu &hearts;</Text>
           </View>
         </ScrollView>
       </SafeAreaView>

@@ -126,7 +126,7 @@ export default function HangoutScreen() {
         </TouchableOpacity>
       </View>
       
-      <ScrollView style={styles.content}>
+      <View style={styles.content}>
         {/* Availability Toggle Section */}
         <View style={styles.availabilitySection}>
           <View style={styles.availabilityRow}>
@@ -232,7 +232,7 @@ export default function HangoutScreen() {
             }
           />
         )}
-      </ScrollView>
+      </View>
 
       {/* Activity Selection Modal */}
       <Modal

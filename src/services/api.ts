@@ -114,13 +114,19 @@ class ApiService {
     await this.client.delete(`/users/${username}/follow`, { data: { followerUsername } });
   }
 
-  async updateHangoutStatus(username: string, isAvailable: boolean, currentActivity?: string, activities?: string[]): Promise<void> {
-    await this.client.put('/hangouts/status', {
+  async updateHangoutStatus(
+    username: string,
+    isAvailable: boolean,
+    currentActivity?: string,
+    activities?: string[]
+  ): Promise<any> {
+    const res = await this.client.put(`/hangouts/status`, {
       username,
       is_available: isAvailable,
       current_activity: currentActivity,
       activities,
     });
+    return res.data;
   }
 
   async getProfileCompletion(username: string): Promise<any> {
@@ -177,19 +183,39 @@ class ApiService {
   }
 
   // Hangout endpoints
-  async getOpenHangouts(filters?: any): Promise<any[]> {
-    const response = await this.client.get('/hangouts', { params: filters });
-    return response.data;
+  async getOpenHangouts(params?: {
+    languages?: string[];    
+    distance_km?: number;
+    user_lat?: number;
+    user_lng?: number;
+    limit?: number;
+  }): Promise<any[]> {
+    const res = await this.client.get(`/hangouts`, {
+      params: {
+        languages: params?.languages?.join(","),
+        distance_km: params?.distance_km,
+        user_lat: params?.user_lat,
+        user_lng: params?.user_lng,
+        limit: params?.limit,
+      },
+    });
+    return res.data;
   }
 
-  async getMyHangouts(username: string): Promise<Hangout[]> {
-    const response = await this.client.get(`/hangouts/connections/${username}`);
-    return response.data;
+  async getMyHangouts(username: string): Promise<any[]> {
+  
+    const res = await this.client.get(`/hangouts/user/${encodeURIComponent(username)}/joined`);
+    return res.data;
   }
 
-  async getHangoutStatus(username: string): Promise<any> {
-    const response = await this.client.get(`/hangouts/status/${username}`);
-    return response.data;
+  async getHangoutStatus(username: string): Promise<{
+    username: string;
+    is_available: boolean;
+    current_activity?: string;
+    activities?: string[];
+  }> {
+    const res = await this.client.get(`/hangouts/status/${encodeURIComponent(username)}`);
+    return res.data;
   }
 
   async createHangout(data: any): Promise<any> {
