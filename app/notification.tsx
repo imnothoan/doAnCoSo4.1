@@ -1,18 +1,55 @@
-import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, Text, FlatList, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { StyleSheet, View, Text, FlatList, TouchableOpacity, RefreshControl, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { MOCK_NOTIFICATIONS } from '@/src/services/mockData';
 import { Notification } from '@/src/types';
 import { getRelativeTime } from '@/src/utils/date';
+import { useAuth } from '@/src/context/AuthContext';
+import ApiService from '@/src/services/api';
 
 export default function NotificationScreen() {
+  const { user } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const loadNotifications = useCallback(async () => {
+    if (!user?.username) return;
+    
+    try {
+      setLoading(true);
+      const data = await ApiService.getNotifications(user.username, 50);
+      setNotifications(data);
+    } catch (error) {
+      console.error('Error loading notifications:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.username]);
 
   useEffect(() => {
-    setNotifications(MOCK_NOTIFICATIONS);
-  }, []);
+    loadNotifications();
+  }, [loadNotifications]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await loadNotifications();
+    setRefreshing(false);
+  }, [loadNotifications]);
+
+  const handleMarkAsRead = async (notificationId: number) => {
+    if (!user?.username) return;
+    try {
+      await ApiService.markNotificationAsRead(user.username, [notificationId]);
+      // Update local state
+      setNotifications(prev =>
+        prev.map(n => n.id === notificationId.toString() ? { ...n, read: true } : n)
+      );
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+    }
+  };
 
   const renderNotificationItem = ({ item }: { item: Notification }) => {
     const getIcon = () => {
@@ -56,6 +93,7 @@ export default function NotificationScreen() {
     return (
       <TouchableOpacity
         style={[styles.notificationItem, !item.read && styles.unreadNotification]}
+        onPress={() => handleMarkAsRead(parseInt(item.id))}
       >
         <View style={[styles.iconContainer, { backgroundColor: getIconColor() + '20' }]}>
           <Ionicons name={getIcon() as any} size={24} color={getIconColor()} />
@@ -78,10 +116,16 @@ export default function NotificationScreen() {
     );
   };
 
-  const markAllAsRead = () => {
-    setNotifications(prev => 
-      prev.map(notif => ({ ...notif, read: true }))
-    );
+  const markAllAsRead = async () => {
+    if (!user?.username) return;
+    try {
+      await ApiService.markAllNotificationsAsRead(user.username);
+      setNotifications(prev => 
+        prev.map(notif => ({ ...notif, read: true }))
+      );
+    } catch (error) {
+      console.error('Error marking all as read:', error);
+    }
   };
 
   const unreadCount = notifications.filter(n => !n.read).length;
@@ -109,20 +153,29 @@ export default function NotificationScreen() {
           </View>
         )}
 
-        <FlatList
-          data={notifications}
-          renderItem={renderNotificationItem}
-          keyExtractor={(item) => item.id}
-          ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <Ionicons name="notifications-outline" size={64} color="#ccc" />
-              <Text style={styles.emptyText}>No notifications</Text>
-              <Text style={styles.emptySubtext}>
-                You&apos;re all caught up!
-              </Text>
-            </View>
-          }
-        />
+        {loading && !refreshing ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#007AFF" />
+          </View>
+        ) : (
+          <FlatList
+            data={notifications}
+            renderItem={renderNotificationItem}
+            keyExtractor={(item) => item.id}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+            }
+            ListEmptyComponent={
+              <View style={styles.emptyContainer}>
+                <Ionicons name="notifications-outline" size={64} color="#ccc" />
+                <Text style={styles.emptyText}>No notifications</Text>
+                <Text style={styles.emptySubtext}>
+                  You&apos;re all caught up!
+                </Text>
+              </View>
+            }
+          />
+        )}
       </SafeAreaView>
     </>
   );
@@ -217,5 +270,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#aaa',
     marginTop: 8,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });

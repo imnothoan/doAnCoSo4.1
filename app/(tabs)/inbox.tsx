@@ -1,20 +1,44 @@
-import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, Text, FlatList, TouchableOpacity, Image } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { StyleSheet, View, Text, FlatList, TouchableOpacity, Image, RefreshControl, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { MOCK_CHATS } from '@/src/services/mockData';
 import { Chat } from '@/src/types';
 import { getRelativeTime } from '@/src/utils/date';
+import { useAuth } from '@/src/context/AuthContext';
+import ApiService from '@/src/services/api';
 
 export default function InboxScreen() {
   const router = useRouter();
+  const { user } = useAuth();
   const [chats, setChats] = useState<Chat[]>([]);
   const [activeTab, setActiveTab] = useState<'all' | 'events' | 'users'>('all');
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const loadChats = useCallback(async () => {
+    if (!user?.username) return;
+    
+    try {
+      setLoading(true);
+      const data = await ApiService.getConversations(user.username);
+      setChats(data);
+    } catch (error) {
+      console.error('Error loading chats:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.username]);
 
   useEffect(() => {
-    setChats(MOCK_CHATS);
-  }, []);
+    loadChats();
+  }, [loadChats]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await loadChats();
+    setRefreshing(false);
+  }, [loadChats]);
 
   const filteredChats = chats.filter(chat => {
     if (activeTab === 'all') return true;
@@ -108,20 +132,29 @@ export default function InboxScreen() {
         </TouchableOpacity>
       </View>
 
-      <FlatList
-        data={filteredChats}
-        renderItem={renderChatItem}
-        keyExtractor={(item) => item.id}
-        ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Ionicons name="chatbubbles-outline" size={64} color="#ccc" />
-            <Text style={styles.emptyText}>No messages yet</Text>
-            <Text style={styles.emptySubtext}>
-              Start a conversation with someone
-            </Text>
-          </View>
-        }
-      />
+      {loading && !refreshing ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#007AFF" />
+        </View>
+      ) : (
+        <FlatList
+          data={filteredChats}
+          renderItem={renderChatItem}
+          keyExtractor={(item) => item.id}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <Ionicons name="chatbubbles-outline" size={64} color="#ccc" />
+              <Text style={styles.emptyText}>No messages yet</Text>
+              <Text style={styles.emptySubtext}>
+                Start a conversation with someone
+              </Text>
+            </View>
+          }
+        />
+      )}
     </SafeAreaView>
   );
 }
@@ -263,5 +296,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#aaa',
     marginTop: 8,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });

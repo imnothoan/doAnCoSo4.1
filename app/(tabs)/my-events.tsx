@@ -1,21 +1,44 @@
-import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, Text, FlatList, TouchableOpacity, Image } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { StyleSheet, View, Text, FlatList, TouchableOpacity, Image, RefreshControl, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { MOCK_EVENTS } from '@/src/services/mockData';
 import { Event } from '@/src/types';
 import { formatDate } from '@/src/utils/date';
 import { formatDistance } from '@/src/utils/distance';
+import { useAuth } from '@/src/context/AuthContext';
+import ApiService from '@/src/services/api';
 
 export default function MyEventsScreen() {
   const router = useRouter();
+  const { user } = useAuth();
   const [events, setEvents] = useState<Event[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const loadEvents = useCallback(async () => {
+    if (!user?.username) return;
+    
+    try {
+      setLoading(true);
+      const data = await ApiService.getMyEvents(user.username, 'participating');
+      setEvents(data);
+    } catch (error) {
+      console.error('Error loading events:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.username]);
 
   useEffect(() => {
-    // Load mock events
-    setEvents(MOCK_EVENTS);
-  }, []);
+    loadEvents();
+  }, [loadEvents]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await loadEvents();
+    setRefreshing(false);
+  }, [loadEvents]);
 
   const renderEventCard = ({ item }: { item: Event }) => (
     <TouchableOpacity 
@@ -81,21 +104,30 @@ export default function MyEventsScreen() {
         <Text style={styles.headerTitle}>My Events</Text>
       </View>
       
-      <FlatList
-        data={events}
-        renderItem={renderEventCard}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.listContent}
-        ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Ionicons name="calendar-outline" size={64} color="#ccc" />
-            <Text style={styles.emptyText}>No events yet</Text>
-            <Text style={styles.emptySubtext}>
-              Join events to see them here
-            </Text>
-          </View>
-        }
-      />
+      {loading && !refreshing ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#007AFF" />
+        </View>
+      ) : (
+        <FlatList
+          data={events}
+          renderItem={renderEventCard}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.listContent}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <Ionicons name="calendar-outline" size={64} color="#ccc" />
+              <Text style={styles.emptyText}>No events yet</Text>
+              <Text style={styles.emptySubtext}>
+                Join events to see them here
+              </Text>
+            </View>
+          }
+        />
+      )}
     </SafeAreaView>
   );
 }
@@ -208,5 +240,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#aaa',
     marginTop: 8,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
