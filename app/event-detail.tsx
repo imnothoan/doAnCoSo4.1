@@ -271,7 +271,7 @@ export default function EventDetailScreen() {
             {/* Comment Input */}
             <View style={styles.commentInputContainer}>
               <Image 
-                source={{ uri: MOCK_USERS[0].avatar }} 
+                source={{ uri: user?.avatar || 'https://via.placeholder.com/40' }} 
                 style={styles.commentAvatar} 
               />
               <View style={styles.commentInputWrapper}>

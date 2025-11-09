@@ -222,7 +222,9 @@ export default function ChatScreen() {
     if (typing) {
       typingTimeoutRef.current = setTimeout(() => {
         setIsTyping(false);
-        WebSocketService.sendTyping(chatId, currentUser.username, false);
+        if (currentUser?.username) {
+          WebSocketService.sendTyping(chatId, currentUser.username, false);
+        }
       }, 3000);
     }
   };
