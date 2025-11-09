@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { formatDate } from '@/src/utils/date';
 import { useAuth } from '@/src/context/AuthContext';
 import ApiService from '@/src/services/api';
+import ImageService from '@/src/services/image';
 import { Event } from '@/src/types';
 
 export default function EventDetailScreen() {
@@ -16,6 +17,7 @@ export default function EventDetailScreen() {
   const [event, setEvent] = useState<Event | null>(null);
   const [loading, setLoading] = useState(true);
   const [comment, setComment] = useState('');
+  const [commentImage, setCommentImage] = useState<any>(null);
   const [isInterested, setIsInterested] = useState(false);
   const [isJoined, setIsJoined] = useState(false);
   const [submittingComment, setSubmittingComment] = useState(false);
@@ -68,8 +70,18 @@ export default function EventDetailScreen() {
 
     try {
       setSubmittingComment(true);
-      await ApiService.addEventComment(event.id, user.username, comment.trim());
+      
+      // If there's an image, convert it to proper format for upload
+      const imageFile = commentImage ? {
+        uri: commentImage.uri,
+        type: commentImage.type,
+        name: commentImage.name,
+      } : undefined;
+      
+      await ApiService.addEventComment(event.id, user.username, comment.trim(), imageFile);
       setComment('');
+      setCommentImage(null);
+      
       // Reload event to get updated comments
       const updatedEvent = await ApiService.getEventById(eventId, user.username);
       setEvent(updatedEvent);
@@ -79,6 +91,21 @@ export default function EventDetailScreen() {
       Alert.alert('Error', 'Failed to add comment');
     } finally {
       setSubmittingComment(false);
+    }
+  };
+
+  const handlePickImage = async () => {
+    const image = await ImageService.pickImageFromGallery({
+      allowsEditing: true,
+      quality: 0.8,
+    });
+
+    if (image) {
+      if (!ImageService.validateImageSize(image, 5)) {
+        Alert.alert('Error', 'Image size must be less than 5MB');
+        return;
+      }
+      setCommentImage(image);
     }
   };
 
@@ -255,19 +282,33 @@ export default function EventDetailScreen() {
                   onChangeText={setComment}
                   multiline
                 />
+                {commentImage && (
+                  <View style={styles.commentImagePreview}>
+                    <Image source={{ uri: commentImage.uri }} style={styles.commentImage} />
+                    <TouchableOpacity 
+                      style={styles.removeImageButton}
+                      onPress={() => setCommentImage(null)}
+                    >
+                      <Ionicons name="close-circle" size={24} color="#FF3B30" />
+                    </TouchableOpacity>
+                  </View>
+                )}
                 <View style={styles.commentActions}>
-                  <TouchableOpacity style={styles.imageButton}>
+                  <TouchableOpacity 
+                    style={styles.imageButton}
+                    onPress={handlePickImage}
+                  >
                     <Ionicons name="image-outline" size={20} color="#666" />
                   </TouchableOpacity>
                   <TouchableOpacity 
-                    style={[styles.postButton, comment.length > 0 && styles.postButtonActive]}
-                    disabled={comment.length === 0 || submittingComment}
+                    style={[styles.postButton, (comment.length > 0 || commentImage) && styles.postButtonActive]}
+                    disabled={(comment.length === 0 && !commentImage) || submittingComment}
                     onPress={handleAddComment}
                   >
                     {submittingComment ? (
                       <ActivityIndicator size="small" color="#007AFF" />
                     ) : (
-                      <Text style={[styles.postButtonText, comment.length > 0 && styles.postButtonTextActive]}>
+                      <Text style={[styles.postButtonText, (comment.length > 0 || commentImage) && styles.postButtonTextActive]}>
                         Post
                       </Text>
                     )}
@@ -523,5 +564,21 @@ const styles = StyleSheet.create({
     color: '#999',
     textAlign: 'center',
     paddingVertical: 20,
+  },
+  commentImagePreview: {
+    position: 'relative',
+    marginBottom: 8,
+  },
+  commentImage: {
+    width: '100%',
+    height: 150,
+    borderRadius: 12,
+  },
+  removeImageButton: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: '#fff',
+    borderRadius: 12,
   },
 });

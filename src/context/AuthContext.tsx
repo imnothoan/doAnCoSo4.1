@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User, AuthState } from '../types';
 import ApiService from '../services/api';
+import WebSocketService from '../services/websocket';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface AuthContextType extends AuthState {
@@ -37,6 +38,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (token && userJson) {
         const user = JSON.parse(userJson);
         ApiService.setAuthToken(token);
+        
+        // Initialize WebSocket connection
+        const apiUrl = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
+        WebSocketService.connect(apiUrl, token);
+        
         setAuthState({
           isAuthenticated: true,
           user,
@@ -59,6 +65,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await AsyncStorage.setItem(USER_KEY, JSON.stringify(user));
       
       ApiService.setAuthToken(token);
+      
+      // Initialize WebSocket connection
+      const apiUrl = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
+      WebSocketService.connect(apiUrl, token);
+      
       setAuthState({
         isAuthenticated: true,
         user,
@@ -87,6 +98,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await AsyncStorage.setItem(USER_KEY, JSON.stringify(user));
       
       ApiService.setAuthToken(token);
+      
+      // Initialize WebSocket connection
+      const apiUrl = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
+      WebSocketService.connect(apiUrl, token);
+      
       setAuthState({
         isAuthenticated: true,
         user,
@@ -104,6 +120,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (error) {
       console.error('Logout error:', error);
     } finally {
+      // Disconnect WebSocket
+      WebSocketService.disconnect();
+      
       // Clear stored auth data
       await AsyncStorage.removeItem(TOKEN_KEY);
       await AsyncStorage.removeItem(USER_KEY);
