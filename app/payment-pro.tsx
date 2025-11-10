@@ -190,7 +190,7 @@ export default function PaymentProScreen() {
                 🧪 Test Mode - No real payment required
               </Text>
               <Text style={[styles.pricingNote, { marginTop: 8 }]}>
-                This is a test feature. Simply click "Subscribe to Pro" to activate Pro features instantly. You can cancel anytime.
+                This is a test feature. Simply click &quot;Subscribe to Pro&quot; to activate Pro features instantly. You can cancel anytime.
               </Text>
             </View>
           </View>
@@ -203,7 +203,7 @@ export default function PaymentProScreen() {
                 <Text style={[styles.sectionTitle, { marginBottom: 0, marginLeft: 8 }]}>How to Test Pro Features</Text>
               </View>
               <Text style={styles.testInstructions}>
-                1. Click "Subscribe to Pro" button below{'\n'}
+                1. Click &quot;Subscribe to Pro&quot; button below{'\n'}
                 2. Confirm the subscription in the dialog{'\n'}
                 3. Your Pro features will activate immediately{'\n'}
                 4. Notice the yellow theme and PRO badge on your profile{'\n'}

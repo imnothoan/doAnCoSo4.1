@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { StyleSheet, View, Text, FlatList, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
@@ -15,11 +15,7 @@ export default function FollowersListScreen() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadUsers();
-  }, [username, type]);
-
-  const loadUsers = async () => {
+  const loadUsers = useCallback(async () => {
     if (!username) return;
     
     try {
@@ -33,7 +29,11 @@ export default function FollowersListScreen() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [username, type]);
+
+  useEffect(() => {
+    loadUsers();
+  }, [loadUsers]);
 
   const renderUserItem = ({ item }: { item: User }) => (
     <TouchableOpacity

@@ -75,7 +75,7 @@ export default function InboxScreen() {
           if (detailedOtherUser?.username && (!detailedOtherUser.name || !detailedOtherUser.avatar)) {
             try {
               completeOtherUser = await ApiService.getUserByUsername(detailedOtherUser.username);
-            } catch (e) {
+            } catch {
               console.warn('Failed to fetch user profile for', detailedOtherUser.username);
             }
           }
