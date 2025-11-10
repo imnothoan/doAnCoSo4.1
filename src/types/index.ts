@@ -96,7 +96,7 @@ export interface Chat {
   id: string;
   type: 'event' | 'user' | 'group';
   name?: string;
-  participants: User[];
+  participants?: User[];
   lastMessage?: Message;
   unreadCount?: number;
   eventId?: string;

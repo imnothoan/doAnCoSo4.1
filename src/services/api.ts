@@ -289,15 +289,82 @@ class ApiService {
   }
 
   // Chat endpoints
-  async getConversations(username: string): Promise<Chat[]> {
+ async getConversations(username: string): Promise<Chat[]> {
     const response = await this.client.get('/messages/conversations', { params: { user: username } });
-    return response.data;
+    const raw = response.data;
+
+    return (raw || []).map((c: any) => {
+      const last = c.last_message
+        ? {
+            id: String(c.last_message.id),
+            chatId: String(c.last_message.conversation_id ?? c.id),
+            senderId: c.last_message.sender_username,
+            sender: {
+              id: c.last_message.sender?.id ?? c.last_message.sender_username,
+              username: c.last_message.sender?.username ?? c.last_message.sender_username,
+              name: c.last_message.sender?.name ?? c.last_message.sender_username,
+              avatar: c.last_message.sender?.avatar ?? '',
+              // Các field khác có thể bổ sung sau nếu cần
+              email: (c.last_message.sender?.username || 'unknown') + '@example.com',
+              country: '',
+              city: '',
+              status: 'Chilling',
+              languages: [],
+              interests: [],
+            },
+            content: c.last_message.content || '',
+            image: c.last_message.message_media?.[0]?.media_url,
+            timestamp: c.last_message.created_at, 
+            read: false,
+          }
+        : undefined;
+
+      return {
+        id: String(c.id),
+        type: c.type === 'dm' ? 'user' : c.type === 'group' ? 'group' : (c.type || 'user'),
+        name: c.title || undefined,
+        participants: [], 
+        lastMessage: last,
+        unreadCount: c.unread_count ?? 0,
+        eventId: undefined,
+      } as Chat;
+    });
   }
 
-  async getChatMessages(conversationId: string): Promise<Message[]> {
-    const response = await this.client.get(`/messages/conversations/${conversationId}/messages`);
-    return response.data;
-  }
+async getConversation(conversationId: string): Promise<Chat> {
+  const response = await this.client.get(`/messages/conversations/${conversationId}`);
+  const c = response.data;
+  return {
+    id: String(c.id),
+    type: c.type === 'dm' ? 'user' : c.type === 'group' ? 'group' : c.type,
+    name: c.title || undefined,
+    participants: (c.participants || []).map((p: any) => ({
+      id: p.id,
+      username: p.username,
+      name: p.name,
+      avatar: p.avatar,
+    })),
+  };
+}
+
+async getChatMessages(conversationId: string): Promise<Message[]> {
+  const response = await this.client.get(`/messages/conversations/${conversationId}/messages`);
+  return response.data.map((m: any) => ({
+    id: String(m.id),
+    chatId: String(m.chatId),
+    senderId: m.senderId,
+    sender: {
+      id: m.sender?.id,
+      username: m.sender?.username,
+      name: m.sender?.name,
+      avatar: m.sender?.avatar,
+    },
+    content: m.content,
+    image: m.image,
+    timestamp: m.timestamp,
+    read: m.read ?? false,
+  }));
+}
 
   async sendMessage(conversationId: string, senderUsername: string, content: string, replyToMessageId?: string): Promise<void> {
     await this.client.post(`/messages/conversations/${conversationId}/messages`, {

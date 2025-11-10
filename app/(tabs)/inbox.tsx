@@ -50,11 +50,15 @@ export default function InboxScreen() {
   });
 
   const renderChatItem = ({ item }: { item: Chat }) => {
-    const otherUser = item.participants[0]; // Simplified - would need to filter out current user
+    const otherUser = item.participants?.find(p => p.username !== user?.username);
     const isUnread = (item.unreadCount ?? 0) > 0;
 
+    const relativeTime = item.lastMessage?.timestamp
+      ? getRelativeTime(item.lastMessage.timestamp)
+      : '';
+
     return (
-      <TouchableOpacity 
+      <TouchableOpacity
         style={styles.chatItem}
         onPress={() => router.push(`/chat?id=${item.id}`)}
       >
@@ -63,8 +67,12 @@ export default function InboxScreen() {
             <View style={styles.eventAvatarPlaceholder}>
               <Ionicons name="calendar" size={24} color="#007AFF" />
             </View>
-          ) : (
+          ) : otherUser?.avatar ? (
             <Image source={{ uri: otherUser.avatar }} style={styles.chatAvatar} />
+          ) : (
+            <View style={styles.eventAvatarPlaceholder}>
+              <Ionicons name="person-circle-outline" size={40} color="#999" />
+            </View>
           )}
           {isUnread && <View style={styles.unreadDot} />}
         </View>
@@ -72,17 +80,15 @@ export default function InboxScreen() {
         <View style={styles.chatContent}>
           <View style={styles.chatHeader}>
             <Text style={[styles.chatName, isUnread && styles.unreadText]}>
-              {item.name || otherUser.name}
+              {item.name || otherUser?.name || 'Conversation'}
             </Text>
-            {item.lastMessage && (
-              <Text style={styles.chatTime}>
-                {getRelativeTime(item.lastMessage.timestamp)}
-              </Text>
+            {!!relativeTime && (
+              <Text style={styles.chatTime}>{relativeTime}</Text>
             )}
           </View>
 
           <View style={styles.messageRow}>
-            {item.lastMessage && (
+            {item.lastMessage && item.lastMessage.content && (
               <Text
                 style={[styles.lastMessage, isUnread && styles.unreadText]}
                 numberOfLines={1}
