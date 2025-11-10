@@ -142,6 +142,7 @@ class ApiService {
     });
   }
 
+  
   async getUsers(filters?: ConnectionFilters): Promise<User[]> {
     const response = await this.client.get('/users', { params: filters });
     return response.data;
@@ -350,13 +351,13 @@ class ApiService {
   }
 
   // Chat endpoints
- async getConversations(username: string): Promise<Chat[]> {
+  async getConversations(username: string): Promise<Chat[]> {
     const response = await this.client.get('/messages/conversations', { params: { user: username } });
     const raw = response.data;
 
     return (raw || []).map((c: any) => {
-      // Map participants with proper User type
-      const participants: User[] = (c.participants || []).map((p: any) => ({
+      // Map participants nếu server có
+      let participants: User[] = (c.participants || []).map((p: any) => ({
         id: String(p.id || p.username),
         username: p.username || '',
         name: p.name || p.username || '',
@@ -373,67 +374,100 @@ class ApiService {
         flag: p.flag,
       } as User));
 
-      const last = c.last_message
+      const lastRaw = c.last_message;
+      const lastMessage = lastRaw
         ? {
-            id: String(c.last_message.id),
-            chatId: String(c.last_message.conversation_id ?? c.id),
-            senderId: c.last_message.sender_username,
+            id: String(lastRaw.id),
+            chatId: String(lastRaw.conversation_id ?? c.id),
+            senderId: lastRaw.sender_username,
             sender: {
-              id: c.last_message.sender?.id ?? c.last_message.sender_username,
-              username: c.last_message.sender?.username ?? c.last_message.sender_username,
-              name: c.last_message.sender?.name ?? c.last_message.sender_username,
-              avatar: c.last_message.sender?.avatar ?? '',
-              email: (c.last_message.sender?.username || 'unknown') + '@example.com',
-              country: c.last_message.sender?.country || '',
-              city: c.last_message.sender?.city || '',
-              status: c.last_message.sender?.status || 'Chilling',
-              languages: c.last_message.sender?.languages || [],
-              interests: c.last_message.sender?.interests || [],
+              id: lastRaw.sender?.id ?? lastRaw.sender_username,
+              username: lastRaw.sender?.username ?? lastRaw.sender_username,
+              name: lastRaw.sender?.name ?? lastRaw.sender_username,
+              avatar: lastRaw.sender?.avatar ?? '',
+              email: (lastRaw.sender?.username || 'unknown') + '@example.com',
+              country: lastRaw.sender?.country || '',
+              city: lastRaw.sender?.city || '',
+              status: lastRaw.sender?.status || 'Chilling',
+              languages: lastRaw.sender?.languages || [],
+              interests: lastRaw.sender?.interests || [],
             } as User,
-            content: c.last_message.content || '',
-            image: c.last_message.message_media?.[0]?.media_url,
-            timestamp: c.last_message.created_at, 
-            read: c.last_message.is_read || false,
+            content: lastRaw.content || '',
+            image: lastRaw.message_media?.[0]?.media_url,
+            timestamp: lastRaw.created_at, 
+            read: lastRaw.is_read || false,
           }
         : undefined;
 
+      // map dm -> user để khớp với type hiện tại ở client
+      const mappedType: 'event' | 'user' | 'group' =
+        c.type === 'group' ? 'group'
+        : c.type === 'event' ? 'event'
+        : 'user';
+
+      // REBUILD participants cho DM nếu thiếu otherUser:
+      if (mappedType === 'user') {
+        const usernames = new Set(participants.map(p => p.username).filter(Boolean));
+        // Thêm currentUser nếu thiếu
+        if (username && !usernames.has(username)) {
+          participants.push({
+            id: username,
+            username,
+            name: username,
+            email: `${username}@example.com`,
+            avatar: '',
+            country: '',
+            city: '',
+            status: 'Chilling',
+            languages: [],
+            interests: [],
+          } as User);
+          usernames.add(username);
+        }
+        // Thêm người còn lại từ lastMessage.sender nếu khác currentUser
+        if (lastMessage?.sender?.username && lastMessage.sender.username !== username && !usernames.has(lastMessage.sender.username)) {
+          participants.push(lastMessage.sender);
+          usernames.add(lastMessage.sender.username);
+        }
+      }
+
       return {
         id: String(c.id),
-        type: c.type === 'dm' ? 'user' : c.type === 'group' ? 'group' : (c.type || 'user'),
+        type: mappedType,
         name: c.title || undefined,
-        participants: participants, 
-        lastMessage: last,
+        participants,
+        lastMessage,
         unreadCount: c.unread_count ?? 0,
         eventId: undefined,
       } as Chat;
     });
   }
 
-async getConversation(conversationId: string): Promise<Chat> {
-  const response = await this.client.get(`/messages/conversations/${conversationId}`);
-  const c = response.data;
-  return {
-    id: String(c.id),
-    type: c.type === 'dm' ? 'user' : c.type === 'group' ? 'group' : c.type,
-    name: c.title || undefined,
-    participants: (c.participants || []).map((p: any) => ({
-      id: String(p.id || p.username),
-      username: p.username || '',
-      name: p.name || p.username || '',
-      email: p.email || `${p.username}@example.com`,
-      avatar: p.avatar || '',
-      country: p.country || '',
-      city: p.city || '',
-      status: p.status || 'Chilling',
-      languages: p.languages || [],
-      interests: p.interests || [],
-      bio: p.bio,
-      gender: p.gender,
-      age: p.age,
-      flag: p.flag,
-    } as User)),
-  };
-}
+  async getConversation(conversationId: string): Promise<Chat> {
+    const response = await this.client.get(`/messages/conversations/${conversationId}`);
+    const c = response.data;
+    return {
+      id: String(c.id),
+      type: c.type === 'group' ? 'group' : (c.type === 'event' ? 'event' : 'user'),
+      name: c.title || undefined,
+      participants: (c.participants || []).map((p: any) => ({
+        id: String(p.id || p.username),
+        username: p.username || '',
+        name: p.name || p.username || '',
+        email: p.email || `${p.username}@example.com`,
+        avatar: p.avatar || '',
+        country: p.country || '',
+        city: p.city || '',
+        status: p.status || 'Chilling',
+        languages: p.languages || [],
+        interests: p.interests || [],
+        bio: p.bio,
+        gender: p.gender,
+        age: p.age,
+        flag: p.flag,
+      } as User)),
+    };
+  }
 
 async getChatMessages(conversationId: string): Promise<Message[]> {
   const response = await this.client.get(`/messages/conversations/${conversationId}/messages`);
@@ -472,11 +506,20 @@ async getChatMessages(conversationId: string): Promise<Message[]> {
     return response.data;
   }
 
-  async markMessagesAsRead(conversationId: string, username: string, upToMessageId: number): Promise<void> {
-    await this.client.post(`/messages/conversations/${conversationId}/read`, {
-      username,
-      up_to_message_id: upToMessageId,
-    });
+  async markMessagesAsRead(
+    conversationId: string,
+    username: string,
+    upToMessageId?: number | string
+  ): Promise<void> {
+    const body: any = { username };
+    if (upToMessageId !== undefined && upToMessageId !== null && `${upToMessageId}` !== '') {
+      body.up_to_message_id = Number(upToMessageId);
+    }
+    await this.client.post(`/messages/conversations/${conversationId}/read`, body);
+  }
+
+  async markAllMessagesAsRead(conversationId: string, username: string): Promise<void> {
+    await this.client.post(`/messages/conversations/${conversationId}/read`, { username });
   }
 
   // Quick messages

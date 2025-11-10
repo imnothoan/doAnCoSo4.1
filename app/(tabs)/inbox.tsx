@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { StyleSheet, View, Text, FlatList, TouchableOpacity, Image, RefreshControl, ActivityIndicator } from 'react-native';
+import { StyleSheet, View, Text, FlatList, TouchableOpacity, Image, RefreshControl, ActivityIndicator, InteractionManager } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -7,6 +7,7 @@ import { Chat } from '@/src/types';
 import { getRelativeTime } from '@/src/utils/date';
 import { useAuth } from '@/src/context/AuthContext';
 import ApiService from '@/src/services/api';
+import { useFocusEffect } from '@react-navigation/native';
 
 export default function InboxScreen() {
   const router = useRouter();
@@ -18,15 +19,12 @@ export default function InboxScreen() {
 
   const loadChats = useCallback(async () => {
     if (!user?.username) return;
-    
     try {
       setLoading(true);
       const data = await ApiService.getConversations(user.username);
       setChats(data);
     } catch (error) {
       console.error('Error loading chats:', error);
-      // Don't show alert on every failed load, just log it
-      // The user can refresh manually if needed
     } finally {
       setLoading(false);
     }
@@ -35,6 +33,46 @@ export default function InboxScreen() {
   useEffect(() => {
     loadChats();
   }, [loadChats]);
+
+  // Reload khi quay lại tab Inbox
+  useFocusEffect(
+    useCallback(() => {
+      loadChats();
+    }, [loadChats])
+  );
+
+  // Enrich: nếu DM thiếu otherUser thì lấy chi tiết conv để có participants đầy đủ
+  useEffect(() => {
+    let cancelled = false;
+    const enrichMissing = async () => {
+      if (!user?.username) return;
+      const targets = chats.filter(c =>
+        (c.type === 'user' || c.type === 'dm') &&
+        (
+          !c.participants ||
+          c.participants.length < 2 ||
+          !c.participants.some(p => p.username !== user.username)
+        )
+      );
+      for (const conv of targets) {
+        try {
+          const detail = await ApiService.getConversation(conv.id);
+          if (cancelled) return;
+          setChats(prev =>
+            prev.map(c =>
+              c.id === conv.id
+                ? { ...c, participants: detail.participants?.length ? detail.participants : c.participants }
+                : c
+            )
+          );
+        } catch {
+          // bỏ qua
+        }
+      }
+    };
+    InteractionManager.runAfterInteractions(enrichMissing);
+    return () => { cancelled = true; };
+  }, [chats, user?.username]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -49,21 +87,44 @@ export default function InboxScreen() {
     return true;
   });
 
+  const handleOpenChat = useCallback(async (chat: Chat) => {
+    try {
+      if (user?.username) {
+        await ApiService.markAllMessagesAsRead(chat.id, user.username);
+      }
+      setChats(prev => prev.map(c => c.id === chat.id ? { ...c, unreadCount: 0 } as Chat : c));
+    } catch (e) {
+      console.warn('mark read failed:', e);
+    } finally {
+      router.push(`/chat?id=${chat.id}`);
+    }
+  }, [router, user?.username]);
+
   const renderChatItem = ({ item }: { item: Chat }) => {
     const isDM = item.type === 'dm' || item.type === 'user';
-    const otherUser = isDM
-      ? item.participants?.find(p => p.username !== user?.username)
+
+    // 1) ưu tiên participants khác mình
+    let otherUser = isDM
+      ? item.participants?.find(p => p.username && p.username !== user?.username)
       : undefined;
 
-    const fallbackUser = item.lastMessage?.sender;
+    // 2) fallback dùng sender nếu KHÁC mình
+    const sender = item.lastMessage?.sender;
+    if (!otherUser && sender?.username && sender.username !== user?.username) {
+      otherUser = sender;
+    }
+
+    // 3) fallback cuối: lấy bất kỳ participant nào khác mình
+    if (!otherUser && item.participants && item.participants.length) {
+      const first = item.participants.find(p => p.username !== user?.username);
+      if (first) otherUser = first;
+    }
 
     const displayName = isDM
-      ? (otherUser?.name || fallbackUser?.name || otherUser?.username || fallbackUser?.username || 'Direct Message')
+      ? (otherUser?.name || otherUser?.username || 'Direct Message')
       : (item.name || 'Group');
 
-    const avatarUrl = isDM
-      ? (otherUser?.avatar || fallbackUser?.avatar)
-      : undefined;
+    const avatarUrl = isDM ? (otherUser?.avatar || '') : '';
 
     const relativeTime = item.lastMessage?.timestamp
       ? getRelativeTime(item.lastMessage.timestamp)
@@ -74,7 +135,7 @@ export default function InboxScreen() {
     return (
       <TouchableOpacity
         style={styles.chatItem}
-        onPress={() => router.push(`/chat?id=${item.id}`)}
+        onPress={() => handleOpenChat(item)}
       >
         <View style={styles.avatarContainer}>
           {isDM ? (
@@ -183,146 +244,30 @@ export default function InboxScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-  },
-  header: {
-    backgroundColor: '#fff',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  tabsContainer: {
-    flexDirection: 'row',
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-  },
-  tab: {
-    flex: 1,
-    paddingVertical: 14,
-    alignItems: 'center',
-    borderBottomWidth: 2,
-    borderBottomColor: 'transparent',
-  },
-  activeTab: {
-    borderBottomColor: '#007AFF',
-  },
-  tabText: {
-    fontSize: 15,
-    color: '#666',
-    fontWeight: '500',
-  },
-  activeTabText: {
-    color: '#007AFF',
-    fontWeight: '600',
-  },
-  chatItem: {
-    backgroundColor: '#fff',
-    flexDirection: 'row',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-  },
-  avatarContainer: {
-    position: 'relative',
-    marginRight: 12,
-  },
-  chatAvatar: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-  },
-  eventAvatarPlaceholder: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#E3F2FD',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  unreadDot: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: '#007AFF',
-    borderWidth: 2,
-    borderColor: '#fff',
-  },
-  chatContent: {
-    flex: 1,
-  },
-  chatHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 6,
-  },
-  chatName: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#333',
-    flex: 1,
-  },
-  unreadText: {
-    fontWeight: '700',
-  },
-  chatTime: {
-    fontSize: 12,
-    color: '#999',
-  },
-  messageRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  lastMessage: {
-    fontSize: 14,
-    color: '#666',
-    flex: 1,
-  },
-  unreadBadge: {
-    backgroundColor: '#007AFF',
-    borderRadius: 10,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    marginLeft: 8,
-    minWidth: 20,
-    alignItems: 'center',
-  },
-  unreadBadgeText: {
-    fontSize: 12,
-    color: '#fff',
-    fontWeight: '600',
-  },
-  emptyContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 80,
-  },
-  emptyText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#999',
-    marginTop: 16,
-  },
-  emptySubtext: {
-    fontSize: 14,
-    color: '#aaa',
-    marginTop: 8,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+  container: { flex: 1, backgroundColor: '#f5f5f5' },
+  header: { backgroundColor: '#fff', padding: 16, borderBottomWidth: 1, borderBottomColor: '#e0e0e0' },
+  headerTitle: { fontSize: 24, fontWeight: 'bold', color: '#333' },
+  tabsContainer: { flexDirection: 'row', backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#e0e0e0' },
+  tab: { flex: 1, paddingVertical: 14, alignItems: 'center', borderBottomWidth: 2, borderBottomColor: 'transparent' },
+  activeTab: { borderBottomColor: '#007AFF' },
+  tabText: { fontSize: 15, color: '#666', fontWeight: '500' },
+  activeTabText: { color: '#007AFF', fontWeight: '600' },
+  chatItem: { backgroundColor: '#fff', flexDirection: 'row', padding: 16, borderBottomWidth: 1, borderBottomColor: '#f0f0f0' },
+  avatarContainer: { position: 'relative', marginRight: 12 },
+  chatAvatar: { width: 56, height: 56, borderRadius: 28 },
+  eventAvatarPlaceholder: { width: 56, height: 56, borderRadius: 28, backgroundColor: '#E3F2FD', justifyContent: 'center', alignItems: 'center' },
+  unreadDot: { position: 'absolute', top: 0, right: 0, width: 12, height: 12, borderRadius: 6, backgroundColor: '#007AFF', borderWidth: 2, borderColor: '#fff' },
+  chatContent: { flex: 1 },
+  chatHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
+  chatName: { fontSize: 16, fontWeight: '500', color: '#333', flex: 1 },
+  unreadText: { fontWeight: '700' },
+  chatTime: { fontSize: 12, color: '#999' },
+  messageRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  lastMessage: { fontSize: 14, color: '#666', flex: 1 },
+  unreadBadge: { backgroundColor: '#007AFF', borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2, marginLeft: 8, minWidth: 20, alignItems: 'center' },
+  unreadBadgeText: { fontSize: 12, color: '#fff', fontWeight: '600' },
+  emptyContainer: { alignItems: 'center', justifyContent: 'center', paddingVertical: 80 },
+  emptyText: { fontSize: 18, fontWeight: '600', color: '#999', marginTop: 16 },
+  emptySubtext: { fontSize: 14, color: '#aaa', marginTop: 8 },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 });
