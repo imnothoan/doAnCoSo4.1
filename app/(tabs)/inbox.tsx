@@ -41,35 +41,77 @@ export default function InboxScreen() {
     }, [loadChats])
   );
 
-  // Enrich: nếu DM thiếu otherUser thì lấy chi tiết conv để có participants đầy đủ
+  // Enrich: nếu DM thiếu otherUser hoặc thiếu avatar/name thì fetch full profile
   useEffect(() => {
     let cancelled = false;
     const enrichMissing = async () => {
       if (!user?.username) return;
-      const targets = chats.filter(c =>
-        (c.type === 'user' || c.type === 'dm') &&
-        (
-          !c.participants ||
-          c.participants.length < 2 ||
-          !c.participants.some(p => p.username !== user.username)
-        )
-      );
+      
+      // Find conversations that need enrichment
+      const targets = chats.filter(c => {
+        if (c.type !== 'user' && c.type !== 'dm') return false;
+        
+        // Check if we have participants
+        if (!c.participants || c.participants.length < 2) return true;
+        
+        // Find the other user in participants
+        const otherUser = c.participants.find(p => p.username && p.username !== user.username);
+        
+        // Need enrichment if no other user found OR other user lacks name/avatar
+        return !otherUser || !otherUser.name || !otherUser.avatar;
+      });
+
       for (const conv of targets) {
         try {
+          // First try to get conversation details
           const detail = await ApiService.getConversation(conv.id);
           if (cancelled) return;
+
+          // Find the other user from detailed participants
+          const detailedOtherUser = detail.participants?.find(p => p.username && p.username !== user.username);
+          
+          // If we still don't have complete data, fetch user profile directly
+          let completeOtherUser = detailedOtherUser;
+          if (detailedOtherUser?.username && (!detailedOtherUser.name || !detailedOtherUser.avatar)) {
+            try {
+              completeOtherUser = await ApiService.getUserByUsername(detailedOtherUser.username);
+            } catch (e) {
+              console.warn('Failed to fetch user profile for', detailedOtherUser.username);
+            }
+          }
+
+          if (cancelled) return;
+
+          // Update the conversation with enriched data
           setChats(prev =>
-            prev.map(c =>
-              c.id === conv.id
-                ? { ...c, participants: detail.participants?.length ? detail.participants : c.participants }
-                : c
-            )
+            prev.map(c => {
+              if (c.id !== conv.id) return c;
+              
+              // Build enriched participants list
+              const enrichedParticipants = [...(detail.participants || [])];
+              
+              // Replace the other user with complete data if we have it
+              if (completeOtherUser) {
+                const idx = enrichedParticipants.findIndex(p => p.username === completeOtherUser?.username);
+                if (idx >= 0) {
+                  enrichedParticipants[idx] = completeOtherUser;
+                } else {
+                  enrichedParticipants.push(completeOtherUser);
+                }
+              }
+
+              return {
+                ...c,
+                participants: enrichedParticipants.length > 0 ? enrichedParticipants : c.participants,
+              };
+            })
           );
-        } catch {
-          // bỏ qua
+        } catch (e) {
+          console.warn('Failed to enrich conversation', conv.id, e);
         }
       }
     };
+    
     InteractionManager.runAfterInteractions(enrichMissing);
     return () => { cancelled = true; };
   }, [chats, user?.username]);
