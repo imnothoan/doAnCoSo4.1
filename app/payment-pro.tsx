@@ -187,10 +187,30 @@ export default function PaymentProScreen() {
               <Text style={[styles.pricingAmount, { color: colors.primary }]}>$9.99</Text>
               <Text style={styles.pricingPeriod}>per month</Text>
               <Text style={styles.pricingNote}>
-                Test Mode - No real charges
+                🧪 Test Mode - No real payment required
+              </Text>
+              <Text style={[styles.pricingNote, { marginTop: 8 }]}>
+                This is a test feature. Simply click "Subscribe to Pro" to activate Pro features instantly. You can cancel anytime.
               </Text>
             </View>
           </View>
+
+          {/* How to Test Info */}
+          {!isPro && (
+            <View style={[styles.section, { backgroundColor: '#E3F2FD' }]}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                <Ionicons name="information-circle" size={24} color={colors.primary} />
+                <Text style={[styles.sectionTitle, { marginBottom: 0, marginLeft: 8 }]}>How to Test Pro Features</Text>
+              </View>
+              <Text style={styles.testInstructions}>
+                1. Click "Subscribe to Pro" button below{'\n'}
+                2. Confirm the subscription in the dialog{'\n'}
+                3. Your Pro features will activate immediately{'\n'}
+                4. Notice the yellow theme and PRO badge on your profile{'\n'}
+                5. You can cancel anytime from this screen
+              </Text>
+            </View>
+          )}
 
           {/* Action Button */}
           {!isPro ? (
@@ -201,7 +221,7 @@ export default function PaymentProScreen() {
             >
               <Ionicons name="star" size={20} color="#fff" />
               <Text style={styles.subscribeButtonText}>
-                {processing ? 'Processing...' : 'Subscribe to Pro'}
+                {processing ? 'Processing...' : 'Subscribe to Pro (Test Mode)'}
               </Text>
             </TouchableOpacity>
           ) : (
@@ -315,6 +335,12 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#999',
     fontStyle: 'italic',
+    textAlign: 'center',
+  },
+  testInstructions: {
+    fontSize: 14,
+    color: '#333',
+    lineHeight: 22,
   },
   subscribeButton: {
     flexDirection: 'row',
