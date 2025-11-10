@@ -11,7 +11,9 @@ export default function ProfileScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const { user: currentUser } = useAuth();
+  // Support both 'id' and 'username' parameters
   const userId = params.id as string;
+  const username = params.username as string;
   
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -21,7 +23,10 @@ export default function ProfileScreen() {
     const loadUser = async () => {
       try {
         setLoading(true);
-        const data = await ApiService.getUserById(userId);
+        // Use username if provided, otherwise use id
+        const data = username 
+          ? await ApiService.getUserByUsername(username)
+          : await ApiService.getUserById(userId);
         setUser(data);
         
         // Check if current user is following this user
@@ -38,7 +43,7 @@ export default function ProfileScreen() {
     };
 
     loadUser();
-  }, [userId, currentUser?.username]);
+  }, [userId, username, currentUser?.username]);
 
     const handleMessage = async () => {
       if (!user?.username || !currentUser?.username) return;

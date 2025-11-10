@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { StyleSheet, View, Text, ScrollView, TouchableOpacity, Image, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -6,30 +6,54 @@ import { useAuth } from '@/src/context/AuthContext';
 import { useTheme } from '@/src/context/ThemeContext';
 import { useRouter } from 'expo-router';
 import ApiService from '@/src/services/api';
+import { useFocusEffect } from '@react-navigation/native';
 
 export default function AccountScreen() {
   const router = useRouter();
-  const { user, logout } = useAuth();
+  const { user: authUser, logout, updateUser } = useAuth();
   const { colors } = useTheme();
   const [profileCompletion, setProfileCompletion] = useState(0);
   const [loading, setLoading] = useState(true);
   const [loggingOut, setLoggingOut] = useState(false);
 
-  useEffect(() => {
-    const loadProfileCompletion = async () => {
-      if (!user?.username) return;
-      try {
-        const data = await ApiService.getProfileCompletion(user.username);
-        setProfileCompletion(data.completion_percentage || 0);
-      } catch (error) {
-        console.error('Error loading profile completion:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const loadProfileData = useCallback(async () => {
+    if (!authUser?.username) return;
+    try {
+      // Load profile completion
+      const completionData = await ApiService.getProfileCompletion(authUser.username);
+      setProfileCompletion(completionData.completion_percentage || 0);
 
-    loadProfileCompletion();
-  }, [user?.username]);
+      // Load updated user data with follower/following counts
+      try {
+        const userData = await ApiService.getUserByUsername(authUser.username);
+        // Update the auth context with the latest user data
+        await updateUser({
+          followersCount: userData.followersCount,
+          followingCount: userData.followingCount,
+        });
+      } catch (userError) {
+        console.error('Error loading user data:', userError);
+      }
+    } catch (error) {
+      console.error('Error loading profile completion:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [authUser?.username, updateUser]);
+
+  useEffect(() => {
+    loadProfileData();
+  }, [loadProfileData]);
+
+  // Reload data when returning to this tab
+  useFocusEffect(
+    useCallback(() => {
+      loadProfileData();
+    }, [loadProfileData])
+  );
+
+  // Use the user from auth context which will be updated
+  const user = authUser;
 
   if (!user) {
     return (
