@@ -4,11 +4,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/src/context/AuthContext';
+import { useTheme } from '@/src/context/ThemeContext';
 import ApiService from '@/src/services/api';
 
 export default function PaymentProScreen() {
   const router = useRouter();
   const { user, updateUser } = useAuth();
+  const { colors } = useTheme();
   const [processing, setProcessing] = useState(false);
 
   const isPro = user?.isPro || false;
@@ -126,8 +128,8 @@ export default function PaymentProScreen() {
             <Text style={styles.sectionTitle}>Pro Features</Text>
             
             <View style={styles.featureItem}>
-              <View style={styles.featureIcon}>
-                <Ionicons name="people" size={24} color="#007AFF" />
+              <View style={[styles.featureIcon, { backgroundColor: colors.primary + '20' }]}>
+                <Ionicons name="people" size={24} color={colors.primary} />
               </View>
               <View style={styles.featureContent}>
                 <Text style={styles.featureTitle}>Extended Friend Limit</Text>
@@ -139,8 +141,8 @@ export default function PaymentProScreen() {
             </View>
 
             <View style={styles.featureItem}>
-              <View style={styles.featureIcon}>
-                <Ionicons name="sparkles" size={24} color="#007AFF" />
+              <View style={[styles.featureIcon, { backgroundColor: colors.primary + '20' }]}>
+                <Ionicons name="sparkles" size={24} color={colors.primary} />
               </View>
               <View style={styles.featureContent}>
                 <Text style={styles.featureTitle}>AI Post Writer</Text>
@@ -152,8 +154,8 @@ export default function PaymentProScreen() {
             </View>
 
             <View style={styles.featureItem}>
-              <View style={styles.featureIcon}>
-                <Ionicons name="color-palette" size={24} color="#007AFF" />
+              <View style={[styles.featureIcon, { backgroundColor: colors.primary + '20' }]}>
+                <Ionicons name="color-palette" size={24} color={colors.primary} />
               </View>
               <View style={styles.featureContent}>
                 <Text style={styles.featureTitle}>Exclusive Theme</Text>
@@ -165,8 +167,8 @@ export default function PaymentProScreen() {
             </View>
 
             <View style={styles.featureItem}>
-              <View style={styles.featureIcon}>
-                <Ionicons name="flash" size={24} color="#007AFF" />
+              <View style={[styles.featureIcon, { backgroundColor: colors.primary + '20' }]}>
+                <Ionicons name="flash" size={24} color={colors.primary} />
               </View>
               <View style={styles.featureContent}>
                 <Text style={styles.featureTitle}>Priority Support</Text>
@@ -182,7 +184,7 @@ export default function PaymentProScreen() {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Pricing</Text>
             <View style={styles.pricingCard}>
-              <Text style={styles.pricingAmount}>$9.99</Text>
+              <Text style={[styles.pricingAmount, { color: colors.primary }]}>$9.99</Text>
               <Text style={styles.pricingPeriod}>per month</Text>
               <Text style={styles.pricingNote}>
                 Test Mode - No real charges
@@ -193,7 +195,7 @@ export default function PaymentProScreen() {
           {/* Action Button */}
           {!isPro ? (
             <TouchableOpacity 
-              style={[styles.subscribeButton, processing && styles.subscribeButtonDisabled]}
+              style={[styles.subscribeButton, { backgroundColor: colors.primary }, processing && styles.subscribeButtonDisabled]}
               onPress={handleSubscribe}
               disabled={processing}
             >
@@ -276,7 +278,6 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#E3F2FD',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -304,7 +305,6 @@ const styles = StyleSheet.create({
   pricingAmount: {
     fontSize: 48,
     fontWeight: 'bold',
-    color: '#007AFF',
   },
   pricingPeriod: {
     fontSize: 16,
@@ -320,7 +320,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#007AFF',
     marginHorizontal: 16,
     marginTop: 16,
     padding: 16,

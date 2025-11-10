@@ -3,12 +3,14 @@ import { StyleSheet, View, Text, ScrollView, TouchableOpacity, Image, ActivityIn
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/src/context/AuthContext';
+import { useTheme } from '@/src/context/ThemeContext';
 import { useRouter } from 'expo-router';
 import ApiService from '@/src/services/api';
 
 export default function AccountScreen() {
   const router = useRouter();
   const { user, logout } = useAuth();
+  const { colors } = useTheme();
   const [profileCompletion, setProfileCompletion] = useState(0);
   const [loading, setLoading] = useState(true);
   const [loggingOut, setLoggingOut] = useState(false);
@@ -52,8 +54,43 @@ export default function AccountScreen() {
     </TouchableOpacity>
   );
 
+  const dynamicStyles = {
+    container: {
+      ...styles.container,
+      backgroundColor: colors.background,
+    },
+    statusBadge: {
+      ...styles.statusBadge,
+      backgroundColor: colors.primary + '20',
+    },
+    statusText: {
+      ...styles.statusText,
+      color: colors.primary,
+    },
+    editProfileButton: {
+      ...styles.editProfileButton,
+      borderColor: colors.primary,
+    },
+    editProfileText: {
+      ...styles.editProfileText,
+      color: colors.primary,
+    },
+    progressBar: {
+      ...styles.progressBar,
+      backgroundColor: colors.primary,
+    },
+    interestTag: {
+      ...styles.interestTag,
+      backgroundColor: colors.primary + '20',
+    },
+    interestText: {
+      ...styles.interestText,
+      color: colors.primary,
+    },
+  };
+
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={dynamicStyles.container}>
       <ScrollView>
         {/* Profile Header */}
         <View style={styles.profileHeader}>
@@ -80,16 +117,16 @@ export default function AccountScreen() {
             </Text>
           </View>
           
-          <View style={styles.statusBadge}>
-            <Text style={styles.statusText}>{user.status}</Text>
+          <View style={dynamicStyles.statusBadge}>
+            <Text style={dynamicStyles.statusText}>{user.status}</Text>
           </View>
 
           <TouchableOpacity 
-            style={styles.editProfileButton}
+            style={dynamicStyles.editProfileButton}
             onPress={() => router.push('/edit-profile')}
           >
-            <Ionicons name="create-outline" size={20} color="#007AFF" />
-            <Text style={styles.editProfileText}>Edit Profile</Text>
+            <Ionicons name="create-outline" size={20} color={colors.primary} />
+            <Text style={dynamicStyles.editProfileText}>Edit Profile</Text>
           </TouchableOpacity>
         </View>
 
@@ -99,11 +136,11 @@ export default function AccountScreen() {
             <View style={styles.progressHeader}>
               <Text style={styles.progressTitle}>Your Profile: {profileCompletion}% completed</Text>
               <TouchableOpacity>
-                <Ionicons name="chevron-forward" size={20} color="#007AFF" />
+                <Ionicons name="chevron-forward" size={20} color={colors.primary} />
               </TouchableOpacity>
             </View>
             <View style={styles.progressBarContainer}>
-              <View style={[styles.progressBar, { width: `${profileCompletion}%` }]} />
+              <View style={[dynamicStyles.progressBar, { width: `${profileCompletion}%` }]} />
             </View>
             <Text style={styles.progressHint}>Complete your profile to get more connections</Text>
           </View>
@@ -161,8 +198,8 @@ export default function AccountScreen() {
             <Text style={styles.sectionTitle}>Interests</Text>
             <View style={styles.interestsContainer}>
               {user.interests.map((interest, index) => (
-                <View key={index} style={styles.interestTag}>
-                  <Text style={styles.interestText}>{interest}</Text>
+                <View key={index} style={dynamicStyles.interestTag}>
+                  <Text style={dynamicStyles.interestText}>{interest}</Text>
                 </View>
               ))}
             </View>
