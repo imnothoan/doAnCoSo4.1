@@ -40,22 +40,20 @@ export default function ProfileScreen() {
     loadUser();
   }, [userId, currentUser?.username]);
 
-  const handleMessage = async () => {
-    if (!user || !currentUser?.username) return;
-    
-    try {
-      // Create or get existing conversation
-      const conversation = await ApiService.createConversation(
-        'dm',
-        currentUser.username,
-        [currentUser.username, user.username || '']
-      );
-      router.push(`/chat?id=${conversation.id}`);
-    } catch (error) {
-      console.error('Error creating conversation:', error);
-      Alert.alert('Error', 'Failed to start chat');
-    }
-  };
+    const handleMessage = async () => {
+      if (!user?.username || !currentUser?.username) return;
+
+      try {
+        const conv = await ApiService.createOrGetDirectConversation(
+          currentUser.username,
+          user.username
+        );
+        router.push(`/chat?id=${conv.id}`);
+      } catch (error) {
+        console.error('Error creating/getting DM conversation:', error);
+        Alert.alert('Error', 'Failed to open chat');
+      }
+    };
 
   const handleFollow = async () => {
     if (!user?.username || !currentUser?.username) return;

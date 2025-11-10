@@ -50,12 +50,26 @@ export default function InboxScreen() {
   });
 
   const renderChatItem = ({ item }: { item: Chat }) => {
-    const otherUser = item.participants?.find(p => p.username !== user?.username);
-    const isUnread = (item.unreadCount ?? 0) > 0;
+    const isDM = item.type === 'dm' || item.type === 'user';
+    const otherUser = isDM
+      ? item.participants?.find(p => p.username !== user?.username)
+      : undefined;
+
+    const fallbackUser = item.lastMessage?.sender;
+
+    const displayName = isDM
+      ? (otherUser?.name || fallbackUser?.name || otherUser?.username || fallbackUser?.username || 'Direct Message')
+      : (item.name || 'Group');
+
+    const avatarUrl = isDM
+      ? (otherUser?.avatar || fallbackUser?.avatar)
+      : undefined;
 
     const relativeTime = item.lastMessage?.timestamp
       ? getRelativeTime(item.lastMessage.timestamp)
       : '';
+
+    const isUnread = (item.unreadCount ?? 0) > 0;
 
     return (
       <TouchableOpacity
@@ -63,15 +77,17 @@ export default function InboxScreen() {
         onPress={() => router.push(`/chat?id=${item.id}`)}
       >
         <View style={styles.avatarContainer}>
-          {item.type === 'event' ? (
-            <View style={styles.eventAvatarPlaceholder}>
-              <Ionicons name="calendar" size={24} color="#007AFF" />
-            </View>
-          ) : otherUser?.avatar ? (
-            <Image source={{ uri: otherUser.avatar }} style={styles.chatAvatar} />
+          {isDM ? (
+            avatarUrl ? (
+              <Image source={{ uri: avatarUrl }} style={styles.chatAvatar} />
+            ) : (
+              <View style={styles.eventAvatarPlaceholder}>
+                <Ionicons name="person-circle-outline" size={32} color="#999" />
+              </View>
+            )
           ) : (
             <View style={styles.eventAvatarPlaceholder}>
-              <Ionicons name="person-circle-outline" size={40} color="#999" />
+              <Ionicons name="people-outline" size={24} color="#007AFF" />
             </View>
           )}
           {isUnread && <View style={styles.unreadDot} />}
@@ -80,15 +96,14 @@ export default function InboxScreen() {
         <View style={styles.chatContent}>
           <View style={styles.chatHeader}>
             <Text style={[styles.chatName, isUnread && styles.unreadText]}>
-              {item.name || otherUser?.name || 'Conversation'}
+              {displayName}
             </Text>
             {!!relativeTime && (
               <Text style={styles.chatTime}>{relativeTime}</Text>
             )}
           </View>
-
           <View style={styles.messageRow}>
-            {item.lastMessage && item.lastMessage.content && (
+            {item.lastMessage?.content && (
               <Text
                 style={[styles.lastMessage, isUnread && styles.unreadText]}
                 numberOfLines={1}

@@ -174,7 +174,17 @@ class ApiService {
       return false;
     }
   }
-
+   // Create or get existing direct conversation with otherUsername
+  async createOrGetDirectConversation(currentUsername: string, otherUsername: string): Promise<{ id: string | number }> {
+    const response = await this.client.post('/messages/conversations', {
+      type: 'dm',
+      created_by: currentUsername,
+      members: [otherUsername],
+    });
+    // Server có thể trả { reused: true, id, ... } hoặc { id, ... }
+    const data = response.data;
+    return { id: data.id };
+  }
   async updateHangoutStatus(
     username: string,
     isAvailable: boolean,
