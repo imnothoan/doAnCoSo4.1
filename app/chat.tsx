@@ -202,7 +202,31 @@ export default function ChatScreen() {
     const onNewMsg = (incoming: any) => {
       const msg = normalizeMessage(incoming);
       if (String(msg.chatId) === String(chatId)) {
-        setMessages((prev) => [...prev, msg]);
+        // Only add message if it's not from the current user (to avoid duplicates with optimistic updates)
+        // Or if it has an ID from the server (not a temp ID)
+        setMessages((prev) => {
+          // Check if this message already exists (by ID or by matching content and timestamp)
+          const exists = prev.some(
+            (m) => m.id === msg.id || 
+            (m.content === msg.content && 
+             m.senderId === msg.senderId && 
+             Math.abs(new Date(m.timestamp).getTime() - new Date(msg.timestamp).getTime()) < 5000)
+          );
+          
+          if (exists) {
+            // Update the temp message with the real one from server
+            return prev.map((m) => 
+              m.id.startsWith('temp-') && 
+              m.content === msg.content && 
+              m.senderId === msg.senderId 
+                ? msg 
+                : m
+            );
+          }
+          
+          return [...prev, msg];
+        });
+        
         // Cố gắng enrich sender vừa đến
         if (msg.senderId && !userMap[msg.senderId]) {
           enrichSenders([msg]);
@@ -226,11 +250,11 @@ export default function ChatScreen() {
       try {
         WebSocketService.leaveConversation(chatId);
       } catch {}
-      WebSocketService.off('new_message');
-      WebSocketService.off('typing');
+      WebSocketService.off('new_message', onNewMsg);
+      WebSocketService.off('typing', onTyping);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [chatId, currentUser?.username, userMap]);
+  }, [chatId, currentUser?.username]);
 
   // Load messages khi vào màn hình
   useEffect(() => {

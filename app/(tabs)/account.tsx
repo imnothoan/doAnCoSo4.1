@@ -64,7 +64,15 @@ export default function AccountScreen() {
               <Ionicons name="person" size={60} color="#999" />
             </View>
           )}
-          <Text style={styles.profileName}>{user.name}</Text>
+          <View style={styles.nameContainer}>
+            <Text style={styles.profileName}>{user.name}</Text>
+            {user.isPro && (
+              <View style={styles.proBadge}>
+                <Ionicons name="star" size={16} color="#FFD700" />
+                <Text style={styles.proText}>PRO</Text>
+              </View>
+            )}
+          </View>
           <View style={styles.locationRow}>
             <Text style={styles.flag}>{user.flag || '🌍'}</Text>
             <Text style={styles.location}>
@@ -126,14 +134,20 @@ export default function AccountScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Summary</Text>
           <View style={styles.summaryGrid}>
-            <View style={styles.summaryItem}>
+            <TouchableOpacity 
+              style={styles.summaryItem}
+              onPress={() => router.push(`/followers-list?username=${user.username}&type=followers`)}
+            >
               <Text style={styles.summaryValue}>{user.followersCount || 0}</Text>
               <Text style={styles.summaryLabel}>Followers</Text>
-            </View>
-            <View style={styles.summaryItem}>
-              <Text style={styles.summaryValue}>{user.gender || 'N/A'}</Text>
-              <Text style={styles.summaryLabel}>Gender</Text>
-            </View>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.summaryItem}
+              onPress={() => router.push(`/followers-list?username=${user.username}&type=following`)}
+            >
+              <Text style={styles.summaryValue}>{user.followingCount || 0}</Text>
+              <Text style={styles.summaryLabel}>Following</Text>
+            </TouchableOpacity>
             <View style={styles.summaryItem}>
               <Text style={styles.summaryValue}>{user.age || 'N/A'}</Text>
               <Text style={styles.summaryLabel}>Age</Text>
@@ -160,7 +174,7 @@ export default function AccountScreen() {
           <Text style={styles.sectionTitle}>Settings</Text>
           {renderInfoRow('notifications-outline', 'Notifications', '', () => router.push('/settings'))}
           {renderInfoRow('settings-outline', 'Manage Account', '', () => router.push('/settings'))}
-          {renderInfoRow('card-outline', 'Payment & Pro Features', '', () => Alert.alert('Coming Soon', 'Payment features will be available soon.'))}
+          {renderInfoRow('card-outline', 'Payment & Pro Features', '', () => router.push('/payment-pro'))}
           {renderInfoRow('information-circle-outline', 'About', '', () => Alert.alert('ConnectSphere', 'Version 1.0.0\n\nA social networking app to connect with people around the world.'))}
         </View>
 
@@ -226,6 +240,26 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#333',
     marginBottom: 6,
+  },
+  nameContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 6,
+  },
+  proBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#333',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    gap: 4,
+  },
+  proText: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#FFD700',
   },
   locationRow: {
     flexDirection: 'row',
