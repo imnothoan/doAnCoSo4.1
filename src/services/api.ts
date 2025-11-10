@@ -174,6 +174,57 @@ class ApiService {
       return false;
     }
   }
+
+  async getFollowers(username: string): Promise<User[]> {
+    try {
+      const response = await this.client.get(`/users/${username}/followers`);
+      return (response.data || []).map((u: any) => ({
+        id: String(u.id || u.username),
+        username: u.username || '',
+        name: u.name || u.username || '',
+        email: u.email || `${u.username}@example.com`,
+        avatar: u.avatar || '',
+        country: u.country || '',
+        city: u.city || '',
+        status: u.status || 'Chilling',
+        languages: u.languages || [],
+        interests: u.interests || [],
+        bio: u.bio,
+        gender: u.gender,
+        age: u.age,
+        flag: u.flag,
+      } as User));
+    } catch (error) {
+      console.error('Error getting followers:', error);
+      return [];
+    }
+  }
+
+  async getFollowing(username: string): Promise<User[]> {
+    try {
+      const response = await this.client.get(`/users/${username}/following`);
+      return (response.data || []).map((u: any) => ({
+        id: String(u.id || u.username),
+        username: u.username || '',
+        name: u.name || u.username || '',
+        email: u.email || `${u.username}@example.com`,
+        avatar: u.avatar || '',
+        country: u.country || '',
+        city: u.city || '',
+        status: u.status || 'Chilling',
+        languages: u.languages || [],
+        interests: u.interests || [],
+        bio: u.bio,
+        gender: u.gender,
+        age: u.age,
+        flag: u.flag,
+      } as User));
+    } catch (error) {
+      console.error('Error getting following:', error);
+      return [];
+    }
+  }
+
    // Create or get existing direct conversation with otherUsername
   async createOrGetDirectConversation(currentUsername: string, otherUsername: string): Promise<{ id: string | number }> {
     const response = await this.client.post('/messages/conversations', {
@@ -304,6 +355,24 @@ class ApiService {
     const raw = response.data;
 
     return (raw || []).map((c: any) => {
+      // Map participants with proper User type
+      const participants: User[] = (c.participants || []).map((p: any) => ({
+        id: String(p.id || p.username),
+        username: p.username || '',
+        name: p.name || p.username || '',
+        email: p.email || `${p.username}@example.com`,
+        avatar: p.avatar || '',
+        country: p.country || '',
+        city: p.city || '',
+        status: p.status || 'Chilling',
+        languages: p.languages || [],
+        interests: p.interests || [],
+        bio: p.bio,
+        gender: p.gender,
+        age: p.age,
+        flag: p.flag,
+      } as User));
+
       const last = c.last_message
         ? {
             id: String(c.last_message.id),
@@ -314,18 +383,17 @@ class ApiService {
               username: c.last_message.sender?.username ?? c.last_message.sender_username,
               name: c.last_message.sender?.name ?? c.last_message.sender_username,
               avatar: c.last_message.sender?.avatar ?? '',
-              // Các field khác có thể bổ sung sau nếu cần
               email: (c.last_message.sender?.username || 'unknown') + '@example.com',
-              country: '',
-              city: '',
-              status: 'Chilling',
-              languages: [],
-              interests: [],
-            },
+              country: c.last_message.sender?.country || '',
+              city: c.last_message.sender?.city || '',
+              status: c.last_message.sender?.status || 'Chilling',
+              languages: c.last_message.sender?.languages || [],
+              interests: c.last_message.sender?.interests || [],
+            } as User,
             content: c.last_message.content || '',
             image: c.last_message.message_media?.[0]?.media_url,
             timestamp: c.last_message.created_at, 
-            read: false,
+            read: c.last_message.is_read || false,
           }
         : undefined;
 
@@ -333,7 +401,7 @@ class ApiService {
         id: String(c.id),
         type: c.type === 'dm' ? 'user' : c.type === 'group' ? 'group' : (c.type || 'user'),
         name: c.title || undefined,
-        participants: [], 
+        participants: participants, 
         lastMessage: last,
         unreadCount: c.unread_count ?? 0,
         eventId: undefined,
@@ -349,11 +417,21 @@ async getConversation(conversationId: string): Promise<Chat> {
     type: c.type === 'dm' ? 'user' : c.type === 'group' ? 'group' : c.type,
     name: c.title || undefined,
     participants: (c.participants || []).map((p: any) => ({
-      id: p.id,
-      username: p.username,
-      name: p.name,
-      avatar: p.avatar,
-    })),
+      id: String(p.id || p.username),
+      username: p.username || '',
+      name: p.name || p.username || '',
+      email: p.email || `${p.username}@example.com`,
+      avatar: p.avatar || '',
+      country: p.country || '',
+      city: p.city || '',
+      status: p.status || 'Chilling',
+      languages: p.languages || [],
+      interests: p.interests || [],
+      bio: p.bio,
+      gender: p.gender,
+      age: p.age,
+      flag: p.flag,
+    } as User)),
   };
 }
 
@@ -429,6 +507,25 @@ async getChatMessages(conversationId: string): Promise<Message[]> {
       return response.data;
     } catch {
       return null;
+    }
+  }
+
+  // Pro subscription endpoints
+  async activateProSubscription(username: string): Promise<void> {
+    await this.client.post('/subscriptions/activate', { username });
+  }
+
+  async deactivateProSubscription(username: string): Promise<void> {
+    await this.client.post('/subscriptions/deactivate', { username });
+  }
+
+  async getProStatus(username: string): Promise<{ isPro: boolean; expiresAt?: string }> {
+    try {
+      const response = await this.client.get(`/subscriptions/status/${username}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error getting pro status:', error);
+      return { isPro: false };
     }
   }
 
