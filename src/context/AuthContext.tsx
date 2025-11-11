@@ -43,6 +43,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const apiUrl = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
         WebSocketService.connect(apiUrl, token);
         
+        // Check Pro status from server
+        try {
+          if (user.username) {
+            const proStatus = await ApiService.getProStatus(user.username);
+            user.isPro = proStatus.isPro;
+            // Update stored user with Pro status
+            await AsyncStorage.setItem(USER_KEY, JSON.stringify(user));
+          }
+        } catch (proError) {
+          console.error('Error loading pro status:', proError);
+          // Continue with stored isPro value
+        }
+        
         setAuthState({
           isAuthenticated: true,
           user,
@@ -59,6 +72,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (email: string, password: string) => {
     try {
       const { user, token } = await ApiService.login({ email, password });
+      
+      // Check Pro status from server
+      try {
+        if (user.username) {
+          const proStatus = await ApiService.getProStatus(user.username);
+          user.isPro = proStatus.isPro;
+        }
+      } catch (proError) {
+        console.error('Error loading pro status:', proError);
+        // Continue without Pro status
+      }
       
       // Store auth data
       await AsyncStorage.setItem(TOKEN_KEY, token);
@@ -92,6 +116,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         city,
         gender,
       });
+      
+      // Check Pro status from server (new users typically won't be Pro, but check anyway)
+      try {
+        if (user.username) {
+          const proStatus = await ApiService.getProStatus(user.username);
+          user.isPro = proStatus.isPro;
+        }
+      } catch (proError) {
+        console.error('Error loading pro status:', proError);
+        // Continue without Pro status
+      }
       
       // Store auth data
       await AsyncStorage.setItem(TOKEN_KEY, token);
