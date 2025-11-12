@@ -141,12 +141,18 @@ class ApiService {
   // Auth endpoints
   async login(credentials: LoginCredentials): Promise<{ user: User; token: string }> {
     const response = await this.client.post('/auth/login', credentials);
-    return response.data;
+    return {
+      ...response.data,
+      user: mapServerUserToClient(response.data.user),
+    };
   }
 
   async signup(data: SignupData): Promise<{ user: User; token: string }> {
     const response = await this.client.post('/auth/signup', data);
-    return response.data;
+    return {
+      ...response.data,
+      user: mapServerUserToClient(response.data.user),
+    };
   }
 
   async logout(): Promise<void> {
