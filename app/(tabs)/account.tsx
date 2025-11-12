@@ -34,11 +34,13 @@ export default function AccountScreen() {
     } finally {
       setLoading(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authUser?.username]); // Removed refreshUser from dependencies to prevent infinite loop
 
   // Load data only on initial mount
   useEffect(() => {
     loadProfileData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Empty dependency array to run only once on mount
 
   // Reload data when returning to this tab
@@ -47,6 +49,7 @@ export default function AccountScreen() {
       // Only reload if the tab is focused (screen is active)
       loadProfileData();
       return () => {}; // Cleanup function
+      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [authUser?.username]) // Only depend on username, not the whole function
   );
 

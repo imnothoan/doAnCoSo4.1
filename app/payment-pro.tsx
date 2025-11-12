@@ -32,10 +32,12 @@ export default function PaymentProScreen() {
             try {
               setProcessing(true);
               // Call API to activate Pro subscription
-              await ApiService.activateProSubscription(user.username);
-              
-              // Update local user state
-              await updateUser({ isPro: true });
+              if (user?.username) {
+                await ApiService.activateProSubscription(user.username);
+                
+                // Update local user state
+                await updateUser({ isPro: true });
+              }
               
               Alert.alert(
                 'Success!',
@@ -77,10 +79,12 @@ export default function PaymentProScreen() {
             try {
               setProcessing(true);
               // Call API to deactivate Pro subscription
-              await ApiService.deactivateProSubscription(user.username);
-              
-              // Update local user state
-              await updateUser({ isPro: false });
+              if (user?.username) {
+                await ApiService.deactivateProSubscription(user.username);
+                
+                // Update local user state
+                await updateUser({ isPro: false });
+              }
               
               Alert.alert('Subscription Cancelled', 'Your Pro subscription has been cancelled.');
             } catch (error) {

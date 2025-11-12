@@ -2,7 +2,6 @@ import axios, { AxiosInstance } from 'axios';
 import {
   User,
   Event,
-  Hangout,
   Chat,
   Message,
   Community,
@@ -379,7 +378,7 @@ class ApiService {
 
   // Chat endpoints
   async getConversations(username: string): Promise<Chat[]> {
-    const raw = await this.deduplicatedGet('/messages/conversations', { user: username });
+    const raw: any = await this.deduplicatedGet('/messages/conversations', { user: username });
 
     return (raw || []).map((c: any) => {
       // Map participants nếu server có
@@ -470,7 +469,7 @@ class ApiService {
   }
 
   async getConversation(conversationId: string): Promise<Chat> {
-    const c = await this.deduplicatedGet(`/messages/conversations/${conversationId}`);
+    const c: any = await this.deduplicatedGet(`/messages/conversations/${conversationId}`);
     return {
       id: String(c.id),
       type: c.type === 'group' ? 'group' : (c.type === 'event' ? 'event' : 'user'),
@@ -589,7 +588,7 @@ async getChatMessages(conversationId: string): Promise<Message[]> {
 
   async getProStatus(username: string): Promise<{ isPro: boolean; expiresAt?: string }> {
     try {
-      const subscription = await this.deduplicatedGet('/payments/subscription', { username });
+      const subscription: any = await this.deduplicatedGet('/payments/subscription', { username });
       return { 
         isPro: subscription?.plan_type === 'pro' && subscription?.status === 'active',
         expiresAt: subscription?.end_date 
