@@ -30,6 +30,7 @@ function mapServerUserToClient(serverUser: any): User {
   return {
     ...serverUser,
     // Map server field names to client field names
+    backgroundImage: serverUser.background_image ?? serverUser.backgroundImage,
     followersCount: serverUser.followers ?? serverUser.followersCount ?? 0,
     followingCount: serverUser.following ?? serverUser.followingCount ?? 0,
     postsCount: serverUser.posts ?? serverUser.postsCount ?? 0,
@@ -180,6 +181,15 @@ class ApiService {
     const formData = new FormData();
     formData.append('avatar', image);
     const response = await this.client.post(`/users/${userId}/avatar`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
+  }
+
+  async uploadBackgroundImage(userId: string, image: any): Promise<{ backgroundImageUrl: string }> {
+    const formData = new FormData();
+    formData.append('background_image', image);
+    const response = await this.client.post(`/users/${userId}/background-image`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
     return response.data;

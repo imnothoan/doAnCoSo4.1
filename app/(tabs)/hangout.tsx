@@ -20,6 +20,7 @@ import { useTheme } from '@/src/context/ThemeContext';
 import ApiService from '@/src/services/api';
 import ImageService from '@/src/services/image';
 import { User } from '@/src/types';
+import { useFocusEffect } from '@react-navigation/native';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const SWIPE_THRESHOLD = 120;
@@ -42,12 +43,12 @@ export default function HangoutScreen() {
         position.setValue({ x: gesture.dx, y: gesture.dy });
       },
       onPanResponderRelease: (_, gesture) => {
-        if (gesture.dx > SWIPE_THRESHOLD) {
-          // Swipe right - next user
-          forceSwipe('right');
-        } else if (gesture.dx < -SWIPE_THRESHOLD) {
+        if (gesture.dx < -SWIPE_THRESHOLD) {
           // Swipe left - view profile
           forceSwipe('left');
+        } else if (gesture.dx > SWIPE_THRESHOLD) {
+          // Swipe right - next user
+          forceSwipe('right');
         } else {
           resetPosition();
         }
@@ -88,6 +89,13 @@ export default function HangoutScreen() {
     loadOnlineUsers();
   }, [loadOnlineUsers]);
 
+  // Reload when coming back to this screen
+  useFocusEffect(
+    useCallback(() => {
+      loadOnlineUsers();
+    }, [loadOnlineUsers])
+  );
+
   const forceSwipe = (direction: 'left' | 'right') => {
     const x = direction === 'right' ? SCREEN_WIDTH + 100 : -SCREEN_WIDTH - 100;
     Animated.timing(position, {
@@ -101,11 +109,11 @@ export default function HangoutScreen() {
     const currentUserProfile = users[currentIndex];
     
     if (direction === 'left' && currentUserProfile?.username) {
-      // View profile
+      // Swipe left - view profile
       router.push(`/profile?username=${currentUserProfile.username}`);
     }
     
-    // Move to next user
+    // Move to next user (for both left and right swipes)
     position.setValue({ x: 0, y: 0 });
     setCurrentIndex(prevIndex => prevIndex + 1);
   };
@@ -142,13 +150,14 @@ export default function HangoutScreen() {
         name: image.name || 'background.jpg',
       };
 
-      await ApiService.uploadAvatar(currentUser.id, imageFile);
-      Alert.alert('Success', 'Background image uploaded successfully');
+      // Upload background image
+      await ApiService.uploadBackgroundImage(currentUser.id, imageFile);
+      Alert.alert('Success', 'Background image uploaded successfully! It will be visible to others in Hangout.');
       
       setUploadingBackground(false);
     } catch (error) {
       console.error('Error uploading background:', error);
-      Alert.alert('Error', 'Failed to upload background image');
+      Alert.alert('Error', 'Failed to upload background image. Please try again.');
       setUploadingBackground(false);
     }
   };
@@ -188,7 +197,13 @@ export default function HangoutScreen() {
           {...panResponder.panHandlers}
         >
           {/* Background Image */}
-          {user.avatar ? (
+          {user.backgroundImage ? (
+            <Image
+              source={{ uri: user.backgroundImage }}
+              style={styles.cardImage}
+              resizeMode="cover"
+            />
+          ) : user.avatar ? (
             <Image
               source={{ uri: user.avatar }}
               style={styles.cardImage}
@@ -273,7 +288,7 @@ export default function HangoutScreen() {
               },
             ]}
           >
-            <Text style={styles.swipeIndicatorText}>VIEW</Text>
+            <Text style={styles.swipeIndicatorText}>NEXT</Text>
           </Animated.View>
 
           <Animated.View
@@ -307,7 +322,13 @@ export default function HangoutScreen() {
           },
         ]}
       >
-        {user.avatar ? (
+        {user.backgroundImage ? (
+          <Image
+            source={{ uri: user.backgroundImage }}
+            style={styles.cardImage}
+            resizeMode="cover"
+          />
+        ) : user.avatar ? (
           <Image
             source={{ uri: user.avatar }}
             style={styles.cardImage}
@@ -418,7 +439,7 @@ export default function HangoutScreen() {
       {users.length > 0 && currentIndex < users.length && (
         <View style={styles.instructions}>
           <Text style={styles.instructionsText}>
-            ← Swipe left to view profile • Swipe right for next →
+            ✕ View profile • ✓ Next user
           </Text>
         </View>
       )}
