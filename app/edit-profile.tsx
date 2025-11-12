@@ -27,7 +27,7 @@ const STATUS_OPTIONS = ['Traveling', 'Learning', 'Chilling', 'Open to Chat'] as 
 
 export default function EditProfileScreen() {
   const router = useRouter();
-  const { user: currentUser, updateUser: updateAuthUser, refreshUser } = useAuth();
+  const { user: currentUser, updateUser: updateAuthUser } = useAuth();
   
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
