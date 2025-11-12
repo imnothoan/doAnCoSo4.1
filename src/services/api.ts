@@ -17,6 +17,14 @@ import {
 // Base API configuration
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://api.example.com';
 
+// Request deduplication cache
+interface PendingRequest {
+  promise: Promise<any>;
+  timestamp: number;
+}
+
+const pendingRequests = new Map<string, PendingRequest>();
+const REQUEST_CACHE_DURATION = 1000; // 1 second cache for pending requests
 
 class ApiService {
   private client: AxiosInstance;
@@ -30,7 +38,7 @@ class ApiService {
       },
     });
 
-    // Add request interceptor for logging
+    // Add request interceptor for logging and deduplication
     this.client.interceptors.request.use(
       (config) => {
         console.log(`API Request: ${config.method?.toUpperCase()} ${config.url}`);
@@ -90,6 +98,36 @@ class ApiService {
     delete this.client.defaults.headers.common['Authorization'];
   }
 
+  // Helper method to deduplicate GET requests
+  private async deduplicatedGet<T>(url: string, params?: any): Promise<T> {
+    // Only deduplicate GET requests (safe for read operations)
+    const cacheKey = `GET:${url}:${JSON.stringify(params || {})}`;
+    const now = Date.now();
+    
+    // Check if there's a pending request for the same endpoint
+    const pending = pendingRequests.get(cacheKey);
+    if (pending && (now - pending.timestamp) < REQUEST_CACHE_DURATION) {
+      console.log(`Deduplicating request: ${url}`);
+      return pending.promise;
+    }
+    
+    // Create new request
+    const promise = this.client.get(url, { params }).then(response => {
+      // Clean up from pending requests after completion
+      pendingRequests.delete(cacheKey);
+      return response.data;
+    }).catch(error => {
+      // Clean up from pending requests on error
+      pendingRequests.delete(cacheKey);
+      throw error;
+    });
+    
+    // Store pending request
+    pendingRequests.set(cacheKey, { promise, timestamp: now });
+    
+    return promise;
+  }
+
   // Auth endpoints
   async login(credentials: LoginCredentials): Promise<{ user: User; token: string }> {
     const response = await this.client.post('/auth/login', credentials);
@@ -112,8 +150,7 @@ class ApiService {
   }
 
   async getUserByUsername(username: string): Promise<User> {
-    const response = await this.client.get(`/users/username/${username}`);
-    return response.data;
+    return this.deduplicatedGet(`/users/username/${username}`);
   }
 
   async updateUser(userId: string, data: Partial<User>): Promise<User> {
@@ -144,18 +181,15 @@ class ApiService {
 
   
   async getUsers(filters?: ConnectionFilters): Promise<User[]> {
-    const response = await this.client.get('/users', { params: filters });
-    return response.data;
+    return this.deduplicatedGet('/users', filters);
   }
 
   async getUserById(userId: string): Promise<User> {
-    const response = await this.client.get(`/users/${userId}`);
-    return response.data;
+    return this.deduplicatedGet(`/users/${userId}`);
   }
 
   async searchUsers(query: string): Promise<User[]> {
-    const response = await this.client.get('/users/search', { params: { q: query } });
-    return response.data;
+    return this.deduplicatedGet('/users/search', { q: query });
   }
 
   async followUser(username: string, followerUsername: string): Promise<void> {
@@ -253,8 +287,7 @@ class ApiService {
   }
 
   async getProfileCompletion(username: string): Promise<any> {
-    const response = await this.client.get(`/users/${username}/profile-completion`);
-    return response.data;
+    return this.deduplicatedGet(`/users/${username}/profile-completion`);
   }
 
   // Event endpoints
@@ -313,22 +346,17 @@ class ApiService {
     user_lng?: number;
     limit?: number;
   }): Promise<any[]> {
-    const res = await this.client.get(`/hangouts`, {
-      params: {
-        languages: params?.languages?.join(","),
-        distance_km: params?.distance_km,
-        user_lat: params?.user_lat,
-        user_lng: params?.user_lng,
-        limit: params?.limit,
-      },
+    return this.deduplicatedGet(`/hangouts`, {
+      languages: params?.languages?.join(","),
+      distance_km: params?.distance_km,
+      user_lat: params?.user_lat,
+      user_lng: params?.user_lng,
+      limit: params?.limit,
     });
-    return res.data;
   }
 
   async getMyHangouts(username: string): Promise<any[]> {
-  
-    const res = await this.client.get(`/hangouts/user/${encodeURIComponent(username)}/joined`);
-    return res.data;
+    return this.deduplicatedGet(`/hangouts/user/${encodeURIComponent(username)}/joined`);
   }
 
   async getHangoutStatus(username: string): Promise<{
@@ -337,8 +365,7 @@ class ApiService {
     current_activity?: string;
     activities?: string[];
   }> {
-    const res = await this.client.get(`/hangouts/status/${encodeURIComponent(username)}`);
-    return res.data;
+    return this.deduplicatedGet(`/hangouts/status/${encodeURIComponent(username)}`);
   }
 
   async createHangout(data: any): Promise<any> {
@@ -352,8 +379,7 @@ class ApiService {
 
   // Chat endpoints
   async getConversations(username: string): Promise<Chat[]> {
-    const response = await this.client.get('/messages/conversations', { params: { user: username } });
-    const raw = response.data;
+    const raw = await this.deduplicatedGet('/messages/conversations', { user: username });
 
     return (raw || []).map((c: any) => {
       // Map participants nếu server có
@@ -444,8 +470,7 @@ class ApiService {
   }
 
   async getConversation(conversationId: string): Promise<Chat> {
-    const response = await this.client.get(`/messages/conversations/${conversationId}`);
-    const c = response.data;
+    const c = await this.deduplicatedGet(`/messages/conversations/${conversationId}`);
     return {
       id: String(c.id),
       type: c.type === 'group' ? 'group' : (c.type === 'event' ? 'event' : 'user'),
@@ -564,8 +589,7 @@ async getChatMessages(conversationId: string): Promise<Message[]> {
 
   async getProStatus(username: string): Promise<{ isPro: boolean; expiresAt?: string }> {
     try {
-      const response = await this.client.get('/payments/subscription', { params: { username } });
-      const subscription = response.data;
+      const subscription = await this.deduplicatedGet('/payments/subscription', { username });
       return { 
         isPro: subscription?.plan_type === 'pro' && subscription?.status === 'active',
         expiresAt: subscription?.end_date 

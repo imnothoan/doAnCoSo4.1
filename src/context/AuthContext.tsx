@@ -182,11 +182,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!authState.user?.username) return;
 
     try {
-      // First, fetch the latest user data to get the correct ID
-      const freshUser = await ApiService.getUserByUsername(authState.user.username);
+      // Use the user ID from the current authState if available
+      // If not, fetch the latest user data to get the correct ID
+      let userId = authState.user.id;
       
-      // Then update using the correct ID from the fresh user data
-      const updatedUser = await ApiService.updateUser(freshUser.id, data);
+      // Only fetch fresh user if we don't have an ID
+      if (!userId) {
+        const freshUser = await ApiService.getUserByUsername(authState.user.username);
+        userId = freshUser.id;
+      }
+      
+      // Update using the user ID
+      const updatedUser = await ApiService.updateUser(userId, data);
       
       // Update stored user
       await AsyncStorage.setItem(USER_KEY, JSON.stringify(updatedUser));
