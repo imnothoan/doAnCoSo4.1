@@ -9,7 +9,7 @@ import ApiService from '@/src/services/api';
 
 export default function PaymentProScreen() {
   const router = useRouter();
-  const { user, updateUser } = useAuth();
+  const { user, refreshUser } = useAuth();
   const { colors } = useTheme();
   const [processing, setProcessing] = useState(false);
 
@@ -35,8 +35,8 @@ export default function PaymentProScreen() {
               if (user?.username) {
                 await ApiService.activateProSubscription(user.username);
                 
-                // Update local user state
-                await updateUser({ isPro: true });
+                // Refresh user data from server to get updated isPro status
+                await refreshUser();
               }
               
               Alert.alert(
@@ -82,8 +82,8 @@ export default function PaymentProScreen() {
               if (user?.username) {
                 await ApiService.deactivateProSubscription(user.username);
                 
-                // Update local user state
-                await updateUser({ isPro: false });
+                // Refresh user data from server to get updated isPro status
+                await refreshUser();
               }
               
               Alert.alert('Subscription Cancelled', 'Your Pro subscription has been cancelled.');
