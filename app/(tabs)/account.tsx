@@ -10,7 +10,7 @@ import { useFocusEffect } from '@react-navigation/native';
 
 export default function AccountScreen() {
   const router = useRouter();
-  const { user: authUser, logout, updateUser } = useAuth();
+  const { user: authUser, logout, refreshUser } = useAuth();
   const { colors } = useTheme();
   const [profileCompletion, setProfileCompletion] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -23,14 +23,9 @@ export default function AccountScreen() {
       const completionData = await ApiService.getProfileCompletion(authUser.username);
       setProfileCompletion(completionData.completion_percentage || 0);
 
-      // Load updated user data with follower/following counts
+      // Refresh user data from server (this fetches the latest data without updating)
       try {
-        const userData = await ApiService.getUserByUsername(authUser.username);
-        // Update the auth context with the latest user data
-        await updateUser({
-          followersCount: userData.followersCount,
-          followingCount: userData.followingCount,
-        });
+        await refreshUser();
       } catch (userError) {
         console.error('Error loading user data:', userError);
       }
@@ -39,7 +34,7 @@ export default function AccountScreen() {
     } finally {
       setLoading(false);
     }
-  }, [authUser?.username, updateUser]);
+  }, [authUser?.username, refreshUser]);
 
   useEffect(() => {
     loadProfileData();

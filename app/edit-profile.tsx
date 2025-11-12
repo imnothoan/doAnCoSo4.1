@@ -27,7 +27,7 @@ const STATUS_OPTIONS = ['Traveling', 'Learning', 'Chilling', 'Open to Chat'] as 
 
 export default function EditProfileScreen() {
   const router = useRouter();
-  const { user: currentUser, updateUser: updateAuthUser, refreshUser } = useAuth();
+  const { user: currentUser, updateUser: updateAuthUser } = useAuth();
   
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -179,13 +179,14 @@ export default function EditProfileScreen() {
     setLoading(true);
 
     try {
-      // Refresh user data from server to ensure we have the latest ID
-      if (refreshUser) {
-        try {
-          await refreshUser();
-        } catch (refreshError) {
-          console.warn('Failed to refresh user data, continuing with cached data:', refreshError);
-        }
+      // Fetch the latest user data to get the correct ID
+      const freshUser = currentUser?.username 
+        ? await ApiService.getUserByUsername(currentUser.username)
+        : null;
+
+      if (!freshUser?.id) {
+        Alert.alert('Error', 'Unable to update profile. Please try logging in again.');
+        return;
       }
 
       const updatedUser: Partial<User> = {
@@ -202,18 +203,16 @@ export default function EditProfileScreen() {
         age: age ? parseInt(age) : undefined,
       };
 
-      if (currentUser?.id) {
-        const result = await ApiService.updateUser(currentUser.id, updatedUser);
-        
-        // Update auth context
-        if (updateAuthUser) {
-          updateAuthUser(result);
-        }
-
-        Alert.alert('Success', 'Profile updated successfully!', [
-          { text: 'OK', onPress: () => router.back() }
-        ]);
+      const result = await ApiService.updateUser(freshUser.id, updatedUser);
+      
+      // Update auth context
+      if (updateAuthUser) {
+        updateAuthUser(result);
       }
+
+      Alert.alert('Success', 'Profile updated successfully!', [
+        { text: 'OK', onPress: () => router.back() }
+      ]);
     } catch (error: any) {
       console.error('Error updating profile:', error);
       
