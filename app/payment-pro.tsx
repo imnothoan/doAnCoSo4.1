@@ -194,27 +194,12 @@ export default function PaymentProScreen() {
                 🧪 Test Mode - No real payment required
               </Text>
               <Text style={[styles.pricingNote, { marginTop: 8 }]}>
-                This is a test feature. Simply click &quot;Subscribe to Pro&quot; to activate Pro features instantly. You can cancel anytime.
+                You can cancel anytime
               </Text>
             </View>
           </View>
 
-          {/* How to Test Info */}
-          {!isPro && (
-            <View style={[styles.section, { backgroundColor: '#E3F2FD' }]}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-                <Ionicons name="information-circle" size={24} color={colors.primary} />
-                <Text style={[styles.sectionTitle, { marginBottom: 0, marginLeft: 8 }]}>How to Test Pro Features</Text>
-              </View>
-              <Text style={styles.testInstructions}>
-                1. Click &quot;Subscribe to Pro&quot; button below{'\n'}
-                2. Confirm the subscription in the dialog{'\n'}
-                3. Your Pro features will activate immediately{'\n'}
-                4. Notice the yellow theme and PRO badge on your profile{'\n'}
-                5. You can cancel anytime from this screen
-              </Text>
-            </View>
-          )}
+
 
           {/* Action Button */}
           {!isPro ? (

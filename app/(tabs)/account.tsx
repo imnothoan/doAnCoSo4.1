@@ -237,7 +237,7 @@ export default function AccountScreen() {
           {renderInfoRow('notifications-outline', 'Notifications', '', () => router.push('/settings'))}
           {renderInfoRow('settings-outline', 'Manage Account', '', () => router.push('/settings'))}
           {renderInfoRow('card-outline', 'Payment & Pro Features', '', () => router.push('/payment-pro'))}
-          {renderInfoRow('information-circle-outline', 'About', '', () => Alert.alert('ConnectSphere', 'Version 1.0.0\n\nA social networking app to connect with people around the world.'))}
+          {renderInfoRow('information-circle-outline', 'About', '', () => Alert.alert('Flat Sphere', 'Version 1.0.0\n\nA social networking app to connect with people around the world.'))}
         </View>
 
         {/* Sign Out */}
