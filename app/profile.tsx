@@ -120,7 +120,15 @@ export default function ProfileScreen() {
           {/* Profile Header */}
           <View style={styles.headerSection}>
             <Image source={{ uri: user.avatar }} style={styles.avatar} />
-            <Text style={styles.name}>{user.name}</Text>
+            <View style={styles.nameContainer}>
+              <Text style={styles.name}>{user.name}</Text>
+              {user.isPro && (
+                <View style={styles.proBadge}>
+                  <Ionicons name="star" size={14} color="#FFD700" />
+                  <Text style={styles.proText}>PRO</Text>
+                </View>
+              )}
+            </View>
             
             <View style={styles.locationRow}>
               <Text style={styles.flag}>{user.flag}</Text>
@@ -315,11 +323,33 @@ const styles = StyleSheet.create({
     borderWidth: 3,
     borderColor: '#007AFF',
   },
+  nameContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   name: {
     fontSize: 26,
     fontWeight: 'bold',
     color: '#333',
     marginBottom: 8,
+  },
+  proBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFBF0',
+    borderWidth: 1,
+    borderColor: '#FFD700',
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    gap: 4,
+    marginBottom: 8,
+  },
+  proText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#FFB300',
   },
   locationRow: {
     flexDirection: 'row',
