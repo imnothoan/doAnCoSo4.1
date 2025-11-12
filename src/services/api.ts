@@ -555,17 +555,21 @@ async getChatMessages(conversationId: string): Promise<Message[]> {
 
   // Pro subscription endpoints
   async activateProSubscription(username: string): Promise<void> {
-    await this.client.post('/subscriptions/activate', { username });
+    await this.client.post('/payments/subscribe', { username, plan_type: 'pro' });
   }
 
   async deactivateProSubscription(username: string): Promise<void> {
-    await this.client.post('/subscriptions/deactivate', { username });
+    await this.client.post('/payments/cancel', { username });
   }
 
   async getProStatus(username: string): Promise<{ isPro: boolean; expiresAt?: string }> {
     try {
-      const response = await this.client.get(`/subscriptions/status/${username}`);
-      return response.data;
+      const response = await this.client.get('/payments/subscription', { params: { username } });
+      const subscription = response.data;
+      return { 
+        isPro: subscription?.plan_type === 'pro' && subscription?.status === 'active',
+        expiresAt: subscription?.end_date 
+      };
     } catch (error) {
       console.error('Error getting pro status:', error);
       return { isPro: false };

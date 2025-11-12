@@ -27,7 +27,7 @@ const STATUS_OPTIONS = ['Traveling', 'Learning', 'Chilling', 'Open to Chat'] as 
 
 export default function EditProfileScreen() {
   const router = useRouter();
-  const { user: currentUser, updateUser: updateAuthUser } = useAuth();
+  const { user: currentUser, updateUser: updateAuthUser, refreshUser } = useAuth();
   
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -179,6 +179,15 @@ export default function EditProfileScreen() {
     setLoading(true);
 
     try {
+      // Refresh user data from server to ensure we have the latest ID
+      if (refreshUser) {
+        try {
+          await refreshUser();
+        } catch (refreshError) {
+          console.warn('Failed to refresh user data, continuing with cached data:', refreshError);
+        }
+      }
+
       const updatedUser: Partial<User> = {
         name,
         bio,
@@ -205,9 +214,29 @@ export default function EditProfileScreen() {
           { text: 'OK', onPress: () => router.back() }
         ]);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating profile:', error);
-      Alert.alert('Error', 'Failed to update profile. Please try again.');
+      
+      // Handle specific error cases
+      if (error?.response?.status === 500) {
+        Alert.alert(
+          'Error', 
+          'Unable to update profile. Your session may have expired. Please try logging in again.',
+          [
+            { text: 'OK', style: 'cancel' }
+          ]
+        );
+      } else if (error?.response?.status === 404) {
+        Alert.alert(
+          'Error', 
+          'User not found. Please try logging in again.',
+          [
+            { text: 'OK', style: 'cancel' }
+          ]
+        );
+      } else {
+        Alert.alert('Error', 'Failed to update profile. Please try again.');
+      }
     } finally {
       setLoading(false);
     }

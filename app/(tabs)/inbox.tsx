@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { StyleSheet, View, Text, FlatList, TouchableOpacity, Image, RefreshControl, ActivityIndicator, InteractionManager } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -16,6 +16,7 @@ export default function InboxScreen() {
   const [activeTab, setActiveTab] = useState<'all' | 'events' | 'users'>('all');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const enrichedConversationsRef = useRef<Set<string>>(new Set());
 
   const loadChats = useCallback(async () => {
     if (!user?.username) return;
@@ -23,6 +24,8 @@ export default function InboxScreen() {
       setLoading(true);
       const data = await ApiService.getConversations(user.username);
       setChats(data);
+      // Reset enrichment tracking when reloading chats
+      enrichedConversationsRef.current = new Set();
     } catch (error) {
       console.error('Error loading chats:', error);
     } finally {
@@ -47,8 +50,11 @@ export default function InboxScreen() {
     const enrichMissing = async () => {
       if (!user?.username) return;
       
-      // Find conversations that need enrichment
+      // Find conversations that need enrichment and haven't been enriched yet
       const targets = chats.filter(c => {
+        // Skip if already enriched
+        if (enrichedConversationsRef.current.has(c.id)) return false;
+        
         if (c.type !== 'user' && c.type !== 'dm') return false;
         
         // Check if we have participants
@@ -61,8 +67,13 @@ export default function InboxScreen() {
         return !otherUser || !otherUser.name || !otherUser.avatar;
       });
 
+      if (targets.length === 0) return;
+
       for (const conv of targets) {
         try {
+          // Mark this conversation as being enriched to avoid duplicate requests
+          enrichedConversationsRef.current.add(conv.id);
+          
           // First try to get conversation details
           const detail = await ApiService.getConversation(conv.id);
           if (cancelled) return;
@@ -108,6 +119,7 @@ export default function InboxScreen() {
           );
         } catch (e) {
           console.warn('Failed to enrich conversation', conv.id, e);
+          // Keep it marked as enriched to avoid infinite retries
         }
       }
     };
