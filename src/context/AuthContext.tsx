@@ -179,10 +179,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const updateUser = async (data: Partial<User>) => {
-    if (!authState.user) return;
+    if (!authState.user?.username) return;
 
     try {
-      const updatedUser = await ApiService.updateUser(authState.user.id, data);
+      // First, fetch the latest user data to get the correct ID
+      const freshUser = await ApiService.getUserByUsername(authState.user.username);
+      
+      // Then update using the correct ID from the fresh user data
+      const updatedUser = await ApiService.updateUser(freshUser.id, data);
       
       // Update stored user
       await AsyncStorage.setItem(USER_KEY, JSON.stringify(updatedUser));
