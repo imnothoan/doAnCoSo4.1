@@ -33,6 +33,7 @@ function mapServerUserToClient(serverUser: any): User {
     followersCount: serverUser.followers ?? serverUser.followersCount ?? 0,
     followingCount: serverUser.following ?? serverUser.followingCount ?? 0,
     postsCount: serverUser.posts ?? serverUser.postsCount ?? 0,
+    isPro: serverUser.is_premium ?? serverUser.isPro ?? false,
   };
 }
 
