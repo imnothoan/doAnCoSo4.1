@@ -25,6 +25,17 @@ interface PendingRequest {
 const pendingRequests = new Map<string, PendingRequest>();
 const REQUEST_CACHE_DURATION = 1000; // 1 second cache for pending requests
 
+// Helper function to map server user response to client User type
+function mapServerUserToClient(serverUser: any): User {
+  return {
+    ...serverUser,
+    // Map server field names to client field names
+    followersCount: serverUser.followers ?? serverUser.followersCount ?? 0,
+    followingCount: serverUser.following ?? serverUser.followingCount ?? 0,
+    postsCount: serverUser.posts ?? serverUser.postsCount ?? 0,
+  };
+}
+
 class ApiService {
   private client: AxiosInstance;
 
@@ -130,12 +141,18 @@ class ApiService {
   // Auth endpoints
   async login(credentials: LoginCredentials): Promise<{ user: User; token: string }> {
     const response = await this.client.post('/auth/login', credentials);
-    return response.data;
+    return {
+      ...response.data,
+      user: mapServerUserToClient(response.data.user),
+    };
   }
 
   async signup(data: SignupData): Promise<{ user: User; token: string }> {
     const response = await this.client.post('/auth/signup', data);
-    return response.data;
+    return {
+      ...response.data,
+      user: mapServerUserToClient(response.data.user),
+    };
   }
 
   async logout(): Promise<void> {
@@ -145,16 +162,17 @@ class ApiService {
   // User endpoints
   async getCurrentUser(): Promise<User> {
     const response = await this.client.get('/users/me');
-    return response.data;
+    return mapServerUserToClient(response.data);
   }
 
   async getUserByUsername(username: string): Promise<User> {
-    return this.deduplicatedGet(`/users/username/${username}`);
+    const data = await this.deduplicatedGet(`/users/username/${username}`);
+    return mapServerUserToClient(data);
   }
 
   async updateUser(userId: string, data: Partial<User>): Promise<User> {
     const response = await this.client.put(`/users/${userId}`, data);
-    return response.data;
+    return mapServerUserToClient(response.data);
   }
 
   async uploadAvatar(userId: string, image: any): Promise<{ avatarUrl: string }> {
@@ -180,15 +198,18 @@ class ApiService {
 
   
   async getUsers(filters?: ConnectionFilters): Promise<User[]> {
-    return this.deduplicatedGet('/users', filters);
+    const data: any[] = await this.deduplicatedGet('/users', filters);
+    return (data || []).map(mapServerUserToClient);
   }
 
   async getUserById(userId: string): Promise<User> {
-    return this.deduplicatedGet(`/users/${userId}`);
+    const data = await this.deduplicatedGet(`/users/${userId}`);
+    return mapServerUserToClient(data);
   }
 
   async searchUsers(query: string): Promise<User[]> {
-    return this.deduplicatedGet('/users/search', { q: query });
+    const data: any[] = await this.deduplicatedGet('/users/search', { q: query });
+    return (data || []).map(mapServerUserToClient);
   }
 
   async followUser(username: string, followerUsername: string): Promise<void> {
@@ -212,7 +233,7 @@ class ApiService {
   async getFollowers(username: string): Promise<User[]> {
     try {
       const response = await this.client.get(`/users/${username}/followers`);
-      return (response.data || []).map((u: any) => ({
+      return (response.data || []).map((u: any) => mapServerUserToClient({
         id: String(u.id || u.username),
         username: u.username || '',
         name: u.name || u.username || '',
@@ -227,7 +248,10 @@ class ApiService {
         gender: u.gender,
         age: u.age,
         flag: u.flag,
-      } as User));
+        followers: u.followers,
+        following: u.following,
+        posts: u.posts,
+      }));
     } catch (error) {
       console.error('Error getting followers:', error);
       return [];
@@ -237,7 +261,7 @@ class ApiService {
   async getFollowing(username: string): Promise<User[]> {
     try {
       const response = await this.client.get(`/users/${username}/following`);
-      return (response.data || []).map((u: any) => ({
+      return (response.data || []).map((u: any) => mapServerUserToClient({
         id: String(u.id || u.username),
         username: u.username || '',
         name: u.name || u.username || '',
@@ -252,7 +276,10 @@ class ApiService {
         gender: u.gender,
         age: u.age,
         flag: u.flag,
-      } as User));
+        followers: u.followers,
+        following: u.following,
+        posts: u.posts,
+      }));
     } catch (error) {
       console.error('Error getting following:', error);
       return [];
@@ -382,7 +409,7 @@ class ApiService {
 
     return (raw || []).map((c: any) => {
       // Map participants nếu server có
-      let participants: User[] = (c.participants || []).map((p: any) => ({
+      let participants: User[] = (c.participants || []).map((p: any) => mapServerUserToClient({
         id: String(p.id || p.username),
         username: p.username || '',
         name: p.name || p.username || '',
@@ -397,7 +424,10 @@ class ApiService {
         gender: p.gender,
         age: p.age,
         flag: p.flag,
-      } as User));
+        followers: p.followers,
+        following: p.following,
+        posts: p.posts,
+      }));
 
       const lastRaw = c.last_message;
       const lastMessage = lastRaw
@@ -405,7 +435,7 @@ class ApiService {
             id: String(lastRaw.id),
             chatId: String(lastRaw.conversation_id ?? c.id),
             senderId: lastRaw.sender_username,
-            sender: {
+            sender: mapServerUserToClient({
               id: lastRaw.sender?.id ?? lastRaw.sender_username,
               username: lastRaw.sender?.username ?? lastRaw.sender_username,
               name: lastRaw.sender?.name ?? lastRaw.sender_username,
@@ -416,7 +446,10 @@ class ApiService {
               status: lastRaw.sender?.status || 'Chilling',
               languages: lastRaw.sender?.languages || [],
               interests: lastRaw.sender?.interests || [],
-            } as User,
+              followers: lastRaw.sender?.followers,
+              following: lastRaw.sender?.following,
+              posts: lastRaw.sender?.posts,
+            }),
             content: lastRaw.content || '',
             image: lastRaw.message_media?.[0]?.media_url,
             timestamp: lastRaw.created_at, 
@@ -435,7 +468,7 @@ class ApiService {
         const usernames = new Set(participants.map(p => p.username).filter(Boolean));
         // Thêm currentUser nếu thiếu
         if (username && !usernames.has(username)) {
-          participants.push({
+          participants.push(mapServerUserToClient({
             id: username,
             username,
             name: username,
@@ -446,7 +479,7 @@ class ApiService {
             status: 'Chilling',
             languages: [],
             interests: [],
-          } as User);
+          }));
           usernames.add(username);
         }
         // Thêm người còn lại từ lastMessage.sender nếu khác currentUser
@@ -474,7 +507,7 @@ class ApiService {
       id: String(c.id),
       type: c.type === 'group' ? 'group' : (c.type === 'event' ? 'event' : 'user'),
       name: c.title || undefined,
-      participants: (c.participants || []).map((p: any) => ({
+      participants: (c.participants || []).map((p: any) => mapServerUserToClient({
         id: String(p.id || p.username),
         username: p.username || '',
         name: p.name || p.username || '',
@@ -489,7 +522,10 @@ class ApiService {
         gender: p.gender,
         age: p.age,
         flag: p.flag,
-      } as User)),
+        followers: p.followers,
+        following: p.following,
+        posts: p.posts,
+      })),
     };
   }
 
