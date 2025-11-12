@@ -6,12 +6,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { Chat } from '@/src/types';
 import { getRelativeTime } from '@/src/utils/date';
 import { useAuth } from '@/src/context/AuthContext';
+import { useTheme } from '@/src/context/ThemeContext';
 import ApiService from '@/src/services/api';
 import { useFocusEffect } from '@react-navigation/native';
 
 export default function InboxScreen() {
   const router = useRouter();
   const { user } = useAuth();
+  const { colors } = useTheme();
   const [chats, setChats] = useState<Chat[]>([]);
   const [activeTab, setActiveTab] = useState<'all' | 'events' | 'users'>('all');
   const [loading, setLoading] = useState(true);
@@ -202,10 +204,10 @@ export default function InboxScreen() {
             )
           ) : (
             <View style={styles.eventAvatarPlaceholder}>
-              <Ionicons name="people-outline" size={24} color="#007AFF" />
+              <Ionicons name="people-outline" size={24} color={colors.primary} />
             </View>
           )}
-          {isUnread && <View style={styles.unreadDot} />}
+          {isUnread && <View style={[styles.unreadDot, { backgroundColor: colors.primary, borderColor: colors.card }]} />}
         </View>
 
         <View style={styles.chatContent}>
@@ -227,7 +229,7 @@ export default function InboxScreen() {
               </Text>
             )}
             {isUnread && item.unreadCount && item.unreadCount > 0 && (
-              <View style={styles.unreadBadge}>
+              <View style={[styles.unreadBadge, { backgroundColor: colors.primary }]}>
                 <Text style={styles.unreadBadgeText}>{item.unreadCount}</Text>
               </View>
             )}
@@ -238,33 +240,33 @@ export default function InboxScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.header, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
         <Text style={styles.headerTitle}>Inbox</Text>
       </View>
 
-      <View style={styles.tabsContainer}>
+      <View style={[styles.tabsContainer, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
         <TouchableOpacity
-          style={[styles.tab, activeTab === 'all' && styles.activeTab]}
+          style={[styles.tab, activeTab === 'all' && [styles.activeTab, { borderBottomColor: colors.primary }]]}
           onPress={() => setActiveTab('all')}
         >
-          <Text style={[styles.tabText, activeTab === 'all' && styles.activeTabText]}>
+          <Text style={[styles.tabText, activeTab === 'all' && [styles.activeTabText, { color: colors.primary }]]}>
             All
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.tab, activeTab === 'events' && styles.activeTab]}
+          style={[styles.tab, activeTab === 'events' && [styles.activeTab, { borderBottomColor: colors.primary }]]}
           onPress={() => setActiveTab('events')}
         >
-          <Text style={[styles.tabText, activeTab === 'events' && styles.activeTabText]}>
+          <Text style={[styles.tabText, activeTab === 'events' && [styles.activeTabText, { color: colors.primary }]]}>
             Events
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.tab, activeTab === 'users' && styles.activeTab]}
+          style={[styles.tab, activeTab === 'users' && [styles.activeTab, { borderBottomColor: colors.primary }]]}
           onPress={() => setActiveTab('users')}
         >
-          <Text style={[styles.tabText, activeTab === 'users' && styles.activeTabText]}>
+          <Text style={[styles.tabText, activeTab === 'users' && [styles.activeTabText, { color: colors.primary }]]}>
             Users
           </Text>
         </TouchableOpacity>
@@ -272,7 +274,7 @@ export default function InboxScreen() {
 
       {loading && !refreshing ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#007AFF" />
+          <ActivityIndicator size="large" color={colors.primary} />
         </View>
       ) : (
         <FlatList
@@ -298,19 +300,19 @@ export default function InboxScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f5f5f5' },
-  header: { backgroundColor: '#fff', padding: 16, borderBottomWidth: 1, borderBottomColor: '#e0e0e0' },
+  container: { flex: 1 },
+  header: { padding: 16, borderBottomWidth: 1 },
   headerTitle: { fontSize: 24, fontWeight: 'bold', color: '#333' },
-  tabsContainer: { flexDirection: 'row', backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#e0e0e0' },
+  tabsContainer: { flexDirection: 'row', borderBottomWidth: 1 },
   tab: { flex: 1, paddingVertical: 14, alignItems: 'center', borderBottomWidth: 2, borderBottomColor: 'transparent' },
-  activeTab: { borderBottomColor: '#007AFF' },
+  activeTab: { },
   tabText: { fontSize: 15, color: '#666', fontWeight: '500' },
-  activeTabText: { color: '#007AFF', fontWeight: '600' },
+  activeTabText: { fontWeight: '600' },
   chatItem: { backgroundColor: '#fff', flexDirection: 'row', padding: 16, borderBottomWidth: 1, borderBottomColor: '#f0f0f0' },
   avatarContainer: { position: 'relative', marginRight: 12 },
   chatAvatar: { width: 56, height: 56, borderRadius: 28 },
   eventAvatarPlaceholder: { width: 56, height: 56, borderRadius: 28, backgroundColor: '#E3F2FD', justifyContent: 'center', alignItems: 'center' },
-  unreadDot: { position: 'absolute', top: 0, right: 0, width: 12, height: 12, borderRadius: 6, backgroundColor: '#007AFF', borderWidth: 2, borderColor: '#fff' },
+  unreadDot: { position: 'absolute', top: 0, right: 0, width: 12, height: 12, borderRadius: 6, borderWidth: 2 },
   chatContent: { flex: 1 },
   chatHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
   chatName: { fontSize: 16, fontWeight: '500', color: '#333', flex: 1 },
@@ -318,7 +320,7 @@ const styles = StyleSheet.create({
   chatTime: { fontSize: 12, color: '#999' },
   messageRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   lastMessage: { fontSize: 14, color: '#666', flex: 1 },
-  unreadBadge: { backgroundColor: '#007AFF', borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2, marginLeft: 8, minWidth: 20, alignItems: 'center' },
+  unreadBadge: { borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2, marginLeft: 8, minWidth: 20, alignItems: 'center' },
   unreadBadgeText: { fontSize: 12, color: '#fff', fontWeight: '600' },
   emptyContainer: { alignItems: 'center', justifyContent: 'center', paddingVertical: 80 },
   emptyText: { fontSize: 18, fontWeight: '600', color: '#999', marginTop: 16 },
