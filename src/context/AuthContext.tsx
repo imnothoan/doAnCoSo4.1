@@ -9,6 +9,7 @@ interface AuthContextType extends AuthState {
   signup: (username: string, name: string, email: string, password: string, country: string, city: string, gender?: 'Male' | 'Female' | 'Other') => Promise<void>;
   logout: () => Promise<void>;
   updateUser: (data: Partial<User>) => Promise<void>;
+  refreshUser: () => Promise<void>;
   isLoading: boolean;
 }
 
@@ -196,6 +197,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const refreshUser = async () => {
+    if (!authState.user?.username) return;
+
+    try {
+      // Fetch fresh user data from server
+      const freshUser = await ApiService.getUserByUsername(authState.user.username);
+      
+      // Update stored user
+      await AsyncStorage.setItem(USER_KEY, JSON.stringify(freshUser));
+      
+      setAuthState(prev => ({
+        ...prev,
+        user: freshUser,
+      }));
+    } catch (error) {
+      console.error('Refresh user error:', error);
+      throw error;
+    }
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -204,6 +225,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         signup,
         logout,
         updateUser,
+        refreshUser,
         isLoading,
       }}
     >
