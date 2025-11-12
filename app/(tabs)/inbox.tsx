@@ -8,6 +8,7 @@ import { getRelativeTime } from '@/src/utils/date';
 import { useAuth } from '@/src/context/AuthContext';
 import { useTheme } from '@/src/context/ThemeContext';
 import ApiService from '@/src/services/api';
+import WebSocketService from '@/src/services/websocket';
 import { useFocusEffect } from '@react-navigation/native';
 
 export default function InboxScreen() {
@@ -45,6 +46,56 @@ export default function InboxScreen() {
       loadChats();
     }, [loadChats])
   );
+
+  // WebSocket real-time updates for new messages
+  useEffect(() => {
+    if (!user?.username) return;
+
+    // Handle new messages to update conversation list
+    const handleNewMessage = (message: any) => {
+      const conversationId = String(message.chatId || message.conversation_id || message.conversationId);
+      
+      setChats(prevChats => {
+        // Find existing conversation
+        const existingIndex = prevChats.findIndex(c => String(c.id) === conversationId);
+        
+        if (existingIndex >= 0) {
+          // Update existing conversation
+          const updatedChats = [...prevChats];
+          const existingChat = updatedChats[existingIndex];
+          
+          // Move to top and update last message
+          updatedChats.splice(existingIndex, 1);
+          updatedChats.unshift({
+            ...existingChat,
+            lastMessage: {
+              content: message.content || '',
+              timestamp: message.timestamp || new Date().toISOString(),
+              sender: message.sender || { username: message.senderId },
+            },
+            // Increment unread count if message is from someone else
+            unreadCount: message.senderId !== user.username 
+              ? (existingChat.unreadCount || 0) + 1 
+              : existingChat.unreadCount,
+          });
+          
+          return updatedChats;
+        } else {
+          // New conversation - reload the full list
+          loadChats();
+          return prevChats;
+        }
+      });
+    };
+
+    // Listen to new messages
+    WebSocketService.onNewMessage(handleNewMessage);
+
+    return () => {
+      // Clean up listener
+      WebSocketService.off('new_message', handleNewMessage);
+    };
+  }, [user?.username, loadChats]);
 
   // Enrich: nếu DM thiếu otherUser hoặc thiếu avatar/name thì fetch full profile
   useEffect(() => {
