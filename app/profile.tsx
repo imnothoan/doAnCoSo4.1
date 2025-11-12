@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/src/context/AuthContext';
+import { useTheme } from '@/src/context/ThemeContext';
 import ApiService from '@/src/services/api';
 import { User } from '@/src/types';
 
@@ -11,6 +12,7 @@ export default function ProfileScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const { user: currentUser } = useAuth();
+  const { colors } = useTheme();
   // Support both 'id' and 'username' parameters
   const userId = params.id as string;
   const username = params.username as string;
@@ -83,10 +85,10 @@ export default function ProfileScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
         <Stack.Screen options={{ title: 'Profile' }} />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#007AFF" />
+          <ActivityIndicator size="large" color={colors.primary} />
         </View>
       </SafeAreaView>
     );
@@ -94,7 +96,7 @@ export default function ProfileScreen() {
 
   if (!user) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
         <Stack.Screen options={{ title: 'Profile Not Found' }} />
         <View style={styles.loadingContainer}>
           <Text style={styles.errorText}>User not found</Text>
@@ -110,15 +112,15 @@ export default function ProfileScreen() {
           title: user.name,
           headerRight: () => (
             <TouchableOpacity style={styles.headerButton}>
-              <Ionicons name="ellipsis-horizontal" size={24} color="#007AFF" />
+              <Ionicons name="ellipsis-horizontal" size={24} color={colors.primary} />
             </TouchableOpacity>
           ),
         }}
       />
-      <SafeAreaView style={styles.container} edges={['bottom']}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['bottom']}>
         <ScrollView>
           {/* Profile Header */}
-          <View style={styles.headerSection}>
+          <View style={[styles.headerSection, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
             <Image source={{ uri: user.avatar }} style={styles.avatar} />
             <View style={styles.nameContainer}>
               <Text style={styles.name}>{user.name}</Text>
@@ -144,26 +146,26 @@ export default function ProfileScreen() {
               </View>
             )}
 
-            <View style={styles.statusBadge}>
-              <Text style={styles.statusText}>{user.status}</Text>
+            <View style={[styles.statusBadge, { backgroundColor: colors.primary + '20' }]}>
+              <Text style={[styles.statusText, { color: colors.primary }]}>{ user.status}</Text>
             </View>
 
             {/* Action Buttons */}
             <View style={styles.actionButtons}>
-              <TouchableOpacity style={styles.primaryButton} onPress={handleMessage}>
+              <TouchableOpacity style={[styles.primaryButton, { backgroundColor: colors.primary }]} onPress={handleMessage}>
                 <Ionicons name="chatbubble-outline" size={20} color="#fff" />
                 <Text style={styles.primaryButtonText}>Message</Text>
               </TouchableOpacity>
               <TouchableOpacity 
-                style={[styles.secondaryButton, isFollowing && styles.secondaryButtonActive]}
+                style={[styles.secondaryButton, { backgroundColor: colors.card, borderColor: colors.primary }, isFollowing && [styles.secondaryButtonActive, { backgroundColor: colors.primary, borderColor: colors.primary }]]}
                 onPress={handleFollow}
               >
                 <Ionicons 
                   name={isFollowing ? "checkmark" : "person-add-outline"} 
                   size={20} 
-                  color={isFollowing ? "#fff" : "#007AFF"} 
+                  color={isFollowing ? "#fff" : colors.primary} 
                 />
-                <Text style={[styles.secondaryButtonText, isFollowing && styles.secondaryButtonTextActive]}>
+                <Text style={[styles.secondaryButtonText, { color: colors.primary }, isFollowing && styles.secondaryButtonTextActive]}>
                   {isFollowing ? 'Following' : 'Follow'}
                 </Text>
               </TouchableOpacity>
@@ -172,7 +174,7 @@ export default function ProfileScreen() {
 
           {/* About Section */}
           {user.bio && (
-            <View style={styles.section}>
+            <View style={[styles.section, { backgroundColor: colors.card }]}>
               <Text style={styles.sectionTitle}>About</Text>
               <Text style={styles.bioText}>{user.bio}</Text>
             </View>
@@ -180,7 +182,7 @@ export default function ProfileScreen() {
 
           {/* Languages */}
           {user.languages && user.languages.length > 0 && (
-            <View style={styles.section}>
+            <View style={[styles.section, { backgroundColor: colors.card }]}>
               <Text style={styles.sectionTitle}>Languages</Text>
               {user.languages.map((lang, index) => (
                 <View key={index} style={styles.languageRow}>
@@ -192,7 +194,7 @@ export default function ProfileScreen() {
           )}
 
           {/* Summary */}
-          <View style={styles.section}>
+          <View style={[styles.section, { backgroundColor: colors.card }]}>
             <Text style={styles.sectionTitle}>Summary</Text>
             <View style={styles.summaryGrid}>
               <View style={styles.summaryItem}>
@@ -212,12 +214,12 @@ export default function ProfileScreen() {
 
           {/* Interests */}
           {user.interests && user.interests.length > 0 && (
-            <View style={styles.section}>
+            <View style={[styles.section, { backgroundColor: colors.card }]}>
               <Text style={styles.sectionTitle}>Interests</Text>
               <View style={styles.interestsContainer}>
                 {user.interests.map((interest, index) => (
-                  <View key={index} style={styles.interestTag}>
-                    <Text style={styles.interestText}>{interest}</Text>
+                  <View key={index} style={[styles.interestTag, { backgroundColor: colors.primary + '20' }]}>
+                    <Text style={[styles.interestText, { color: colors.primary }]}>{interest}</Text>
                   </View>
                 ))}
               </View>
@@ -226,7 +228,7 @@ export default function ProfileScreen() {
 
           {/* Hangout Activities */}
           {user.hangoutActivities && user.hangoutActivities.length > 0 && (
-            <View style={styles.section}>
+            <View style={[styles.section, { backgroundColor: colors.card }]}>
               <Text style={styles.sectionTitle}>Hangout Activities</Text>
               <View style={styles.activitiesContainer}>
                 {user.hangoutActivities.map((activity, index) => (
@@ -243,7 +245,7 @@ export default function ProfileScreen() {
 
           {/* Specialties */}
           {user.specialties && (
-            <View style={styles.section}>
+            <View style={[styles.section, { backgroundColor: colors.card }]}>
               <Text style={styles.sectionTitle}>Specialties</Text>
               
               {user.specialties.from && (
@@ -292,7 +294,6 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
   },
   loadingContainer: {
     flex: 1,
@@ -308,12 +309,10 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   headerSection: {
-    backgroundColor: '#fff',
     alignItems: 'center',
     paddingVertical: 24,
     paddingHorizontal: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
   },
   avatar: {
     width: 120,
@@ -321,7 +320,7 @@ const styles = StyleSheet.create({
     borderRadius: 60,
     marginBottom: 16,
     borderWidth: 3,
-    borderColor: '#007AFF',
+    borderColor: '#ddd',
   },
   nameContainer: {
     flexDirection: 'row',
@@ -394,7 +393,6 @@ const styles = StyleSheet.create({
   },
   statusText: {
     fontSize: 14,
-    color: '#007AFF',
     fontWeight: '600',
   },
   actionButtons: {
@@ -407,7 +405,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#007AFF',
     paddingVertical: 14,
     borderRadius: 12,
     gap: 8,
@@ -422,26 +419,21 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#fff',
     paddingVertical: 14,
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: '#007AFF',
     gap: 8,
   },
   secondaryButtonActive: {
-    backgroundColor: '#007AFF',
   },
   secondaryButtonText: {
     fontSize: 16,
-    color: '#007AFF',
     fontWeight: '600',
   },
   secondaryButtonTextActive: {
     color: '#fff',
   },
   section: {
-    backgroundColor: '#fff',
     padding: 20,
     marginTop: 8,
   },
@@ -501,7 +493,6 @@ const styles = StyleSheet.create({
   },
   interestText: {
     fontSize: 14,
-    color: '#007AFF',
     fontWeight: '500',
   },
   activitiesContainer: {
