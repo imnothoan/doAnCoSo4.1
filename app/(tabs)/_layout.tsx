@@ -10,7 +10,6 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
-  const { colors } = useTheme();
   
   return (
     <Tabs
@@ -21,48 +20,59 @@ export default function TabLayout() {
         tabBarStyle: {
           height: 60,
           paddingBottom: 8,
+          backgroundColor: 'rgba(255, 255, 255, 0.95)',
+          borderTopWidth: 0,
+          elevation: 0,
+          shadowOpacity: 0.1,
+          shadowOffset: { width: 0, height: -3 },
+          shadowRadius: 12,
         },
       }}>
+      {/* Main discovery - Tinder-like swipe interface */}
       <Tabs.Screen
         name="hangout"
         options={{
-          title: 'Hang out',
-          tabBarIcon: ({ color }) => <IconSymbol size={24} name="person.2.fill" color={color} />,
+          title: 'Discover',
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="heart.fill" color={color} />,
         }}
       />
+      {/* Combined Explore: People & Events in one tab with sub-tabs */}
       <Tabs.Screen
-        name="my-events"
+        name="connection"
         options={{
-          title: 'My events',
-          tabBarIcon: ({ color }) => <IconSymbol size={24} name="calendar" color={color} />,
+          title: 'Explore',
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="sparkles" color={color} />,
         }}
       />
+      {/* Feed/Discussion */}
       <Tabs.Screen
         name="discussion"
         options={{
           title: 'Feed',
-          tabBarIcon: ({ color }) => <MaterialCommunityIcons size={24} name="earth" color={color} />,
+          tabBarIcon: ({ color }) => <MaterialCommunityIcons size={28} name="earth" color={color} />,
         }}
       />
-      <Tabs.Screen
-        name="connection"
-        options={{
-          title: 'Connection',
-          tabBarIcon: ({ color }) => <IconSymbol size={24} name="person.3.fill" color={color} />,
-        }}
-      />
+      {/* Messages/Inbox */}
       <Tabs.Screen
         name="inbox"
         options={{
-          title: 'Inbox',
-          tabBarIcon: ({ color }) => <IconSymbol size={24} name="envelope.fill" color={color} />,
+          title: 'Messages',
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="message.fill" color={color} />,
         }}
       />
+      {/* Profile/Account */}
       <Tabs.Screen
         name="account"
         options={{
-          title: 'Account',
-          tabBarIcon: ({ color }) => <IconSymbol size={24} name="person.fill" color={color} />,
+          title: 'Profile',
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="person.fill" color={color} />,
+        }}
+      />
+      {/* Hide my-events tab - functionality moved to connection/explore */}
+      <Tabs.Screen
+        name="my-events"
+        options={{
+          href: null,
         }}
       />
       {/* Hide old tabs but keep files for reference */}
