@@ -71,7 +71,7 @@ export default function DiscussionScreen() {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.header, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
-        <Text style={styles.headerTitle}>📰 Feed</Text>
+        <Text style={styles.headerTitle}>Feed</Text>
       </View>
 
       <View style={[styles.searchContainer, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>

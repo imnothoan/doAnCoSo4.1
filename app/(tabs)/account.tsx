@@ -136,7 +136,7 @@ export default function AccountScreen() {
             )}
           </View>
           <View style={styles.locationRow}>
-            <Text style={styles.flag}>{user.flag || '🌍'}</Text>
+            <Text style={styles.flag}>{user.flag || ''}</Text>
             <Text style={styles.location}>
               {user.city}, {user.country}
             </Text>

@@ -396,7 +396,7 @@ export default function HangoutScreen() {
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Header */}
       <View style={[styles.header, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
-        <Text style={styles.headerTitle}>💫 Discover</Text>
+        <Text style={styles.headerTitle}>Hang out</Text>
         <View style={styles.headerRight}>
           <TouchableOpacity
             style={styles.uploadButton}
@@ -426,7 +426,7 @@ export default function HangoutScreen() {
         )}
       </View>
 
-      {/* Action Buttons with Glass Effect */}
+     
       {currentIndex < users.length && (
         <View style={styles.actionButtons}>
           <TouchableOpacity
@@ -480,7 +480,7 @@ export default function HangoutScreen() {
         </View>
       )}
 
-      {/* Instructions with Glass Effect */}
+    
       {users.length > 0 && currentIndex < users.length && (
         <GlassCard 
           variant="light" 
