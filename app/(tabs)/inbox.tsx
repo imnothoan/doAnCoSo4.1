@@ -88,12 +88,48 @@ export default function InboxScreen() {
       });
     };
 
-    // Listen to new messages
+    // Handle inbox updates (for when user is not in conversation room)
+    const handleInboxUpdate = (data: { conversationId: string; message: any }) => {
+      const conversationId = String(data.conversationId);
+      
+      setChats(prevChats => {
+        const existingIndex = prevChats.findIndex(c => String(c.id) === conversationId);
+        
+        if (existingIndex >= 0) {
+          // Update existing conversation
+          const updatedChats = [...prevChats];
+          const existingChat = updatedChats[existingIndex];
+          
+          // Move to top and update last message
+          updatedChats.splice(existingIndex, 1);
+          updatedChats.unshift({
+            ...existingChat,
+            lastMessage: {
+              content: data.message.content || '',
+              timestamp: data.message.timestamp || new Date().toISOString(),
+              sender: data.message.sender || { username: data.message.senderId },
+            },
+            // Increment unread count
+            unreadCount: (existingChat.unreadCount || 0) + 1,
+          });
+          
+          return updatedChats;
+        } else {
+          // New conversation - reload the full list
+          loadChats();
+          return prevChats;
+        }
+      });
+    };
+
+    // Listen to new messages and inbox updates
     WebSocketService.onNewMessage(handleNewMessage);
+    WebSocketService.onInboxUpdate(handleInboxUpdate);
 
     return () => {
-      // Clean up listener
+      // Clean up listeners
       WebSocketService.off('new_message', handleNewMessage);
+      WebSocketService.off('inbox_update', handleInboxUpdate);
     };
   }, [user?.username, loadChats]);
 
