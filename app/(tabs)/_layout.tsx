@@ -31,7 +31,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="hangout"
         options={{
-          title: 'Discover',
+          title: 'Hang out',
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="heart.fill" color={color} />,
         }}
       />
@@ -40,7 +40,6 @@ export default function TabLayout() {
         name="connection"
         options={{
           title: 'Explore',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="sparkles" color={color} />,
         }}
       />
       {/* Feed/Discussion */}
@@ -55,8 +54,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="inbox"
         options={{
-          title: 'Messages',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="message.fill" color={color} />,
+          title: 'Inbox',
         }}
       />
       {/* Profile/Account */}

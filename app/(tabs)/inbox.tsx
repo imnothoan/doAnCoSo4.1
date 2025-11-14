@@ -40,11 +40,20 @@ export default function InboxScreen() {
     loadChats();
   }, [loadChats]);
 
-  // Reload khi quay lại tab Inbox
+  // Reload khi quay lại tab Inbox - nhưng không hiển thị loading
   useFocusEffect(
     useCallback(() => {
-      loadChats();
-    }, [loadChats])
+      // Reload data in background without showing loading spinner
+      if (user?.username) {
+        ApiService.getConversations(user.username)
+          .then(data => {
+            setChats(data);
+            // Reset enrichment tracking when reloading chats
+            enrichedConversationsRef.current = new Set();
+          })
+          .catch(error => console.error('Error loading chats:', error));
+      }
+    }, [user?.username])
   );
 
   // WebSocket real-time updates for new messages
@@ -168,15 +177,23 @@ export default function InboxScreen() {
           if (cancelled) return;
 
           // Find the other user from detailed participants
-          const detailedOtherUser = detail.participants?.find(p => p.username && p.username !== user.username);
+          let detailedOtherUser = detail.participants?.find(p => p.username && p.username !== user.username);
+          
+          // If we have a sender in lastMessage and no other user yet, try that
+          if (!detailedOtherUser && conv.lastMessage?.sender?.username) {
+            const senderUsername = conv.lastMessage.sender.username;
+            if (senderUsername !== user.username) {
+              detailedOtherUser = conv.lastMessage.sender;
+            }
+          }
           
           // If we still don't have complete data, fetch user profile directly
           let completeOtherUser = detailedOtherUser;
           if (detailedOtherUser?.username && (!detailedOtherUser.name || !detailedOtherUser.avatar)) {
             try {
               completeOtherUser = await ApiService.getUserByUsername(detailedOtherUser.username);
-            } catch {
-              console.warn('Failed to fetch user profile for', detailedOtherUser.username);
+            } catch (err) {
+              console.warn('Failed to fetch user profile for', detailedOtherUser.username, err);
             }
           }
 
@@ -188,7 +205,7 @@ export default function InboxScreen() {
               if (c.id !== conv.id) return c;
               
               // Build enriched participants list
-              const enrichedParticipants = [...(detail.participants || [])];
+              const enrichedParticipants = [...(detail.participants || c.participants || [])];
               
               // Replace the other user with complete data if we have it
               if (completeOtherUser) {
@@ -203,6 +220,9 @@ export default function InboxScreen() {
               return {
                 ...c,
                 participants: enrichedParticipants.length > 0 ? enrichedParticipants : c.participants,
+                name: c.type === 'dm' || c.type === 'user' 
+                  ? (completeOtherUser?.name || c.name)
+                  : c.name,
               };
             })
           );
@@ -329,7 +349,7 @@ export default function InboxScreen() {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.header, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
-        <Text style={styles.headerTitle}>💬 Messages</Text>
+        <Text style={styles.headerTitle}>💬 Inbox</Text>
       </View>
 
       <View style={[styles.tabsContainer, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>

@@ -36,6 +36,8 @@ export default function HangoutScreen() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [uploadingBackground, setUploadingBackground] = useState(false);
+  const [isAvailableToHangout, setIsAvailableToHangout] = useState(false);
+  const [togglingAvailability, setTogglingAvailability] = useState(false);
   
   const position = useRef(new Animated.ValueXY()).current;
   const panResponder = useRef(
@@ -76,11 +78,12 @@ export default function HangoutScreen() {
         limit: 50,
       });
       
-      // Filter to only show online users and exclude current user
+      // Filter to only show online users who are available for hangout and exclude current user
       const onlineUsers = hangoutData
         .map((h: any) => h.user || h)
         .filter((u: User) => 
           u.isOnline && 
+          u.isAvailableToHangout &&
           u.username !== currentUser.username
         );
       
@@ -94,15 +97,29 @@ export default function HangoutScreen() {
     }
   }, [currentUser?.username]);
 
+  // Load user's hangout status
+  const loadHangoutStatus = useCallback(async () => {
+    if (!currentUser?.username) return;
+    
+    try {
+      const status = await ApiService.getHangoutStatus(currentUser.username);
+      setIsAvailableToHangout(status.is_available || false);
+    } catch (error) {
+      console.error('Error loading hangout status:', error);
+    }
+  }, [currentUser?.username]);
+
   useEffect(() => {
     loadOnlineUsers();
-  }, [loadOnlineUsers]);
+    loadHangoutStatus();
+  }, [loadOnlineUsers, loadHangoutStatus]);
 
   // Reload when coming back to this screen
   useFocusEffect(
     useCallback(() => {
       loadOnlineUsers();
-    }, [loadOnlineUsers])
+      loadHangoutStatus();
+    }, [loadOnlineUsers, loadHangoutStatus])
   );
 
   const forceSwipe = (direction: 'left' | 'right') => {
@@ -169,6 +186,39 @@ export default function HangoutScreen() {
       console.error('Error uploading background:', error);
       Alert.alert('Error', 'Failed to upload background image. Please try again.');
       setUploadingBackground(false);
+    }
+  };
+
+  const handleToggleAvailability = async () => {
+    if (!currentUser?.username) return;
+    
+    try {
+      setTogglingAvailability(true);
+      const newStatus = !isAvailableToHangout;
+      
+      await ApiService.updateHangoutStatus(
+        currentUser.username,
+        newStatus,
+        newStatus ? 'Ready to hang out!' : undefined,
+        []
+      );
+      
+      setIsAvailableToHangout(newStatus);
+      
+      Alert.alert(
+        newStatus ? 'You\'re ready to hang out!' : 'Hangout mode disabled',
+        newStatus 
+          ? 'Other users can now see you in the Hang out section.'
+          : 'You\'ve been removed from the Hang out section.'
+      );
+      
+      // Reload the list to reflect changes
+      await loadOnlineUsers();
+    } catch (error) {
+      console.error('Error toggling availability:', error);
+      Alert.alert('Error', 'Failed to update hangout status. Please try again.');
+    } finally {
+      setTogglingAvailability(false);
     }
   };
 
@@ -361,9 +411,11 @@ export default function HangoutScreen() {
     return (
       <View style={styles.noMoreCards}>
         <Ionicons name="people-outline" size={80} color="#ccc" />
-        <Text style={styles.noMoreCardsText}>No more users online</Text>
+        <Text style={styles.noMoreCardsText}>No users available to hang out</Text>
         <Text style={styles.noMoreCardsSubtext}>
-          Check back later or try adjusting your filters
+          {isAvailableToHangout 
+            ? 'Check back later when more users are available'
+            : 'Set yourself as available to see and be seen by others'}
         </Text>
         <TouchableOpacity
           style={[styles.reloadButton, { backgroundColor: colors.primary }]}
@@ -398,6 +450,32 @@ export default function HangoutScreen() {
       <View style={[styles.header, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
         <Text style={styles.headerTitle}>Hang out</Text>
         <View style={styles.headerRight}>
+          <TouchableOpacity
+            style={[
+              styles.availabilityButton,
+              isAvailableToHangout && [styles.availabilityButtonActive, { backgroundColor: colors.primary }]
+            ]}
+            onPress={handleToggleAvailability}
+            disabled={togglingAvailability}
+          >
+            {togglingAvailability ? (
+              <ActivityIndicator size="small" color={isAvailableToHangout ? '#fff' : colors.primary} />
+            ) : (
+              <>
+                <Ionicons 
+                  name={isAvailableToHangout ? "checkmark-circle" : "radio-button-off-outline"} 
+                  size={20} 
+                  color={isAvailableToHangout ? '#fff' : colors.primary} 
+                />
+                <Text style={[
+                  styles.availabilityButtonText,
+                  isAvailableToHangout && styles.availabilityButtonTextActive
+                ]}>
+                  {isAvailableToHangout ? 'Available' : 'Set Available'}
+                </Text>
+              </>
+            )}
+          </TouchableOpacity>
           <TouchableOpacity
             style={styles.uploadButton}
             onPress={handleUploadBackground}
@@ -533,6 +611,28 @@ const styles = StyleSheet.create({
   },
   uploadButton: {
     padding: 4,
+  },
+  availabilityButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 2,
+    borderColor: '#4ECDC4',
+    backgroundColor: '#fff',
+  },
+  availabilityButtonActive: {
+    borderColor: '#4ECDC4',
+  },
+  availabilityButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#4ECDC4',
+  },
+  availabilityButtonTextActive: {
+    color: '#fff',
   },
   loadingContainer: {
     flex: 1,
