@@ -39,6 +39,11 @@ class WebSocketService {
       this.isConnecting = false;
     });
 
+    // Handle heartbeat from server
+    this.socket.on('heartbeat', () => {
+      this.socket?.emit('heartbeat_ack');
+    });
+
     this.socket.on('connect_error', (error) => {
       console.error('WebSocket connection error:', error.message);
       this.reconnectAttempts++;
@@ -117,6 +122,13 @@ class WebSocketService {
   onNewMessage(callback: (message: Message) => void) {
     if (this.socket) {
       this.socket.on('new_message', callback);
+    }
+  }
+
+  // Listen for inbox updates (when not in conversation room)
+  onInboxUpdate(callback: (data: { conversationId: string; message: any }) => void) {
+    if (this.socket) {
+      this.socket.on('inbox_update', callback);
     }
   }
 

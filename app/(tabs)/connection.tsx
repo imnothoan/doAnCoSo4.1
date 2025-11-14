@@ -3,20 +3,24 @@ import { StyleSheet, View, Text, FlatList, TouchableOpacity, Image, TextInput, R
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { User } from '@/src/types';
+import { User, Event } from '@/src/types';
 import ApiService from '@/src/services/api';
 import LocationService from '@/src/services/location';
 import { useAuth } from '@/src/context/AuthContext';
 import { useTheme } from '@/src/context/ThemeContext';
+import { formatDate } from '@/src/utils/date';
+import { formatDistance } from '@/src/utils/distance';
 
 export default function ConnectionScreen() {
   const router = useRouter();
   const { user: currentUser } = useAuth();
   const { colors } = useTheme();
   const [users, setUsers] = useState<User[]>([]);
+  const [events, setEvents] = useState<Event[]>([]);
+  const [myEvents, setMyEvents] = useState<Event[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [viewMode, setViewMode] = useState<'users' | 'events'>('users');
+  const [viewMode, setViewMode] = useState<'users' | 'events' | 'myevents'>('users');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
@@ -73,6 +77,32 @@ export default function ConnectionScreen() {
     }
   }, [searchQuery]);
 
+  const loadEvents = useCallback(async () => {
+    try {
+      setLoading(true);
+      const data = await ApiService.getEvents();
+      setEvents(data);
+    } catch (error) {
+      console.error('Error loading events:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const loadMyEvents = useCallback(async () => {
+    if (!currentUser?.username) return;
+    
+    try {
+      setLoading(true);
+      const data = await ApiService.getMyEvents(currentUser.username, 'participating');
+      setMyEvents(data);
+    } catch (error) {
+      console.error('Error loading my events:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [currentUser?.username]);
+
   // Apply filters to users
   useEffect(() => {
     let result = [...users];
@@ -112,17 +142,29 @@ export default function ConnectionScreen() {
 
   useEffect(() => {
     const timeoutId = setTimeout(() => {
-      loadUsers();
+      if (viewMode === 'users') {
+        loadUsers();
+      } else if (viewMode === 'events') {
+        loadEvents();
+      } else if (viewMode === 'myevents') {
+        loadMyEvents();
+      }
     }, 300); // Debounce search
 
     return () => clearTimeout(timeoutId);
-  }, [loadUsers]);
+  }, [loadUsers, loadEvents, loadMyEvents, viewMode]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await loadUsers();
+    if (viewMode === 'users') {
+      await loadUsers();
+    } else if (viewMode === 'events') {
+      await loadEvents();
+    } else if (viewMode === 'myevents') {
+      await loadMyEvents();
+    }
     setRefreshing(false);
-  }, [loadUsers]);
+  }, [loadUsers, loadEvents, loadMyEvents, viewMode]);
 
   const handleFollowToggle = async (user: User, event: any) => {
     event.stopPropagation(); // Prevent navigation to profile
@@ -224,10 +266,68 @@ export default function ConnectionScreen() {
     );
   };
 
+  const renderEventCard = ({ item }: { item: Event }) => (
+    <TouchableOpacity 
+      style={styles.eventCard}
+      onPress={() => router.push(`/event-detail?id=${item.id}`)}
+    >
+      {item.image && (
+        <Image source={{ uri: item.image }} style={styles.eventImage} />
+      )}
+      <View style={styles.eventContent}>
+        <View style={styles.eventHeader}>
+          <Text style={styles.eventName} numberOfLines={2}>
+            {item.name}
+          </Text>
+          <View style={styles.distanceContainer}>
+            <Ionicons name="location-outline" size={14} color="#666" />
+            <Text style={styles.distanceText}>{formatDistance(item.distance || 0)}</Text>
+          </View>
+        </View>
+        
+        <View style={styles.eventDetails}>
+          <View style={styles.eventDetailRow}>
+            <Ionicons name="calendar-outline" size={16} color="#666" />
+            <Text style={styles.eventDetailText}>{formatDate(item.dateStart)}</Text>
+          </View>
+          {item.timeStart && (
+            <View style={styles.eventDetailRow}>
+              <Ionicons name="time-outline" size={16} color="#666" />
+              <Text style={styles.eventDetailText}>
+                {item.timeStart} - {item.timeEnd}
+              </Text>
+            </View>
+          )}
+          <View style={styles.eventDetailRow}>
+            <Ionicons name="location-outline" size={16} color="#666" />
+            <Text style={styles.eventDetailText} numberOfLines={1}>
+              {item.address}
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.participantsRow}>
+          <View style={styles.avatarGroup}>
+            {item.participants && item.participants.slice(0, 3).map((participant, index) => (
+              <Image
+                key={participant.id}
+                source={{ uri: participant.avatar }}
+                style={[styles.participantAvatar, { marginLeft: index > 0 ? -10 : 0 }]}
+              />
+            ))}
+          </View>
+          <Text style={styles.participantCount}>
+            {item.participants?.length || 0} interested
+          </Text>
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.header, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
-        <Text style={styles.headerTitle}>Connection</Text>
+        <Text style={styles.headerTitle}>🌍 Explore</Text>
       </View>
 
       <View style={[styles.searchContainer, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
@@ -256,7 +356,7 @@ export default function ConnectionScreen() {
           onPress={() => setViewMode('users')}
         >
           <Text style={[styles.viewModeText, viewMode === 'users' && styles.viewModeTextActive]}>
-            Users
+            People
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -264,7 +364,15 @@ export default function ConnectionScreen() {
           onPress={() => setViewMode('events')}
         >
           <Text style={[styles.viewModeText, viewMode === 'events' && styles.viewModeTextActive]}>
-            All Events
+            Events
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.viewModeButton, viewMode === 'myevents' && [styles.viewModeButtonActive, { backgroundColor: colors.primary }]]}
+          onPress={() => setViewMode('myevents')}
+        >
+          <Text style={[styles.viewModeText, viewMode === 'myevents' && styles.viewModeTextActive]}>
+            My Events
           </Text>
         </TouchableOpacity>
       </View>
@@ -294,10 +402,52 @@ export default function ConnectionScreen() {
       )}
 
       {viewMode === 'events' && (
-        <View style={styles.emptyContainer}>
-          <Ionicons name="calendar-outline" size={64} color="#ccc" />
-          <Text style={styles.emptyText}>Events view coming soon</Text>
-        </View>
+        loading && !refreshing ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={colors.primary} />
+          </View>
+        ) : (
+          <FlatList
+            data={events}
+            renderItem={renderEventCard}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={styles.listContent}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+            }
+            ListEmptyComponent={
+              <View style={styles.emptyContainer}>
+                <Ionicons name="calendar-outline" size={64} color="#ccc" />
+                <Text style={styles.emptyText}>No events found</Text>
+              </View>
+            }
+          />
+        )
+      )}
+
+      {viewMode === 'myevents' && (
+        loading && !refreshing ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={colors.primary} />
+          </View>
+        ) : (
+          <FlatList
+            data={myEvents}
+            renderItem={renderEventCard}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={styles.listContent}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+            }
+            ListEmptyComponent={
+              <View style={styles.emptyContainer}>
+                <Ionicons name="calendar-outline" size={64} color="#ccc" />
+                <Text style={styles.emptyText}>You have no events yet</Text>
+                <Text style={styles.emptySubtext}>Join some events to see them here</Text>
+              </View>
+            }
+          />
+        )
       )}
 
       {/* Filter Modal */}
@@ -667,5 +817,81 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#fff',
     fontWeight: '600',
+  },
+  emptySubtext: {
+    fontSize: 14,
+    color: '#bbb',
+    marginTop: 8,
+  },
+  // Event Card Styles
+  eventCard: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    marginBottom: 16,
+    overflow: 'hidden',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  eventImage: {
+    width: '100%',
+    height: 180,
+    backgroundColor: '#f0f0f0',
+  },
+  eventContent: {
+    padding: 16,
+  },
+  eventHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 12,
+  },
+  eventName: {
+    flex: 1,
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+    marginRight: 8,
+  },
+  distanceContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  eventDetails: {
+    gap: 8,
+    marginBottom: 12,
+  },
+  eventDetailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  eventDetailText: {
+    fontSize: 14,
+    color: '#666',
+    flex: 1,
+  },
+  participantsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  avatarGroup: {
+    flexDirection: 'row',
+  },
+  participantAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: '#fff',
+  },
+  participantCount: {
+    fontSize: 14,
+    color: '#666',
+    fontWeight: '500',
   },
 });
