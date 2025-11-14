@@ -15,12 +15,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import * as Haptics from 'expo-haptics';
 import { useAuth } from '@/src/context/AuthContext';
 import { useTheme } from '@/src/context/ThemeContext';
 import ApiService from '@/src/services/api';
 import ImageService from '@/src/services/image';
 import { User } from '@/src/types';
 import { useFocusEffect } from '@react-navigation/native';
+import { GlassCard } from '@/components/ui/glass-card';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const SWIPE_THRESHOLD = 120;
@@ -43,11 +45,18 @@ export default function HangoutScreen() {
         position.setValue({ x: gesture.dx, y: gesture.dy });
       },
       onPanResponderRelease: (_, gesture) => {
+        // Haptic feedback based on swipe direction
+        if (Math.abs(gesture.dx) > 20) {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        }
+        
         if (gesture.dx < -SWIPE_THRESHOLD) {
           // Swipe left - view profile
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
           forceSwipe('left');
         } else if (gesture.dx > SWIPE_THRESHOLD) {
           // Swipe right - next user
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
           forceSwipe('right');
         } else {
           resetPosition();
@@ -98,9 +107,10 @@ export default function HangoutScreen() {
 
   const forceSwipe = (direction: 'left' | 'right') => {
     const x = direction === 'right' ? SCREEN_WIDTH + 100 : -SCREEN_WIDTH - 100;
-    Animated.timing(position, {
+    Animated.spring(position, {
       toValue: { x, y: 0 },
-      duration: 250,
+      friction: 4,
+      tension: 40,
       useNativeDriver: false,
     }).start(() => onSwipeComplete(direction));
   };
@@ -386,7 +396,7 @@ export default function HangoutScreen() {
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Header */}
       <View style={[styles.header, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
-        <Text style={styles.headerTitle}>Hang Out</Text>
+        <Text style={styles.headerTitle}>💫 Discover</Text>
         <View style={styles.headerRight}>
           <TouchableOpacity
             style={styles.uploadButton}
@@ -416,32 +426,85 @@ export default function HangoutScreen() {
         )}
       </View>
 
-      {/* Action Buttons */}
+      {/* Action Buttons with Glass Effect */}
       {currentIndex < users.length && (
         <View style={styles.actionButtons}>
           <TouchableOpacity
             style={[styles.actionButton, styles.nopeButton]}
-            onPress={() => forceSwipe('left')}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              forceSwipe('left');
+            }}
           >
-            <Ionicons name="close" size={32} color="#FF6B6B" />
+            <LinearGradient
+              colors={['rgba(255, 107, 107, 0.9)', 'rgba(255, 60, 60, 0.8)']}
+              style={styles.actionButtonGradient}
+            >
+              <Ionicons name="close" size={32} color="#FFF" />
+            </LinearGradient>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.actionButton, styles.superLikeButton]}
+            onPress={() => {
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+              // Handle super like / instant message
+              const currentUserProfile = users[currentIndex];
+              if (currentUserProfile) {
+                router.push(`/chat?username=${currentUserProfile.username}`);
+              }
+            }}
+          >
+            <LinearGradient
+              colors={['rgba(0, 122, 255, 0.9)', 'rgba(0, 90, 255, 0.8)']}
+              style={styles.actionButtonGradient}
+            >
+              <Ionicons name="chatbubble" size={28} color="#FFF" />
+            </LinearGradient>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={[styles.actionButton, styles.likeButton]}
-            onPress={() => forceSwipe('right')}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              forceSwipe('right');
+            }}
           >
-            <Ionicons name="checkmark" size={32} color="#4ECDC4" />
+            <LinearGradient
+              colors={['rgba(78, 205, 196, 0.9)', 'rgba(60, 180, 170, 0.8)']}
+              style={styles.actionButtonGradient}
+            >
+              <Ionicons name="heart" size={32} color="#FFF" />
+            </LinearGradient>
           </TouchableOpacity>
         </View>
       )}
 
-      {/* Instructions */}
+      {/* Instructions with Glass Effect */}
       {users.length > 0 && currentIndex < users.length && (
-        <View style={styles.instructions}>
-          <Text style={styles.instructionsText}>
-            ✕ View profile • ✓ Next user
-          </Text>
-        </View>
+        <GlassCard 
+          variant="light" 
+          intensity={40}
+          style={styles.instructionsCard}
+          noPadding={true}
+        >
+          <View style={styles.instructions}>
+            <View style={styles.instructionItem}>
+              <Ionicons name="close-circle" size={20} color="#FF6B6B" />
+              <Text style={styles.instructionsText}>View Profile</Text>
+            </View>
+            <View style={styles.instructionDivider} />
+            <View style={styles.instructionItem}>
+              <Ionicons name="chatbubble" size={18} color="#007AFF" />
+              <Text style={styles.instructionsText}>Message</Text>
+            </View>
+            <View style={styles.instructionDivider} />
+            <View style={styles.instructionItem}>
+              <Ionicons name="heart" size={20} color="#4ECDC4" />
+              <Text style={styles.instructionsText}>Next</Text>
+            </View>
+          </View>
+        </GlassCard>
       )}
     </SafeAreaView>
   );
@@ -607,39 +670,60 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    gap: 40,
+    gap: 20,
     paddingVertical: 20,
   },
   actionButton: {
     width: 70,
     height: 70,
     borderRadius: 35,
+    overflow: 'hidden',
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+  },
+  actionButtonGradient: {
+    width: '100%',
+    height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#fff',
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
   },
   nopeButton: {
-    borderWidth: 2,
-    borderColor: '#FF6B6B',
   },
   likeButton: {
-    borderWidth: 2,
-    borderColor: '#4ECDC4',
+  },
+  superLikeButton: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
   },
   instructions: {
+    flexDirection: 'row',
     paddingHorizontal: 20,
-    paddingBottom: 10,
+    paddingVertical: 12,
+    justifyContent: 'space-around',
     alignItems: 'center',
   },
+  instructionsCard: {
+    marginHorizontal: 20,
+    marginBottom: 10,
+  },
+  instructionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  instructionDivider: {
+    width: 1,
+    height: 20,
+    backgroundColor: 'rgba(0, 0, 0, 0.1)',
+  },
   instructionsText: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#666',
-    textAlign: 'center',
+    fontWeight: '500',
   },
   noMoreCards: {
     alignItems: 'center',

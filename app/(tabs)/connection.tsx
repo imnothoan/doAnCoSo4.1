@@ -327,7 +327,7 @@ export default function ConnectionScreen() {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.header, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
-        <Text style={styles.headerTitle}>Connection</Text>
+        <Text style={styles.headerTitle}>🌍 Explore</Text>
       </View>
 
       <View style={[styles.searchContainer, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
