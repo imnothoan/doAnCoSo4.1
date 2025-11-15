@@ -77,6 +77,14 @@ export default function RootLayout() {
                 presentation: 'card',
               }} 
             />
+            <Stack.Screen 
+              name="liquid-glass-demo" 
+              options={{ 
+                presentation: 'card',
+                title: 'Liquid Glass UI',
+                headerShown: false,
+              }} 
+            />
           </Stack>
           <StatusBar style="auto" />
         </ThemeProvider>

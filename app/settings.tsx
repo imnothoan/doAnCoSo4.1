@@ -207,6 +207,12 @@ export default function SettingsScreen() {
           <View style={[styles.section, { backgroundColor: colors.card }]}>
             <Text style={styles.sectionTitle}>App Settings</Text>
             <SettingRow
+              icon="sparkles"
+              title="iOS Liquid Glass UI Demo"
+              onPress={() => router.push('/liquid-glass-demo')}
+              showChevron
+            />
+            <SettingRow
               icon="language-outline"
               title="Language"
               onPress={() => Alert.alert('Coming Soon', 'Language selection will be available soon.')}
