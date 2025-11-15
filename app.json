@@ -10,9 +10,14 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
+      "deploymentTarget": "18.0",
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "This app needs your location to show nearby events and users.",
-        "NSLocationAlwaysAndWhenInUseUsageDescription": "This app needs your location to show nearby events and users."
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "This app needs your location to show nearby events and users.",
+        "UIUserInterfaceStyle": "Automatic"
+      },
+      "config": {
+        "usesNonExemptEncryption": false
       }
     },
     "android": {
