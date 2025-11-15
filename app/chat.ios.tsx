@@ -29,7 +29,7 @@ export default function ChatScreen() {
   const params = useLocalSearchParams();
   const chatId = params.id as string;
   const { user: currentUser } = useAuth();
-  const { colors, isPro } = useTheme();
+  const { colors } = useTheme();
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [userMap, setUserMap] = useState<Record<string, User>>({});
