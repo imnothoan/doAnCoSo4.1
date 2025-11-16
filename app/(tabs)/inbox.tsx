@@ -51,6 +51,7 @@ export default function InboxScreen() {
     // Handle new messages to update conversation list
     const handleNewMessage = (message: any) => {
       const conversationId = String(message.chatId || message.conversation_id || message.conversationId);
+      const senderId = message.senderId || message.sender_username || message.sender?.username;
       
       setChats(prevChats => {
         // Find existing conversation
@@ -61,17 +62,44 @@ export default function InboxScreen() {
           const updatedChats = [...prevChats];
           const existingChat = updatedChats[existingIndex];
           
+          // Ensure we have complete sender info - use existing participant if available
+          let senderInfo = message.sender;
+          if (!senderInfo || !senderInfo.name) {
+            // Try to find sender in existing participants
+            senderInfo = existingChat.participants?.find(p => p.username === senderId);
+          }
+          
+          // Fallback to basic sender info
+          if (!senderInfo) {
+            senderInfo = {
+              id: senderId,
+              username: senderId,
+              name: senderId,
+              email: `${senderId}@example.com`,
+              avatar: '',
+              country: '',
+              city: '',
+              status: 'Chilling',
+              languages: [],
+              interests: [],
+            };
+          }
+          
           // Move to top and update last message
           updatedChats.splice(existingIndex, 1);
           updatedChats.unshift({
             ...existingChat,
             lastMessage: {
+              id: String(message.id || Date.now()),
+              chatId: conversationId,
+              senderId: senderId,
+              sender: senderInfo,
               content: message.content || '',
-              timestamp: message.timestamp || new Date().toISOString(),
-              sender: message.sender || { username: message.senderId },
+              timestamp: message.timestamp || message.created_at || new Date().toISOString(),
+              read: false,
             },
             // Increment unread count if message is from someone else
-            unreadCount: message.senderId !== user.username 
+            unreadCount: senderId !== user.username 
               ? (existingChat.unreadCount || 0) + 1 
               : existingChat.unreadCount,
           });
@@ -128,9 +156,18 @@ export default function InboxScreen() {
       ? item.participants?.find(p => p.username && p.username !== user?.username)
       : undefined;
 
+    // If otherUser not found in participants, try to get from lastMessage sender
+    if (isDM && !otherUser && item.lastMessage?.sender) {
+      const sender = item.lastMessage.sender;
+      if (sender.username !== user?.username) {
+        otherUser = sender;
+      }
+    }
+
+    // More robust display name with better fallbacks
     const displayName = isDM
-      ? (otherUser?.name || otherUser?.username || 'User')
-      : (item.name || 'Group');
+      ? (otherUser?.name || otherUser?.username || item.name || 'Unknown User')
+      : (item.name || 'Group Chat');
 
     const avatarUrl = isDM ? (otherUser?.avatar || '') : '';
 
