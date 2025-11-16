@@ -67,14 +67,14 @@ export default function HangoutScreen() {
     
     try {
       setLoading(true);
-      console.log('📥 Fetching hangout users...');
+      console.log('Fetching hangout users...');
       
       // Get users available for hangout
       const hangoutData = await ApiService.getOpenHangouts({
         limit: 50,
       });
       
-      console.log(`📊 Received ${hangoutData.length} users from server`);
+      console.log(`Received ${hangoutData.length} users from server`);
       
       // Filter to only show online users and exclude current user
       const onlineUsers = hangoutData
@@ -84,24 +84,24 @@ export default function HangoutScreen() {
           const isNotCurrentUser = u.username !== currentUser.username;
           
           if (!isNotCurrentUser) {
-            console.log('⏭️ Skipping current user');
+            console.log('Skipping current user');
             return false;
           }
           
           if (!isOnline) {
-            console.log(`⏭️ Skipping offline user: ${u.username}`);
+            console.log(`Skipping offline user: ${u.username}`);
             return false;
           }
           
           return true;
         });
       
-      console.log(`✅ Filtered to ${onlineUsers.length} available users`);
+      console.log(`Filtered to ${onlineUsers.length} available users`);
       
       setUsers(onlineUsers);
       setCurrentIndex(0);
     } catch (error) {
-      console.error('❌ Error loading hangout users:', error);
+      console.error('Error loading hangout users:', error);
       Alert.alert('Error', 'Failed to load users. Please try again.');
       setUsers([]);
     } finally {
@@ -164,7 +164,7 @@ export default function HangoutScreen() {
     
     // Set up periodic refresh every 30 seconds to get latest available users
     const refreshInterval = setInterval(() => {
-      console.log('🔄 Auto-refreshing hangout users...');
+      console.log('Auto-refreshing hangout users...');
       loadOnlineUsers();
     }, 30000);
     
@@ -245,7 +245,7 @@ export default function HangoutScreen() {
         name: image.name || `background_${Date.now()}.jpg`,
       };
 
-      console.log('📤 Uploading background image...');
+      console.log('Uploading background image...');
       
       // Upload background image
       const result = await ApiService.uploadBackgroundImage(currentUser.id, imageFile);
@@ -312,7 +312,7 @@ export default function HangoutScreen() {
               style={styles.cardImage}
               resizeMode="cover"
               onError={(e) => {
-                console.log('❌ Failed to load background image for', user.username);
+                console.log('Failed to load background image for', user.username);
               }}
             />
           ) : user.avatar ? (
@@ -321,7 +321,7 @@ export default function HangoutScreen() {
               style={styles.cardImage}
               resizeMode="cover"
               onError={(e) => {
-                console.log('❌ Failed to load avatar for', user.username);
+                console.log('Failed to load avatar for', user.username);
               }}
             />
           ) : (
