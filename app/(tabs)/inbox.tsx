@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { StyleSheet, View, Text, FlatList, TouchableOpacity, Image, RefreshControl, ActivityIndicator } from 'react-native';
+import { StyleSheet, View, Text, FlatList, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -18,7 +18,6 @@ export default function InboxScreen() {
   const [chats, setChats] = useState<Chat[]>([]);
   const [activeTab, setActiveTab] = useState<'all' | 'events' | 'users'>('all');
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
 
   const loadChats = useCallback(async () => {
     if (!user?.username) return;
@@ -62,26 +61,30 @@ export default function InboxScreen() {
           const updatedChats = [...prevChats];
           const existingChat = updatedChats[existingIndex];
           
-          // Ensure we have complete sender info - use existing participant if available
+          // Build complete sender info from message data
           let senderInfo = message.sender;
-          if (!senderInfo || !senderInfo.name) {
-            // Try to find sender in existing participants
-            senderInfo = existingChat.participants?.find(p => p.username === senderId);
+          
+          // If sender info is incomplete, try to find from existing participants
+          if (!senderInfo || !senderInfo.name || !senderInfo.email) {
+            const existingParticipant = existingChat.participants?.find(p => p.username === senderId);
+            if (existingParticipant) {
+              senderInfo = existingParticipant;
+            }
           }
           
-          // Fallback to basic sender info
-          if (!senderInfo) {
+          // Ensure we have at least minimal sender info
+          if (!senderInfo || !senderInfo.username) {
             senderInfo = {
               id: senderId,
               username: senderId,
               name: senderId,
               email: `${senderId}@example.com`,
-              avatar: '',
-              country: '',
-              city: '',
-              status: 'Chilling',
-              languages: [],
-              interests: [],
+              avatar: message.sender?.avatar || '',
+              country: message.sender?.country || '',
+              city: message.sender?.city || '',
+              status: message.sender?.status || 'Chilling',
+              languages: message.sender?.languages || [],
+              interests: message.sender?.interests || [],
             };
           }
           
@@ -122,19 +125,6 @@ export default function InboxScreen() {
     };
   }, [user?.username, loadChats]);
 
-  const onRefresh = useCallback(async () => {
-    setRefreshing(true);
-    await loadChats();
-    setRefreshing(false);
-  }, [loadChats]);
-
-  const filteredChats = chats.filter(chat => {
-    if (activeTab === 'all') return true;
-    if (activeTab === 'events') return chat.type === 'event';
-    if (activeTab === 'users') return chat.type === 'user';
-    return true;
-  });
-
   const handleOpenChat = useCallback(async (chat: Chat) => {
     try {
       if (user?.username) {
@@ -147,6 +137,13 @@ export default function InboxScreen() {
       router.push(`/inbox/chat?id=${chat.id}`);
     }
   }, [router, user?.username]);
+
+  const filteredChats = chats.filter(chat => {
+    if (activeTab === 'all') return true;
+    if (activeTab === 'events') return chat.type === 'event';
+    if (activeTab === 'users') return chat.type === 'user';
+    return true;
+  });
 
   const renderChatItem = ({ item }: { item: Chat }) => {
     const isDM = item.type === 'dm' || item.type === 'user';
@@ -164,11 +161,12 @@ export default function InboxScreen() {
       }
     }
 
-    // More robust display name with better fallbacks
+    // Build robust display name - prioritize actual name over username
     const displayName = isDM
-      ? (otherUser?.name || otherUser?.username || item.name || 'Unknown User')
+      ? (otherUser?.name || otherUser?.username || 'Unknown User')
       : (item.name || 'Group Chat');
 
+    // Get avatar - ensure we use the other user's avatar for DM
     const avatarUrl = isDM ? (otherUser?.avatar || '') : '';
 
     const relativeTime = item.lastMessage?.timestamp
@@ -261,7 +259,7 @@ export default function InboxScreen() {
         </TouchableOpacity>
       </View>
 
-      {loading && !refreshing ? (
+      {loading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
@@ -270,9 +268,6 @@ export default function InboxScreen() {
           data={filteredChats}
           renderItem={renderChatItem}
           keyExtractor={(item) => item.id}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-          }
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <Ionicons name="chatbubbles-outline" size={64} color="#ccc" />
