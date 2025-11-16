@@ -60,27 +60,50 @@ export default function HangoutScreen() {
 
   // Load online users available for hangout
   const loadOnlineUsers = useCallback(async () => {
-    if (!currentUser?.username) return;
+    if (!currentUser?.username) {
+      console.log('❌ Cannot load hangout users - no current user');
+      return;
+    }
     
     try {
       setLoading(true);
+      console.log('📥 Fetching hangout users...');
+      
       // Get users available for hangout
       const hangoutData = await ApiService.getOpenHangouts({
         limit: 50,
       });
       
+      console.log(`📊 Received ${hangoutData.length} users from server`);
+      
       // Filter to only show online users and exclude current user
       const onlineUsers = hangoutData
         .map((h: any) => h.user || h)
-        .filter((u: User) => 
-          u.isOnline && 
-          u.username !== currentUser.username
-        );
+        .filter((u: User) => {
+          const isOnline = u.isOnline || u.is_online;
+          const isNotCurrentUser = u.username !== currentUser.username;
+          const hasBackground = u.backgroundImage || u.background_image;
+          
+          if (!isNotCurrentUser) {
+            console.log('⏭️ Skipping current user');
+            return false;
+          }
+          
+          if (!isOnline) {
+            console.log(`⏭️ Skipping offline user: ${u.username}`);
+            return false;
+          }
+          
+          return true;
+        });
+      
+      console.log(`✅ Filtered to ${onlineUsers.length} available users`);
       
       setUsers(onlineUsers);
       setCurrentIndex(0);
     } catch (error) {
-      console.error('Error loading online users:', error);
+      console.error('❌ Error loading hangout users:', error);
+      Alert.alert('Error', 'Failed to load users. Please try again.');
       setUsers([]);
     } finally {
       setLoading(false);
@@ -139,11 +162,22 @@ export default function HangoutScreen() {
   useEffect(() => {
     loadHangoutStatus();
     loadOnlineUsers();
+    
+    // Set up periodic refresh every 30 seconds to get latest available users
+    const refreshInterval = setInterval(() => {
+      console.log('🔄 Auto-refreshing hangout users...');
+      loadOnlineUsers();
+    }, 30000);
+    
+    return () => {
+      clearInterval(refreshInterval);
+    };
   }, [loadHangoutStatus, loadOnlineUsers]);
 
   // Reload when coming back to this screen
   useFocusEffect(
     useCallback(() => {
+      console.log('📱 Hangout screen focused - reloading data');
       loadHangoutStatus();
       loadOnlineUsers();
     }, [loadHangoutStatus, loadOnlineUsers])
@@ -179,16 +213,25 @@ export default function HangoutScreen() {
   };
 
   const handleUploadBackground = async () => {
-    if (!currentUser?.id) return;
+    if (!currentUser?.id) {
+      Alert.alert('Error', 'Please log in to upload background image');
+      return;
+    }
     
     try {
+      console.log('📷 Opening image picker for background...');
       const image = await ImageService.pickImageFromGallery({
         allowsEditing: true,
-        aspect: [9, 16],
+        aspect: [9, 16], // Portrait aspect ratio for hangout cards
         quality: 0.8,
       });
       
-      if (!image) return;
+      if (!image) {
+        console.log('❌ No image selected');
+        return;
+      }
+
+      console.log('✅ Image selected:', image.uri);
 
       if (!ImageService.validateImageSize(image, 10)) {
         Alert.alert('Error', 'Image size must be less than 10MB');
@@ -200,17 +243,31 @@ export default function HangoutScreen() {
       const imageFile: any = {
         uri: image.uri,
         type: image.type || 'image/jpeg',
-        name: image.name || 'background.jpg',
+        name: image.name || `background_${Date.now()}.jpg`,
       };
 
-      // Upload background image
-      await ApiService.uploadBackgroundImage(currentUser.id, imageFile);
-      Alert.alert('Success', 'Background image uploaded successfully! It will be visible to others in Hangout.');
+      console.log('📤 Uploading background image...');
       
-      setUploadingBackground(false);
+      // Upload background image
+      const result = await ApiService.uploadBackgroundImage(currentUser.id, imageFile);
+      
+      console.log('✅ Background image uploaded successfully:', result.backgroundImageUrl);
+      
+      Alert.alert(
+        'Success', 
+        'Background image uploaded successfully! It will be visible to others in Hangout when you turn on visibility.'
+      );
+      
+      // Refresh user data to get new background image
+      if (currentUser.username) {
+        const updatedUser = await ApiService.getUserByUsername(currentUser.username);
+        console.log('🔄 Updated user background:', updatedUser.backgroundImage);
+      }
+      
     } catch (error) {
-      console.error('Error uploading background:', error);
+      console.error('❌ Error uploading background:', error);
       Alert.alert('Error', 'Failed to upload background image. Please try again.');
+    } finally {
       setUploadingBackground(false);
     }
   };
@@ -250,17 +307,23 @@ export default function HangoutScreen() {
           {...panResponder.panHandlers}
         >
           {/* Background Image */}
-          {user.backgroundImage ? (
+          {(user.backgroundImage || user.background_image) ? (
             <Image
-              source={{ uri: user.backgroundImage }}
+              source={{ uri: user.backgroundImage || user.background_image }}
               style={styles.cardImage}
               resizeMode="cover"
+              onError={(e) => {
+                console.log('❌ Failed to load background image for', user.username);
+              }}
             />
           ) : user.avatar ? (
             <Image
               source={{ uri: user.avatar }}
               style={styles.cardImage}
               resizeMode="cover"
+              onError={(e) => {
+                console.log('❌ Failed to load avatar for', user.username);
+              }}
             />
           ) : (
             <View style={[styles.cardImage, { backgroundColor: colors.border }]}>
@@ -375,9 +438,9 @@ export default function HangoutScreen() {
           },
         ]}
       >
-        {user.backgroundImage ? (
+        {(user.backgroundImage || user.background_image) ? (
           <Image
-            source={{ uri: user.backgroundImage }}
+            source={{ uri: user.backgroundImage || user.background_image }}
             style={styles.cardImage}
             resizeMode="cover"
           />
@@ -390,6 +453,8 @@ export default function HangoutScreen() {
         ) : (
           <View style={[styles.cardImage, { backgroundColor: colors.border }]}>
             <Ionicons name="person" size={120} color="#ccc" />
+          </View>
+        )}
           </View>
         )}
         <LinearGradient
