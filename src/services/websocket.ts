@@ -7,7 +7,7 @@ class WebSocketService {
   private maxReconnectAttempts = Infinity; // Infinite reconnection attempts
   private reconnectDelay = 1000;
   private isConnecting = false;
-  private heartbeatInterval: NodeJS.Timeout | null = null;
+  private heartbeatInterval: ReturnType<typeof setInterval> | null = null; // FIXED
   private connectionStatusListeners: ((connected: boolean) => void)[] = [];
   private activeConversations: Set<string> = new Set(); // Track active conversation rooms
 

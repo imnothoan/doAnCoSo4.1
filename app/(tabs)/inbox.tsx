@@ -18,12 +18,29 @@ export default function InboxScreen() {
   const [activeTab, setActiveTab] = useState<'all' | 'events' | 'users'>('all');
   const [loading, setLoading] = useState(true);
 
+  // 1) Đảm bảo WebSocket kết nối khi ở Inbox
+  useEffect(() => {
+    if (!user?.username) return;
+    const apiUrl = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
+    if (!WebSocketService.isConnected()) {
+      WebSocketService.connect(apiUrl, user.username);
+    }
+  }, [user?.username]);
+
+  // 2) Load chats và JOIN tất cả room để nhận realtime
   const loadChats = useCallback(async () => {
     if (!user?.username) return;
     try {
       setLoading(true);
       const data = await ApiService.getConversations(user.username);
       setChats(data);
+
+      // Join tất cả conversation rooms (quan trọng để Inbox realtime)
+      data.forEach(c => {
+        if (c?.id != null) {
+          WebSocketService.joinConversation(String(c.id));
+        }
+      });
     } catch (error) {
       console.error('Error loading chats:', error);
     } finally {
@@ -38,7 +55,7 @@ export default function InboxScreen() {
   // Note: Removed useFocusEffect reload since WebSocket provides real-time updates
   // No need to reload when returning to the tab - conversations update automatically
 
-  // WebSocket real-time updates for new messages
+  // WebSocket real-time updates  for new messages
   useEffect(() => {
     if (!user?.username) return;
 
@@ -164,11 +181,53 @@ export default function InboxScreen() {
           
           console.log('✅ Updated conversation in inbox:', updatedChat.name || updatedChat.id);
           return updatedChats;
-        } else {
-          // New conversation - reload the full list to get complete data
-          console.log('🔄 New conversation detected, reloading chats...');
-          loadChats();
-          return prevChats;
+                } else {
+          // New conversation first message (we got it because server emitted directly to our socket)
+          console.log('🆕 First message of a new conversation:', conversationId);
+
+          // Tạo minimal sender
+          const minimalSender = message.sender || {
+            id: senderId || 'unknown',
+            username: senderId || 'unknown',
+            name: senderId || senderId || 'Unknown User',
+            email: `${senderId || 'unknown'}@example.com`,
+            avatar: '',
+            country: '',
+            city: '',
+            status: 'Chilling',
+            languages: [],
+            interests: [],
+          };
+
+          const minimalChat: Chat = {
+            id: conversationId,
+            type: 'dm',
+            name: minimalSender.name || minimalSender.username,
+            participants: [minimalSender],
+            lastMessage: {
+              id: String(message.id || Date.now()),
+              chatId: conversationId,
+              senderId: senderId || 'unknown',
+              sender: minimalSender,
+              content: message.content || '',
+              timestamp: message.timestamp || message.created_at || new Date().toISOString(),
+              read: false,
+            },
+            unreadCount: senderId !== user.username ? 1 : 0,
+          };
+
+          // Join room ngay (sẽ không lỗi nếu đã join)
+          WebSocketService.joinConversation(conversationId);
+
+          // Thêm vào đầu danh sách
+          const newList = [minimalChat, ...prevChats];
+
+          // Gọi loadChats nền để enrich (avatar, participants đầy đủ)
+          setTimeout(() => {
+            loadChats();
+          }, 300);
+
+          return newList;
         }
       });
     };

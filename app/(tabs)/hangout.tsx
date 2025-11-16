@@ -186,12 +186,16 @@ export default function HangoutScreen() {
                 {
                   text: 'Enable',
                   onPress: async () => {
+                    if (!currentUser?.username) {
+                      Alert.alert('Error', 'User not found');
+                      return;
+                    }
                     try {
                       await ApiService.updateHangoutStatus(
-                        currentUser.username,
+                        currentUser.username,        // đã thu hẹp
                         true,
-                        currentUser.currentActivity,
-                        currentUser.hangoutActivities
+                        currentUser.currentActivity || '',          // fallback chuỗi rỗng
+                        currentUser.hangoutActivities || []         // fallback mảng rỗng
                       );
                       setIsAvailable(true);
                       loadOnlineUsers(); // Reload to see available users
