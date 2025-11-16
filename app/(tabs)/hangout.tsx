@@ -91,8 +91,8 @@ export default function HangoutScreen() {
       
       setUsers(onlineUsers);
       setCurrentIndex(0);
-    } catch (error) {
-    
+    } catch (err) {
+      console.error('Error loading online users:', err);
       Alert.alert('Error', 'Failed to load users. Please try again.');
       setUsers([]);
     } finally {
@@ -208,7 +208,7 @@ export default function HangoutScreen() {
     loadOnlineUsers();
     
     // Set up periodic refresh every 30 seconds to get latest available users
-
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser?.username, loadOnlineUsers]);
 
   // Reload when coming back to this screen
