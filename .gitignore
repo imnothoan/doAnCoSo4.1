@@ -42,7 +42,13 @@ app-example
 /ios
 /android
 
-# documentation files (keep only README.md in root)
+# documentation files (keep only README.md and essential guides in root)
+# Allow specific useful documentation
+!TESTING_GUIDE.md
+!SERVER_SETUP.md
+!IMPLEMENTATION_SUMMARY.md
+
+# Block other documentation files
 /*_SUMMARY*.md
 /*_GUIDE*.md
 /*_COMPLETE*.md
@@ -55,7 +61,10 @@ app-example
 /DEPLOYMENT*.md
 /PAYMENT*.md
 /SECURITY*.md
-/SERVER*.md
-/TESTING*.md
 /PRO_THEME*.md
 /QUICK*.md
+
+# But re-allow our new documentation
+!TESTING_GUIDE.md
+!SERVER_SETUP.md
+!IMPLEMENTATION_SUMMARY.md
