@@ -198,7 +198,7 @@ export default function AccountScreen() {
           <View style={styles.summaryGrid}>
             <TouchableOpacity 
               style={styles.summaryItem}
-              onPress={() => router.push(`/followers-list?username=${user.username}&type=followers`)}
+              onPress={() => router.push(`account/followers-list?username=${user.username}&type=followers`)}
             >
               <Text style={styles.summaryValue}>{user.followersCount || 0}</Text>
               <Text style={styles.summaryLabel}>Followers</Text>
