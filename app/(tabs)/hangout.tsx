@@ -163,7 +163,7 @@ export default function HangoutScreen() {
     
     if (direction === 'left' && currentUserProfile?.username) {
       // Swipe left - view profile
-      router.push(`/profile?username=${currentUserProfile.username}`);
+      router.push(`/account/profile?username=${currentUserProfile.username}`);
     }
     
     // Move to next user (for both left and right swipes)
