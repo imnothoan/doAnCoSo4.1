@@ -29,12 +29,15 @@ const REQUEST_CACHE_DURATION = 1000; // 1 second cache for pending requests
 function mapServerUserToClient(serverUser: any): User {
   return {
     ...serverUser,
-    // Map server field names to client field names
+    // Map snake_case -> camelCase
     backgroundImage: serverUser.background_image ?? serverUser.backgroundImage,
     followersCount: serverUser.followers ?? serverUser.followersCount ?? 0,
     followingCount: serverUser.following ?? serverUser.followingCount ?? 0,
     postsCount: serverUser.posts ?? serverUser.postsCount ?? 0,
     isPro: serverUser.is_premium ?? serverUser.isPro ?? false,
+
+    // IMPORTANT: map online status
+    isOnline: serverUser.is_online ?? serverUser.isOnline ?? false,
   };
 }
 

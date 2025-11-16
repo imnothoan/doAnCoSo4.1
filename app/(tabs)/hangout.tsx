@@ -45,16 +45,16 @@ export default function HangoutScreen() {
         position.setValue({ x: gesture.dx, y: gesture.dy });
       },
       onPanResponderRelease: (_, gesture) => {
-        if (gesture.dx < -SWIPE_THRESHOLD) {
-          // Swipe left - view profile
-          forceSwipe('left');
-        } else if (gesture.dx > SWIPE_THRESHOLD) {
-          // Swipe right - next user
-          forceSwipe('right');
-        } else {
-          resetPosition();
-        }
-      },
+      if (gesture.dx < -SWIPE_THRESHOLD) {
+        // Swipe left - next user
+        forceSwipe('left');
+      } else if (gesture.dx > SWIPE_THRESHOLD) {
+        // Swipe right - view profile
+        forceSwipe('right');
+      } else {
+        resetPosition();
+      }
+    },
     })
   ).current;
 
@@ -80,28 +80,19 @@ export default function HangoutScreen() {
       // The server already filters for is_available and is_online
       const onlineUsers = hangoutData.filter((u: User) => {
         const isNotCurrentUser = u.username !== currentUser.username;
-        
         if (!isNotCurrentUser) {
           console.log('⏭️  Skipping current user');
           return false;
         }
-        
-        // Server already filtered by is_online and is_available
-        // Double-check just in case
-        if (!u.isOnline) {
-          console.log(`⚠️  Skipping offline user: ${u.username}`);
-          return false;
-        }
-        
         return true;
       });
       
-      console.log(`✅ Filtered to ${onlineUsers.length} available users for hangout`);
+ 
       
       setUsers(onlineUsers);
       setCurrentIndex(0);
     } catch (error) {
-      console.error('❌ Error loading hangout users:', error);
+    
       Alert.alert('Error', 'Failed to load users. Please try again.');
       setUsers([]);
     } finally {
@@ -217,14 +208,7 @@ export default function HangoutScreen() {
     loadOnlineUsers();
     
     // Set up periodic refresh every 30 seconds to get latest available users
-    const refreshInterval = setInterval(() => {
-      console.log('🔄 Auto-refreshing hangout users...');
-      loadOnlineUsers();
-    }, 30000);
-    
-    return () => {
-      clearInterval(refreshInterval);
-    };
+
   }, [currentUser?.username, loadOnlineUsers]);
 
   // Reload when coming back to this screen
@@ -246,17 +230,17 @@ export default function HangoutScreen() {
   };
 
   const onSwipeComplete = (direction: 'left' | 'right') => {
-    const currentUserProfile = users[currentIndex];
-    
-    if (direction === 'left' && currentUserProfile?.username) {
-      // Swipe left - view profile
-      router.push(`/account/profile?username=${currentUserProfile.username}`);
-    }
-    
-    // Move to next user (for both left and right swipes)
-    position.setValue({ x: 0, y: 0 });
-    setCurrentIndex(prevIndex => prevIndex + 1);
-  };
+  const currentUserProfile = users[currentIndex];
+
+  // Đổi sang mở profile khi vuốt phải
+  if (direction === 'right' && currentUserProfile?.username) {
+    router.push(`/account/profile?username=${currentUserProfile.username}`);
+  }
+
+  // Dù trái hay phải vẫn chuyển sang card tiếp theo
+  position.setValue({ x: 0, y: 0 });
+  setCurrentIndex(prevIndex => prevIndex + 1);
+};
 
   const resetPosition = () => {
     Animated.spring(position, {
@@ -445,36 +429,36 @@ export default function HangoutScreen() {
 
           {/* Swipe Indicators */}
           <Animated.View
-            style={[
-              styles.swipeIndicator,
-              styles.likeIndicator,
-              {
-                opacity: position.x.interpolate({
-                  inputRange: [0, SWIPE_THRESHOLD / 2],
-                  outputRange: [0, 1],
-                  extrapolate: 'clamp',
-                }),
-              },
-            ]}
-          >
-            <Text style={styles.swipeIndicatorText}>NEXT</Text>
-          </Animated.View>
+  style={[
+    styles.swipeIndicator,
+    styles.likeIndicator,
+    {
+      opacity: position.x.interpolate({
+        inputRange: [0, SWIPE_THRESHOLD / 2],
+        outputRange: [0, 1],
+        extrapolate: 'clamp',
+      }),
+    },
+  ]}
+>
+  <Text style={styles.swipeIndicatorText}>PROFILE</Text>
+</Animated.View>
 
           <Animated.View
-            style={[
-              styles.swipeIndicator,
-              styles.nopeIndicator,
-              {
-                opacity: position.x.interpolate({
-                  inputRange: [-SWIPE_THRESHOLD / 2, 0],
-                  outputRange: [1, 0],
-                  extrapolate: 'clamp',
-                }),
-              },
-            ]}
-          >
-            <Text style={styles.swipeIndicatorText}>PROFILE</Text>
-          </Animated.View>
+  style={[
+    styles.swipeIndicator,
+    styles.nopeIndicator,
+    {
+      opacity: position.x.interpolate({
+        inputRange: [-SWIPE_THRESHOLD / 2, 0],
+        outputRange: [1, 0],
+        extrapolate: 'clamp',
+      }),
+    },
+  ]}
+>
+  <Text style={styles.swipeIndicatorText}>NEXT</Text>
+</Animated.View>
         </Animated.View>
       );
     }
@@ -574,12 +558,7 @@ export default function HangoutScreen() {
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Header */}
       <View style={[styles.header, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
-        <View>
-          <Text style={styles.headerTitle}>Hang Out</Text>
-          <Text style={styles.headerSubtitle}>
-            {isAvailable ? '🟢 You\'re visible to others' : '🔴 You\'re hidden from others'}
-          </Text>
-        </View>
+
         <View style={styles.headerRight}>
           <TouchableOpacity
             style={[
@@ -635,30 +614,13 @@ export default function HangoutScreen() {
         )}
       </View>
 
-      {/* Action Buttons */}
-      {currentIndex < users.length && (
-        <View style={styles.actionButtons}>
-          <TouchableOpacity
-            style={[styles.actionButton, styles.nopeButton]}
-            onPress={() => forceSwipe('left')}
-          >
-            <Ionicons name="close" size={32} color="#FF6B6B" />
-          </TouchableOpacity>
 
-          <TouchableOpacity
-            style={[styles.actionButton, styles.likeButton]}
-            onPress={() => forceSwipe('right')}
-          >
-            <Ionicons name="checkmark" size={32} color="#4ECDC4" />
-          </TouchableOpacity>
-        </View>
-      )}
 
       {/* Instructions */}
       {users.length > 0 && currentIndex < users.length && (
         <View style={styles.instructions}>
           <Text style={styles.instructionsText}>
-            ✕ View profile • ✓ Next user
+            Next user • View profile
           </Text>
         </View>
       )}
