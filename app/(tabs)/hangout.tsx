@@ -58,6 +58,35 @@ export default function HangoutScreen() {
     })
   ).current;
 
+  // Load online users available for hangout
+  const loadOnlineUsers = useCallback(async () => {
+    if (!currentUser?.username) return;
+    
+    try {
+      setLoading(true);
+      // Get users available for hangout
+      const hangoutData = await ApiService.getOpenHangouts({
+        limit: 50,
+      });
+      
+      // Filter to only show online users and exclude current user
+      const onlineUsers = hangoutData
+        .map((h: any) => h.user || h)
+        .filter((u: User) => 
+          u.isOnline && 
+          u.username !== currentUser.username
+        );
+      
+      setUsers(onlineUsers);
+      setCurrentIndex(0);
+    } catch (error) {
+      console.error('Error loading online users:', error);
+      setUsers([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [currentUser?.username]);
+
   // Load current hangout status
   const loadHangoutStatus = useCallback(async () => {
     if (!currentUser?.username) return;
@@ -105,36 +134,7 @@ export default function HangoutScreen() {
     } finally {
       setUpdatingStatus(false);
     }
-  }, [currentUser, isAvailable, updatingStatus]);
-
-  // Load online users available for hangout
-  const loadOnlineUsers = useCallback(async () => {
-    if (!currentUser?.username) return;
-    
-    try {
-      setLoading(true);
-      // Get users available for hangout
-      const hangoutData = await ApiService.getOpenHangouts({
-        limit: 50,
-      });
-      
-      // Filter to only show online users and exclude current user
-      const onlineUsers = hangoutData
-        .map((h: any) => h.user || h)
-        .filter((u: User) => 
-          u.isOnline && 
-          u.username !== currentUser.username
-        );
-      
-      setUsers(onlineUsers);
-      setCurrentIndex(0);
-    } catch (error) {
-      console.error('Error loading online users:', error);
-      setUsers([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [currentUser?.username]);
+  }, [currentUser, isAvailable, updatingStatus, loadOnlineUsers]);
 
   useEffect(() => {
     loadHangoutStatus();
