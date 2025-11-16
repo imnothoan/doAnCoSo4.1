@@ -9,14 +9,20 @@ class WebSocketService {
   private isConnecting = false;
   private heartbeatInterval: NodeJS.Timeout | null = null;
   private connectionStatusListeners: ((connected: boolean) => void)[] = [];
+  private activeConversations: Set<string> = new Set(); // Track active conversation rooms
 
   connect(url: string, token?: string) {
-    if (this.socket?.connected || this.isConnecting) {
-      console.log('WebSocket already connected or connecting');
+    if (this.socket?.connected) {
+      console.log('WebSocket already connected');
       return;
     }
 
-    console.log('Connecting to WebSocket:', url);
+    if (this.isConnecting) {
+      console.log('WebSocket connection already in progress');
+      return;
+    }
+
+    console.log('🔌 Connecting to WebSocket:', url);
     this.isConnecting = true;
 
     this.socket = io(url, {
@@ -30,6 +36,7 @@ class WebSocketService {
       reconnectionDelayMax: 5000,
       timeout: 10000,
       autoConnect: true,
+      forceNew: false, // Reuse existing connection if available
     });
 
     this.socket.on('connect', () => {
@@ -37,6 +44,15 @@ class WebSocketService {
       this.reconnectAttempts = 0;
       this.isConnecting = false;
       this.startHeartbeat();
+      
+      // Rejoin all active conversation rooms
+      if (this.activeConversations.size > 0) {
+        console.log('🔄 Rejoining', this.activeConversations.size, 'conversation rooms...');
+        this.activeConversations.forEach(conversationId => {
+          this.socket?.emit('join_conversation', { conversationId });
+        });
+      }
+      
       this.notifyConnectionStatus(true);
     });
 
@@ -110,6 +126,7 @@ class WebSocketService {
     }
     this.isConnecting = false;
     this.reconnectAttempts = 0;
+    this.activeConversations.clear(); // Clear tracked conversations on disconnect
     this.notifyConnectionStatus(false);
   }
 
@@ -125,6 +142,9 @@ class WebSocketService {
   joinConversation(conversationId: string) {
     if (this.socket) {
       this.socket.emit('join_conversation', { conversationId });
+      // Track this conversation so we can rejoin on reconnection
+      this.activeConversations.add(conversationId);
+      console.log('📥 Joined conversation:', conversationId);
     }
   }
 
@@ -132,6 +152,9 @@ class WebSocketService {
   leaveConversation(conversationId: string) {
     if (this.socket) {
       this.socket.emit('leave_conversation', { conversationId });
+      // Remove from active conversations
+      this.activeConversations.delete(conversationId);
+      console.log('📤 Left conversation:', conversationId);
     }
   }
 
