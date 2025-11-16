@@ -36,12 +36,8 @@ export default function InboxScreen() {
     loadChats();
   }, [loadChats]);
 
-  // Reload when returning to Inbox tab
-  useFocusEffect(
-    useCallback(() => {
-      loadChats();
-    }, [loadChats])
-  );
+  // Note: Removed useFocusEffect reload since WebSocket provides real-time updates
+  // No need to reload when returning to the tab - conversations update automatically
 
   // WebSocket real-time updates for new messages
   useEffect(() => {
@@ -61,37 +57,92 @@ export default function InboxScreen() {
           const updatedChats = [...prevChats];
           const existingChat = updatedChats[existingIndex];
           
-          // Build complete sender info from message data
+          // Build complete sender info, prioritizing message.sender data
           let senderInfo = message.sender;
           
           // If sender info is incomplete, try to find from existing participants
-          if (!senderInfo || !senderInfo.name || !senderInfo.email) {
+          if (!senderInfo || !senderInfo.name) {
             const existingParticipant = existingChat.participants?.find(p => p.username === senderId);
             if (existingParticipant) {
               senderInfo = existingParticipant;
             }
           }
           
-          // Ensure we have at least minimal sender info
+          // Ensure we have complete sender info with all required fields
           if (!senderInfo || !senderInfo.username) {
             senderInfo = {
               id: senderId,
               username: senderId,
               name: senderId,
               email: `${senderId}@example.com`,
-              avatar: message.sender?.avatar || '',
-              country: message.sender?.country || '',
-              city: message.sender?.city || '',
-              status: message.sender?.status || 'Chilling',
-              languages: message.sender?.languages || [],
-              interests: message.sender?.interests || [],
+              avatar: '',
+              country: '',
+              city: '',
+              status: 'Chilling',
+              languages: [],
+              interests: [],
             };
+          } else {
+            // Merge to ensure all fields exist
+            senderInfo = {
+              id: senderInfo.id || senderId,
+              username: senderInfo.username || senderId,
+              name: senderInfo.name || senderInfo.username || senderId,
+              email: senderInfo.email || `${senderId}@example.com`,
+              avatar: senderInfo.avatar || '',
+              country: senderInfo.country || '',
+              city: senderInfo.city || '',
+              status: senderInfo.status || 'Chilling',
+              languages: senderInfo.languages || [],
+              interests: senderInfo.interests || [],
+              bio: senderInfo.bio,
+              gender: senderInfo.gender,
+              age: senderInfo.age,
+              flag: senderInfo.flag,
+              followersCount: senderInfo.followersCount,
+              followingCount: senderInfo.followingCount,
+              postsCount: senderInfo.postsCount,
+              isOnline: senderInfo.isOnline,
+            };
+          }
+          
+          // Update participants if sender is not in the list (for DM conversations)
+          let updatedParticipants = existingChat.participants || [];
+          if (existingChat.type === 'user' || existingChat.type === 'dm') {
+            // Ensure both current user and sender are in participants
+            const hasCurrentUser = updatedParticipants.some(p => p.username === user.username);
+            const hasSender = updatedParticipants.some(p => p.username === senderId);
+            
+            if (!hasCurrentUser) {
+              updatedParticipants.push({
+                id: user.id,
+                username: user.username,
+                name: user.name || user.username,
+                email: user.email || `${user.username}@example.com`,
+                avatar: user.avatar || '',
+                country: user.country || '',
+                city: user.city || '',
+                status: user.status || 'Chilling',
+                languages: user.languages || [],
+                interests: user.interests || [],
+              });
+            }
+            
+            if (!hasSender && senderId !== user.username) {
+              updatedParticipants.push(senderInfo);
+            } else if (hasSender && senderId !== user.username) {
+              // Update existing participant with fresh data
+              updatedParticipants = updatedParticipants.map(p => 
+                p.username === senderId ? senderInfo : p
+              );
+            }
           }
           
           // Move to top and update last message
           updatedChats.splice(existingIndex, 1);
           updatedChats.unshift({
             ...existingChat,
+            participants: updatedParticipants,
             lastMessage: {
               id: String(message.id || Date.now()),
               chatId: conversationId,
@@ -123,7 +174,7 @@ export default function InboxScreen() {
       // Clean up listener
       WebSocketService.off('new_message', handleNewMessage);
     };
-  }, [user?.username, loadChats]);
+  }, [user?.username, user, loadChats]);
 
   const handleOpenChat = useCallback(async (chat: Chat) => {
     try {
