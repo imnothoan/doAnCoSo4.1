@@ -115,9 +115,9 @@ export default function InboxScreen() {
             
             if (!hasCurrentUser) {
               updatedParticipants.push({
-                id: user.id,
-                username: user.username,
-                name: user.name || user.username,
+                id: user.id || user.username || '',
+                username: user.username || '',
+                name: user.name || user.username || '',
                 email: user.email || `${user.username}@example.com`,
                 avatar: user.avatar || '',
                 country: user.country || '',
