@@ -155,7 +155,7 @@ export default function ConnectionScreen() {
     return (
       <TouchableOpacity 
         style={styles.userCard}
-        onPress={() => router.push(`/profile?id=${item.id}`)}
+        onPress={() => router.push(`/account/profile?id=${item.id}`)}
       >
         <Image source={{ uri: item.avatar }} style={styles.userAvatar} />
         <View style={styles.userContent}>
