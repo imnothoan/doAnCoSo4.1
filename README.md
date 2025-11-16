@@ -23,6 +23,17 @@ ConnectSphere is a feature-rich social networking app designed to help users:
 - **React Native Paper** for UI components
 - **Expo Location** for geolocation features
 - **@expo/vector-icons** (Ionicons) for icons
+- **@expo/ui** for SwiftUI components (iOS liquid glass effect) ✨
+
+## 🎨 iOS Premium Features
+
+### Liquid Glass Bottom Tab Bar (iOS Only)
+ConnectSphere features Apple's latest **iOS 18 Liquid Glass** design on iOS devices:
+- ✨ Native SwiftUI liquid glass morphism effect
+- 🎯 Interactive glass that responds to touches
+- 🔵 Dynamic states: clear glass for active tabs, regular glass for inactive
+- 📱 Platform-specific: iOS gets premium experience, Android/Web use standard tabs
+- 📖 See [LIQUID_GLASS_IMPLEMENTATION.md](./LIQUID_GLASS_IMPLEMENTATION.md) for details
 
 ## ✨ Features Implemented
 
