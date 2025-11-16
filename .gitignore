@@ -41,3 +41,21 @@ app-example
 # generated native folders
 /ios
 /android
+
+# documentation files (keep only README.md in root)
+/*_SUMMARY*.md
+/*_GUIDE*.md
+/*_COMPLETE*.md
+/*_IMPLEMENTATION*.md
+/*_FIX*.md
+/HOAN_THANH*.md
+/HUONG_DAN*.md
+/TOM_TAT*.md
+/BUGFIX*.md
+/DEPLOYMENT*.md
+/PAYMENT*.md
+/SECURITY*.md
+/SERVER*.md
+/TESTING*.md
+/PRO_THEME*.md
+/QUICK*.md

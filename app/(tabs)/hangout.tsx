@@ -82,7 +82,6 @@ export default function HangoutScreen() {
         .filter((u: User) => {
           const isOnline = u.isOnline || u.is_online;
           const isNotCurrentUser = u.username !== currentUser.username;
-          const hasBackground = u.backgroundImage || u.background_image;
           
           if (!isNotCurrentUser) {
             console.log('⏭️ Skipping current user');
@@ -453,8 +452,6 @@ export default function HangoutScreen() {
         ) : (
           <View style={[styles.cardImage, { backgroundColor: colors.border }]}>
             <Ionicons name="person" size={120} color="#ccc" />
-          </View>
-        )}
           </View>
         )}
         <LinearGradient

@@ -9,7 +9,6 @@ import { useAuth } from '@/src/context/AuthContext';
 import { useTheme } from '@/src/context/ThemeContext';
 import ApiService from '@/src/services/api';
 import WebSocketService from '@/src/services/websocket';
-import { useFocusEffect } from '@react-navigation/native';
 
 export default function InboxScreen() {
   const router = useRouter();

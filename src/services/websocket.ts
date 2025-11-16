@@ -8,7 +8,7 @@ class WebSocketService {
   private reconnectDelay = 1000;
   private isConnecting = false;
   private heartbeatInterval: NodeJS.Timeout | null = null;
-  private connectionStatusListeners: Array<(connected: boolean) => void> = [];
+  private connectionStatusListeners: ((connected: boolean) => void)[] = [];
 
   connect(url: string, token?: string) {
     if (this.socket?.connected || this.isConnecting) {
