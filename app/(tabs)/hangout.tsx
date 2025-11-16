@@ -84,12 +84,21 @@ export default function HangoutScreen() {
       
       // Filter to only show online users and exclude current user
       // The server already filters for is_available and is_online
+      // ALSO filter out any users without a username (data integrity check)
       const onlineUsers = hangoutData.filter((u: User) => {
+        // Skip users without username
+        if (!u.username) {
+          console.warn('⚠️ Skipping user without username:', u.id);
+          return false;
+        }
+        
+        // Skip current user
         const isNotCurrentUser = u.username !== currentUser.username;
         if (!isNotCurrentUser) {
           console.log('⏭️  Skipping current user');
           return false;
         }
+        
         return true;
       });
       
@@ -262,6 +271,12 @@ export default function HangoutScreen() {
       } else {
         console.warn('⚠️ Cannot navigate to profile: username is missing');
         console.warn('⚠️ Current user profile:', JSON.stringify(currentUserProfile, null, 2));
+        // Show user-friendly error
+        Alert.alert(
+          'Profile Unavailable',
+          'This user\'s profile is temporarily unavailable. Please try the next user.',
+          [{ text: 'OK' }]
+        );
       }
       // Reset position but DON'T increment index - user can come back to same card
       position.setValue({ x: 0, y: 0 });
