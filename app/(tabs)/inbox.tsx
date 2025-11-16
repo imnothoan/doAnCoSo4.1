@@ -45,6 +45,8 @@ export default function InboxScreen() {
 
     // Handle new messages to update conversation list
     const handleNewMessage = (message: any) => {
+      console.log('📨 New message received in inbox:', message);
+      
       const conversationId = String(message.chatId || message.conversation_id || message.conversationId);
       const senderId = message.senderId || message.sender_username || message.sender?.username;
       
@@ -57,11 +59,11 @@ export default function InboxScreen() {
           const updatedChats = [...prevChats];
           const existingChat = updatedChats[existingIndex];
           
-          // Build complete sender info, prioritizing message.sender data
+          // Build complete sender info from message
           let senderInfo = message.sender;
           
           // If sender info is incomplete, try to find from existing participants
-          if (!senderInfo || !senderInfo.name) {
+          if (!senderInfo || !senderInfo.name || !senderInfo.username) {
             const existingParticipant = existingChat.participants?.find(p => p.username === senderId);
             if (existingParticipant) {
               senderInfo = existingParticipant;
@@ -71,10 +73,10 @@ export default function InboxScreen() {
           // Ensure we have complete sender info with all required fields
           if (!senderInfo || !senderInfo.username) {
             senderInfo = {
-              id: senderId,
-              username: senderId,
-              name: senderId,
-              email: `${senderId}@example.com`,
+              id: senderId || 'unknown',
+              username: senderId || 'unknown',
+              name: senderId || 'Unknown User',
+              email: `${senderId || 'unknown'}@example.com`,
               avatar: '',
               country: '',
               city: '',
@@ -83,12 +85,12 @@ export default function InboxScreen() {
               interests: [],
             };
           } else {
-            // Merge to ensure all fields exist
+            // Merge to ensure all fields exist with proper fallbacks
             senderInfo = {
-              id: senderInfo.id || senderId,
-              username: senderInfo.username || senderId,
-              name: senderInfo.name || senderInfo.username || senderId,
-              email: senderInfo.email || `${senderId}@example.com`,
+              id: senderInfo.id || senderInfo.username || senderId || 'unknown',
+              username: senderInfo.username || senderId || 'unknown',
+              name: senderInfo.name || senderInfo.username || senderId || 'Unknown User',
+              email: senderInfo.email || `${senderInfo.username || senderId}@example.com`,
               avatar: senderInfo.avatar || '',
               country: senderInfo.country || '',
               city: senderInfo.city || '',
@@ -99,25 +101,25 @@ export default function InboxScreen() {
               gender: senderInfo.gender,
               age: senderInfo.age,
               flag: senderInfo.flag,
-              followersCount: senderInfo.followersCount,
-              followingCount: senderInfo.followingCount,
-              postsCount: senderInfo.postsCount,
-              isOnline: senderInfo.isOnline,
+              followersCount: senderInfo.followersCount || senderInfo.followers || 0,
+              followingCount: senderInfo.followingCount || senderInfo.following || 0,
+              postsCount: senderInfo.postsCount || senderInfo.posts || 0,
+              isOnline: senderInfo.isOnline || senderInfo.is_online,
             };
           }
           
-          // Update participants if sender is not in the list (for DM conversations)
+          // Update participants list for DM conversations to ensure both users are present
           let updatedParticipants = existingChat.participants || [];
           if (existingChat.type === 'user' || existingChat.type === 'dm') {
             // Ensure both current user and sender are in participants
             const hasCurrentUser = updatedParticipants.some(p => p.username === user.username);
             const hasSender = updatedParticipants.some(p => p.username === senderId);
             
-            if (!hasCurrentUser) {
-              updatedParticipants.push({
-                id: user.id || user.username || '',
-                username: user.username || '',
-                name: user.name || user.username || '',
+            if (!hasCurrentUser && user.username) {
+              updatedParticipants = [...updatedParticipants, {
+                id: user.id || user.username,
+                username: user.username,
+                name: user.name || user.username,
                 email: user.email || `${user.username}@example.com`,
                 avatar: user.avatar || '',
                 country: user.country || '',
@@ -125,11 +127,11 @@ export default function InboxScreen() {
                 status: user.status || 'Chilling',
                 languages: user.languages || [],
                 interests: user.interests || [],
-              });
+              }];
             }
             
-            if (!hasSender && senderId !== user.username) {
-              updatedParticipants.push(senderInfo);
+            if (!hasSender && senderId && senderId !== user.username) {
+              updatedParticipants = [...updatedParticipants, senderInfo];
             } else if (hasSender && senderId !== user.username) {
               // Update existing participant with fresh data
               updatedParticipants = updatedParticipants.map(p => 
@@ -138,15 +140,14 @@ export default function InboxScreen() {
             }
           }
           
-          // Move to top and update last message
-          updatedChats.splice(existingIndex, 1);
-          updatedChats.unshift({
+          // Create updated chat object and move to top
+          const updatedChat = {
             ...existingChat,
             participants: updatedParticipants,
             lastMessage: {
               id: String(message.id || Date.now()),
               chatId: conversationId,
-              senderId: senderId,
+              senderId: senderId || 'unknown',
               sender: senderInfo,
               content: message.content || '',
               timestamp: message.timestamp || message.created_at || new Date().toISOString(),
@@ -155,12 +156,18 @@ export default function InboxScreen() {
             // Increment unread count if message is from someone else
             unreadCount: senderId !== user.username 
               ? (existingChat.unreadCount || 0) + 1 
-              : existingChat.unreadCount,
-          });
+              : existingChat.unreadCount || 0,
+          };
           
+          // Remove from current position and add to top
+          updatedChats.splice(existingIndex, 1);
+          updatedChats.unshift(updatedChat);
+          
+          console.log('✅ Updated conversation in inbox:', updatedChat.name || updatedChat.id);
           return updatedChats;
         } else {
           // New conversation - reload the full list to get complete data
+          console.log('🔄 New conversation detected, reloading chats...');
           loadChats();
           return prevChats;
         }
@@ -212,13 +219,28 @@ export default function InboxScreen() {
       }
     }
 
-    // Build robust display name - prioritize actual name over username
-    const displayName = isDM
-      ? (otherUser?.name || otherUser?.username || 'Unknown User')
-      : (item.name || 'Group Chat');
+    // CRITICAL: Build robust display name - NEVER show "Direct Message" or generic text
+    let displayName: string;
+    if (isDM) {
+      if (otherUser?.name && otherUser.name !== otherUser.username) {
+        // User has a proper display name
+        displayName = otherUser.name;
+      } else if (otherUser?.username) {
+        // Fall back to username
+        displayName = otherUser.username;
+      } else {
+        // Last resort: show "Loading..." and trigger a reload
+        displayName = 'Loading...';
+        // Trigger reload to get proper data
+        setTimeout(() => loadChats(), 100);
+      }
+    } else {
+      displayName = item.name || 'Group Chat';
+    }
 
-    // Get avatar - ensure we use the other user's avatar for DM
+    // Get avatar - ensure we ALWAYS use the other user's avatar for DM
     const avatarUrl = isDM ? (otherUser?.avatar || '') : '';
+    const hasAvatar = Boolean(avatarUrl && avatarUrl.length > 0);
 
     const relativeTime = item.lastMessage?.timestamp
       ? getRelativeTime(item.lastMessage.timestamp)
@@ -233,16 +255,19 @@ export default function InboxScreen() {
       >
         <View style={styles.avatarContainer}>
           {isDM ? (
-            avatarUrl ? (
-              <Image source={{ uri: avatarUrl }} style={styles.chatAvatar} />
+            hasAvatar ? (
+              <Image 
+                source={{ uri: avatarUrl }} 
+                style={styles.chatAvatar}
+              />
             ) : (
               <View style={styles.eventAvatarPlaceholder}>
-                <Ionicons name="person-circle-outline" size={32} color="#999" />
+                <Ionicons name="person-circle" size={32} color="#999" />
               </View>
             )
           ) : (
             <View style={styles.eventAvatarPlaceholder}>
-              <Ionicons name="people-outline" size={24} color={colors.primary} />
+              <Ionicons name="people" size={24} color={colors.primary} />
             </View>
           )}
           {isUnread && <View style={[styles.unreadDot, { backgroundColor: colors.primary, borderColor: colors.card }]} />}
@@ -250,7 +275,7 @@ export default function InboxScreen() {
 
         <View style={styles.chatContent}>
           <View style={styles.chatHeader}>
-            <Text style={[styles.chatName, isUnread && styles.unreadText]}>
+            <Text style={[styles.chatName, isUnread && styles.unreadText]} numberOfLines={1}>
               {displayName}
             </Text>
             {!!relativeTime && (
