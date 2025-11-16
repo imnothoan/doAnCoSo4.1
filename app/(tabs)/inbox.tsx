@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { StyleSheet, View, Text, FlatList, TouchableOpacity, Image, RefreshControl, ActivityIndicator, InteractionManager } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { StyleSheet, View, Text, FlatList, TouchableOpacity, Image, RefreshControl, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -19,7 +19,6 @@ export default function InboxScreen() {
   const [activeTab, setActiveTab] = useState<'all' | 'events' | 'users'>('all');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const enrichedConversationsRef = useRef<Set<string>>(new Set());
 
   const loadChats = useCallback(async () => {
     if (!user?.username) return;
@@ -27,8 +26,6 @@ export default function InboxScreen() {
       setLoading(true);
       const data = await ApiService.getConversations(user.username);
       setChats(data);
-      // Reset enrichment tracking when reloading chats
-      enrichedConversationsRef.current = new Set();
     } catch (error) {
       console.error('Error loading chats:', error);
     } finally {
@@ -40,7 +37,7 @@ export default function InboxScreen() {
     loadChats();
   }, [loadChats]);
 
-  // Reload khi quay lại tab Inbox
+  // Reload when returning to Inbox tab
   useFocusEffect(
     useCallback(() => {
       loadChats();
@@ -81,7 +78,7 @@ export default function InboxScreen() {
           
           return updatedChats;
         } else {
-          // New conversation - reload the full list
+          // New conversation - reload the full list to get complete data
           loadChats();
           return prevChats;
         }
@@ -96,90 +93,6 @@ export default function InboxScreen() {
       WebSocketService.off('new_message', handleNewMessage);
     };
   }, [user?.username, loadChats]);
-
-  // Enrich: nếu DM thiếu otherUser hoặc thiếu avatar/name thì fetch full profile
-  useEffect(() => {
-    let cancelled = false;
-    const enrichMissing = async () => {
-      if (!user?.username) return;
-      
-      // Find conversations that need enrichment and haven't been enriched yet
-      const targets = chats.filter(c => {
-        // Skip if already enriched
-        if (enrichedConversationsRef.current.has(c.id)) return false;
-        
-        if (c.type !== 'user' && c.type !== 'dm') return false;
-        
-        // Check if we have participants
-        if (!c.participants || c.participants.length < 2) return true;
-        
-        // Find the other user in participants
-        const otherUser = c.participants.find(p => p.username && p.username !== user.username);
-        
-        // Need enrichment if no other user found OR other user lacks name/avatar
-        return !otherUser || !otherUser.name || !otherUser.avatar;
-      });
-
-      if (targets.length === 0) return;
-
-      for (const conv of targets) {
-        try {
-          // Mark this conversation as being enriched to avoid duplicate requests
-          enrichedConversationsRef.current.add(conv.id);
-          
-          // First try to get conversation details
-          const detail = await ApiService.getConversation(conv.id);
-          if (cancelled) return;
-
-          // Find the other user from detailed participants
-          const detailedOtherUser = detail.participants?.find(p => p.username && p.username !== user.username);
-          
-          // If we still don't have complete data, fetch user profile directly
-          let completeOtherUser = detailedOtherUser;
-          if (detailedOtherUser?.username && (!detailedOtherUser.name || !detailedOtherUser.avatar)) {
-            try {
-              completeOtherUser = await ApiService.getUserByUsername(detailedOtherUser.username);
-            } catch {
-              console.warn('Failed to fetch user profile for', detailedOtherUser.username);
-            }
-          }
-
-          if (cancelled) return;
-
-          // Update the conversation with enriched data
-          setChats(prev =>
-            prev.map(c => {
-              if (c.id !== conv.id) return c;
-              
-              // Build enriched participants list
-              const enrichedParticipants = [...(detail.participants || [])];
-              
-              // Replace the other user with complete data if we have it
-              if (completeOtherUser) {
-                const idx = enrichedParticipants.findIndex(p => p.username === completeOtherUser?.username);
-                if (idx >= 0) {
-                  enrichedParticipants[idx] = completeOtherUser;
-                } else {
-                  enrichedParticipants.push(completeOtherUser);
-                }
-              }
-
-              return {
-                ...c,
-                participants: enrichedParticipants.length > 0 ? enrichedParticipants : c.participants,
-              };
-            })
-          );
-        } catch (e) {
-          console.warn('Failed to enrich conversation', conv.id, e);
-          // Keep it marked as enriched to avoid infinite retries
-        }
-      }
-    };
-    
-    InteractionManager.runAfterInteractions(enrichMissing);
-    return () => { cancelled = true; };
-  }, [chats, user?.username]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -210,25 +123,13 @@ export default function InboxScreen() {
   const renderChatItem = ({ item }: { item: Chat }) => {
     const isDM = item.type === 'dm' || item.type === 'user';
 
-    // 1) ưu tiên participants khác mình
+    // Find the other user in participants (not the current user)
     let otherUser = isDM
       ? item.participants?.find(p => p.username && p.username !== user?.username)
       : undefined;
 
-    // 2) fallback dùng sender nếu KHÁC mình
-    const sender = item.lastMessage?.sender;
-    if (!otherUser && sender?.username && sender.username !== user?.username) {
-      otherUser = sender;
-    }
-
-    // 3) fallback cuối: lấy bất kỳ participant nào khác mình
-    if (!otherUser && item.participants && item.participants.length) {
-      const first = item.participants.find(p => p.username !== user?.username);
-      if (first) otherUser = first;
-    }
-
     const displayName = isDM
-      ? (otherUser?.name || otherUser?.username || 'Direct Message')
+      ? (otherUser?.name || otherUser?.username || 'User')
       : (item.name || 'Group');
 
     const avatarUrl = isDM ? (otherUser?.avatar || '') : '';
