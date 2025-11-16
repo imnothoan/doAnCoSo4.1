@@ -91,8 +91,8 @@ export default function HangoutScreen() {
       
       setUsers(onlineUsers);
       setCurrentIndex(0);
-    } catch (error) {
-    
+    } catch (err) {
+      console.error('Error loading online users:', err);
       Alert.alert('Error', 'Failed to load users. Please try again.');
       setUsers([]);
     } finally {
@@ -208,7 +208,7 @@ export default function HangoutScreen() {
     loadOnlineUsers();
     
     // Set up periodic refresh every 30 seconds to get latest available users
-
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser?.username, loadOnlineUsers]);
 
   // Reload when coming back to this screen
@@ -230,17 +230,25 @@ export default function HangoutScreen() {
   };
 
   const onSwipeComplete = (direction: 'left' | 'right') => {
-  const currentUserProfile = users[currentIndex];
+    const currentUserProfile = users[currentIndex];
 
-  // Đổi sang mở profile khi vuốt phải
-  if (direction === 'right' && currentUserProfile?.username) {
-    router.push(`/account/profile?username=${currentUserProfile.username}`);
-  }
-
-  // Dù trái hay phải vẫn chuyển sang card tiếp theo
-  position.setValue({ x: 0, y: 0 });
-  setCurrentIndex(prevIndex => prevIndex + 1);
-};
+    if (direction === 'right') {
+      // Swipe right: Navigate to profile
+      if (currentUserProfile?.username) {
+        console.log('📱 Navigating to profile:', currentUserProfile.username);
+        router.push(`/account/profile?username=${currentUserProfile.username}`);
+      } else {
+        console.warn('⚠️ Cannot navigate to profile: username is missing');
+      }
+      // Reset position but DON'T increment index - user can come back to same card
+      position.setValue({ x: 0, y: 0 });
+    } else {
+      // Swipe left: Skip to next card
+      console.log('⏭️ Skipping to next card');
+      position.setValue({ x: 0, y: 0 });
+      setCurrentIndex(prevIndex => prevIndex + 1);
+    }
+  };
 
   const resetPosition = () => {
     Animated.spring(position, {
