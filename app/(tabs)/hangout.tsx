@@ -424,7 +424,7 @@ export default function HangoutScreen() {
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Hang Out</Text>
-          <TouchableOpacity onPress={() => router.push('/notification')}>
+          <TouchableOpacity onPress={() => router.push('/feed/notification')}>
             <Ionicons name="notifications-outline" size={24} color="#333" />
           </TouchableOpacity>
         </View>
@@ -478,7 +478,7 @@ export default function HangoutScreen() {
               <Ionicons name="image-outline" size={24} color={colors.primary} />
             )}
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => router.push('/notification')}>
+          <TouchableOpacity onPress={() => router.push('/feed/notification')}>
             <Ionicons name="notifications-outline" size={24} color="#333" />
           </TouchableOpacity>
         </View>

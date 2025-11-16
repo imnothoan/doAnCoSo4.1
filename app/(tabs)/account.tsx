@@ -148,7 +148,7 @@ export default function AccountScreen() {
 
           <TouchableOpacity 
             style={dynamicStyles.editProfileButton}
-            onPress={() => router.push('/edit-profile')}
+            onPress={() => router.push('/account /edit-profile')}
           >
             <Ionicons name="create-outline" size={20} color={colors.primary} />
             <Text style={dynamicStyles.editProfileText}>Edit Profile</Text>
@@ -234,9 +234,9 @@ export default function AccountScreen() {
         {/* Settings */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Settings</Text>
-          {renderInfoRow('notifications-outline', 'Notifications', '', () => router.push('/settings'))}
-          {renderInfoRow('settings-outline', 'Manage Account', '', () => router.push('/settings'))}
-          {renderInfoRow('card-outline', 'Payment & Pro Features', '', () => router.push('/payment-pro'))}
+          {renderInfoRow('notifications-outline', 'Notifications', '', () => router.push('/account /settings'))}
+          {renderInfoRow('settings-outline', 'Manage Account', '', () => router.push('/account /settings'))}
+          {renderInfoRow('card-outline', 'Payment & Pro Features', '', () => router.push('/account /payment-pro'))}
           {renderInfoRow('information-circle-outline', 'About', '', () => Alert.alert('Flat Sphere', 'Version 1.0.0\n\nA social networking app to connect with people around the world.'))}
         </View>
 
@@ -247,7 +247,7 @@ export default function AccountScreen() {
             setLoggingOut(true);
             try {
               await logout();
-              router.replace('/login');
+              router.replace('/auth/login');
             } catch (error) {
               console.error('Error logging out:', error);
               Alert.alert('Error', 'Failed to logout. Please try again.');
