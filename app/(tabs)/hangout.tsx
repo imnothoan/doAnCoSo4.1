@@ -80,7 +80,7 @@ export default function HangoutScreen() {
       const onlineUsers = hangoutData
         .map((h: any) => h.user || h)
         .filter((u: User) => {
-          const isOnline = u.isOnline || u.is_online;
+          const isOnline = u.isOnline;
           const isNotCurrentUser = u.username !== currentUser.username;
           
           if (!isNotCurrentUser) {
@@ -306,9 +306,9 @@ export default function HangoutScreen() {
           {...panResponder.panHandlers}
         >
           {/* Background Image */}
-          {(user.backgroundImage || user.background_image) ? (
+          {user.backgroundImage ? (
             <Image
-              source={{ uri: user.backgroundImage || user.background_image }}
+              source={{ uri: user.backgroundImage }}
               style={styles.cardImage}
               resizeMode="cover"
               onError={(e) => {
@@ -437,9 +437,9 @@ export default function HangoutScreen() {
           },
         ]}
       >
-        {(user.backgroundImage || user.background_image) ? (
+        {user.backgroundImage ? (
           <Image
-            source={{ uri: user.backgroundImage || user.background_image }}
+            source={{ uri: user.backgroundImage }}
             style={styles.cardImage}
             resizeMode="cover"
           />
