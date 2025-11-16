@@ -160,6 +160,35 @@ export default function HangoutScreen() {
 
   useEffect(() => {
     loadHangoutStatus();
+    
+    // Auto-enable hangout visibility on first visit if not set
+    const initializeHangoutVisibility = async () => {
+      if (currentUser?.username) {
+        try {
+          const status = await ApiService.getHangoutStatus(currentUser.username);
+          // If user has never set status before (no record), auto-enable it
+          if (!status || status.last_updated === undefined) {
+            console.log('📍 First time in Hangout - auto-enabling visibility');
+            await ApiService.updateHangoutStatus(
+              currentUser.username,
+              true, // Auto-enable visibility
+              currentUser.currentActivity,
+              currentUser.hangoutActivities
+            );
+            setIsAvailable(true);
+            Alert.alert(
+              'Welcome to Hang Out! 👋',
+              'You are now visible to other users nearby. Toggle the "Visible" button anytime to control who can see you.',
+              [{ text: 'Got it!' }]
+            );
+          }
+        } catch (error) {
+          console.error('Error initializing hangout visibility:', error);
+        }
+      }
+    };
+    
+    initializeHangoutVisibility();
     loadOnlineUsers();
     
     // Set up periodic refresh every 30 seconds to get latest available users
@@ -466,12 +495,31 @@ export default function HangoutScreen() {
     return (
       <View style={styles.noMoreCards}>
         <Ionicons name="people-outline" size={80} color="#ccc" />
-        <Text style={styles.noMoreCardsText}>No more users online</Text>
-        <Text style={styles.noMoreCardsSubtext}>
-          Check back later or try adjusting your filters
+        <Text style={styles.noMoreCardsText}>
+          {isAvailable ? 'No more users available' : 'Turn on visibility to see others'}
         </Text>
+        <Text style={styles.noMoreCardsSubtext}>
+          {isAvailable 
+            ? 'Check back later or invite friends to join' 
+            : 'You need to be visible to discover other users nearby'}
+        </Text>
+        {!isAvailable && (
+          <TouchableOpacity
+            style={[styles.reloadButton, { backgroundColor: colors.primary, marginTop: 16 }]}
+            onPress={toggleHangoutStatus}
+          >
+            <Ionicons name="eye" size={20} color="#fff" />
+            <Text style={styles.reloadButtonText}>Turn On Visibility</Text>
+          </TouchableOpacity>
+        )}
         <TouchableOpacity
-          style={[styles.reloadButton, { backgroundColor: colors.primary }]}
+          style={[
+            styles.reloadButton, 
+            { 
+              backgroundColor: isAvailable ? colors.primary : colors.border,
+              marginTop: 12,
+            }
+          ]}
           onPress={loadOnlineUsers}
         >
           <Ionicons name="refresh" size={20} color="#fff" />
@@ -501,7 +549,12 @@ export default function HangoutScreen() {
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Header */}
       <View style={[styles.header, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
-        <Text style={styles.headerTitle}>Hang Out</Text>
+        <View>
+          <Text style={styles.headerTitle}>Hang Out</Text>
+          <Text style={styles.headerSubtitle}>
+            {isAvailable ? '🟢 You\'re visible to others' : '🔴 You\'re hidden from others'}
+          </Text>
+        </View>
         <View style={styles.headerRight}>
           <TouchableOpacity
             style={[
@@ -603,6 +656,11 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
     color: '#333',
+  },
+  headerSubtitle: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 2,
   },
   headerRight: {
     flexDirection: 'row',
