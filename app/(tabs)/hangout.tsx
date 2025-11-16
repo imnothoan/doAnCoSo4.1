@@ -34,6 +34,8 @@ export default function HangoutScreen() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [uploadingBackground, setUploadingBackground] = useState(false);
+  const [isAvailable, setIsAvailable] = useState(false);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
   
   const position = useRef(new Animated.ValueXY()).current;
   const panResponder = useRef(
@@ -85,15 +87,66 @@ export default function HangoutScreen() {
     }
   }, [currentUser?.username]);
 
+  // Load current hangout status
+  const loadHangoutStatus = useCallback(async () => {
+    if (!currentUser?.username) return;
+    
+    try {
+      const status = await ApiService.getHangoutStatus(currentUser.username);
+      setIsAvailable(status.is_available || false);
+    } catch (error) {
+      console.error('Error loading hangout status:', error);
+      setIsAvailable(false);
+    }
+  }, [currentUser?.username]);
+
+  // Toggle hangout availability
+  const toggleHangoutStatus = useCallback(async () => {
+    if (!currentUser?.username || updatingStatus) return;
+    
+    try {
+      setUpdatingStatus(true);
+      const newStatus = !isAvailable;
+      
+      await ApiService.updateHangoutStatus(
+        currentUser.username,
+        newStatus,
+        currentUser.currentActivity,
+        currentUser.hangoutActivities
+      );
+      
+      setIsAvailable(newStatus);
+      
+      Alert.alert(
+        'Success',
+        newStatus 
+          ? 'You are now visible in Hangout. Others can see your profile!'
+          : 'You are now hidden from Hangout. Others cannot see you.'
+      );
+      
+      // Reload users if we just turned on availability
+      if (newStatus) {
+        loadOnlineUsers();
+      }
+    } catch (error) {
+      console.error('Error updating hangout status:', error);
+      Alert.alert('Error', 'Failed to update hangout status. Please try again.');
+    } finally {
+      setUpdatingStatus(false);
+    }
+  }, [currentUser, isAvailable, updatingStatus, loadOnlineUsers]);
+
   useEffect(() => {
+    loadHangoutStatus();
     loadOnlineUsers();
-  }, [loadOnlineUsers]);
+  }, [loadHangoutStatus, loadOnlineUsers]);
 
   // Reload when coming back to this screen
   useFocusEffect(
     useCallback(() => {
+      loadHangoutStatus();
       loadOnlineUsers();
-    }, [loadOnlineUsers])
+    }, [loadHangoutStatus, loadOnlineUsers])
   );
 
   const forceSwipe = (direction: 'left' | 'right') => {
@@ -389,6 +442,32 @@ export default function HangoutScreen() {
         <Text style={styles.headerTitle}>Hang Out</Text>
         <View style={styles.headerRight}>
           <TouchableOpacity
+            style={[
+              styles.statusToggle,
+              { 
+                backgroundColor: isAvailable ? colors.primary : colors.border,
+                borderColor: isAvailable ? colors.primary : colors.border,
+              }
+            ]}
+            onPress={toggleHangoutStatus}
+            disabled={updatingStatus}
+          >
+            {updatingStatus ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <>
+                <Ionicons 
+                  name={isAvailable ? "eye" : "eye-off"} 
+                  size={18} 
+                  color="#fff" 
+                />
+                <Text style={styles.statusToggleText}>
+                  {isAvailable ? 'Visible' : 'Hidden'}
+                </Text>
+              </>
+            )}
+          </TouchableOpacity>
+          <TouchableOpacity
             style={styles.uploadButton}
             onPress={handleUploadBackground}
             disabled={uploadingBackground}
@@ -465,8 +544,22 @@ const styles = StyleSheet.create({
   },
   headerRight: {
     flexDirection: 'row',
-    gap: 16,
+    gap: 12,
     alignItems: 'center',
+  },
+  statusToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1,
+  },
+  statusToggleText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '600',
   },
   uploadButton: {
     padding: 4,
