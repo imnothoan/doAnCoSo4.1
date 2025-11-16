@@ -67,41 +67,41 @@ export default function HangoutScreen() {
     
     try {
       setLoading(true);
-      console.log('Fetching hangout users...');
+      console.log('📡 Fetching hangout users...');
       
       // Get users available for hangout
       const hangoutData = await ApiService.getOpenHangouts({
         limit: 50,
       });
       
-      console.log(`Received ${hangoutData.length} users from server`);
+      console.log(`📊 Received ${hangoutData.length} users from server`);
       
       // Filter to only show online users and exclude current user
-      const onlineUsers = hangoutData
-        .map((h: any) => h.user || h)
-        .filter((u: User) => {
-          const isOnline = u.isOnline;
-          const isNotCurrentUser = u.username !== currentUser.username;
-          
-          if (!isNotCurrentUser) {
-            console.log('Skipping current user');
-            return false;
-          }
-          
-          if (!isOnline) {
-            console.log(`Skipping offline user: ${u.username}`);
-            return false;
-          }
-          
-          return true;
-        });
+      // The server already filters for is_available and is_online
+      const onlineUsers = hangoutData.filter((u: User) => {
+        const isNotCurrentUser = u.username !== currentUser.username;
+        
+        if (!isNotCurrentUser) {
+          console.log('⏭️  Skipping current user');
+          return false;
+        }
+        
+        // Server already filtered by is_online and is_available
+        // Double-check just in case
+        if (!u.isOnline) {
+          console.log(`⚠️  Skipping offline user: ${u.username}`);
+          return false;
+        }
+        
+        return true;
+      });
       
-      console.log(`Filtered to ${onlineUsers.length} available users`);
+      console.log(`✅ Filtered to ${onlineUsers.length} available users for hangout`);
       
       setUsers(onlineUsers);
       setCurrentIndex(0);
     } catch (error) {
-      console.error('Error loading hangout users:', error);
+      console.error('❌ Error loading hangout users:', error);
       Alert.alert('Error', 'Failed to load users. Please try again.');
       setUsers([]);
     } finally {
@@ -159,32 +159,53 @@ export default function HangoutScreen() {
   }, [currentUser, isAvailable, updatingStatus, loadOnlineUsers]);
 
   useEffect(() => {
-    loadHangoutStatus();
-    
-    // Auto-enable hangout visibility on first visit if not set
+    // Auto-enable hangout visibility on first visit
     const initializeHangoutVisibility = async () => {
-      if (currentUser?.username) {
-        try {
-          const status = await ApiService.getHangoutStatus(currentUser.username);
-          // If user has never set status before (no record), auto-enable it
-          if (!status || status.last_updated === undefined) {
-            console.log('📍 First time in Hangout - auto-enabling visibility');
-            await ApiService.updateHangoutStatus(
-              currentUser.username,
-              true, // Auto-enable visibility
-              currentUser.currentActivity,
-              currentUser.hangoutActivities
-            );
-            setIsAvailable(true);
+      if (!currentUser?.username) return;
+      
+      try {
+        console.log('🔍 Checking hangout visibility status...');
+        const status = await ApiService.getHangoutStatus(currentUser.username);
+        
+        console.log('📊 Current hangout status:', status);
+        
+        // Set the current visibility state
+        setIsAvailable(status.is_available || false);
+        
+        // If user has never set status before OR is not available, suggest enabling
+        if (!status.is_available) {
+          console.log('📍 User not visible in Hangout - suggesting to enable');
+          
+          // Don't auto-enable, let user decide but show a helpful message
+          setTimeout(() => {
             Alert.alert(
-              'Welcome to Hang Out! 👋',
-              'You are now visible to other users nearby. Toggle the "Visible" button anytime to control who can see you.',
-              [{ text: 'Got it!' }]
+              'Enable Hangout Visibility? 👋',
+              'Turn on visibility to discover other users nearby and let them see you! You can toggle this anytime.',
+              [
+                { text: 'Not Now', style: 'cancel' },
+                {
+                  text: 'Enable',
+                  onPress: async () => {
+                    try {
+                      await ApiService.updateHangoutStatus(
+                        currentUser.username,
+                        true,
+                        currentUser.currentActivity,
+                        currentUser.hangoutActivities
+                      );
+                      setIsAvailable(true);
+                      loadOnlineUsers(); // Reload to see available users
+                    } catch (error) {
+                      console.error('Error enabling visibility:', error);
+                    }
+                  },
+                },
+              ]
             );
-          }
-        } catch (error) {
-          console.error('Error initializing hangout visibility:', error);
+          }, 1000); // Delay to avoid showing immediately
         }
+      } catch (error) {
+        console.error('❌ Error initializing hangout visibility:', error);
       }
     };
     
@@ -193,14 +214,14 @@ export default function HangoutScreen() {
     
     // Set up periodic refresh every 30 seconds to get latest available users
     const refreshInterval = setInterval(() => {
-      console.log('Auto-refreshing hangout users...');
+      console.log('🔄 Auto-refreshing hangout users...');
       loadOnlineUsers();
     }, 30000);
     
     return () => {
       clearInterval(refreshInterval);
     };
-  }, [loadHangoutStatus, loadOnlineUsers]);
+  }, [currentUser?.username, loadOnlineUsers]);
 
   // Reload when coming back to this screen
   useFocusEffect(
