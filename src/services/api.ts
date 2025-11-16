@@ -383,13 +383,16 @@ class ApiService {
     user_lng?: number;
     limit?: number;
   }): Promise<any[]> {
-    return this.deduplicatedGet(`/hangouts`, {
+    const users = await this.deduplicatedGet(`/hangouts`, {
       languages: params?.languages?.join(","),
       distance_km: params?.distance_km,
       user_lat: params?.user_lat,
       user_lng: params?.user_lng,
       limit: params?.limit,
     });
+    
+    // Map server user data to client format
+    return (users || []).map((user: any) => mapServerUserToClient(user));
   }
 
   async getMyHangouts(username: string): Promise<any[]> {
