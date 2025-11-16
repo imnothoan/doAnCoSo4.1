@@ -382,7 +382,7 @@ class ApiService {
     user_lat?: number;
     user_lng?: number;
     limit?: number;
-  }): Promise<any[]> {
+  }): Promise<User[]> {
     const users = await this.deduplicatedGet(`/hangouts`, {
       languages: params?.languages?.join(","),
       distance_km: params?.distance_km,
@@ -391,8 +391,13 @@ class ApiService {
       limit: params?.limit,
     });
     
-    // Map server user data to client format
-    return (users || []).map((user: any) => mapServerUserToClient(user));
+    // Map server user data to client format, ensuring we have an array
+    if (!users || !Array.isArray(users)) {
+      console.warn('getOpenHangouts: Invalid response, expected array:', users);
+      return [];
+    }
+    
+    return users.map((user: any) => mapServerUserToClient(user));
   }
 
   async getMyHangouts(username: string): Promise<any[]> {

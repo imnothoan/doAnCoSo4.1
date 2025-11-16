@@ -41,3 +41,30 @@ app-example
 # generated native folders
 /ios
 /android
+
+# documentation files (keep only README.md and essential guides in root)
+# Allow specific useful documentation
+!TESTING_GUIDE.md
+!SERVER_SETUP.md
+!IMPLEMENTATION_SUMMARY.md
+
+# Block other documentation files
+/*_SUMMARY*.md
+/*_GUIDE*.md
+/*_COMPLETE*.md
+/*_IMPLEMENTATION*.md
+/*_FIX*.md
+/HOAN_THANH*.md
+/HUONG_DAN*.md
+/TOM_TAT*.md
+/BUGFIX*.md
+/DEPLOYMENT*.md
+/PAYMENT*.md
+/SECURITY*.md
+/PRO_THEME*.md
+/QUICK*.md
+
+# But re-allow our new documentation
+!TESTING_GUIDE.md
+!SERVER_SETUP.md
+!IMPLEMENTATION_SUMMARY.md

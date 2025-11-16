@@ -1,281 +1,311 @@
-# Testing Guide
+# ConnectSphere - Testing Guide
 
-This guide helps you test all the bug fixes and new features in the ConnectSphere app.
+This guide provides comprehensive instructions for testing the ConnectSphere app with multiple emulators to verify all features work correctly.
 
 ## Prerequisites
 
-1. **Backend Server Running**
-   - Make sure the backend server is running at: http://192.168.1.228:3000
-   - Or update the URL in `.env` file: `EXPO_PUBLIC_API_URL=http://your-server:3000`
+### Server Setup
 
-2. **Install Dependencies**
+1. **Clone and setup the server**:
+   ```bash
+   git clone https://github.com/imnothoan/doAnCoSo4.1.server
+   cd doAnCoSo4.1.server
+   npm install
+   ```
+
+2. **Configure environment variables** (`.env` file):
+   ```env
+   PORT=3000
+   DATABASE_URL=<your-supabase-url>
+   SUPABASE_KEY=<your-supabase-key>
+   ```
+
+3. **Start the server**:
+   ```bash
+   npm start
+   ```
+
+4. **Verify server is running**:
+   - Server should be accessible at `http://<your-ip>:3000`
+   - WebSocket should be ready for connections
+
+### Client Setup
+
+1. **Update API URL in `.env`**:
+   ```env
+   EXPO_PUBLIC_API_URL=http://<your-server-ip>:3000
+   ```
+   
+   Replace `<your-server-ip>` with your actual server IP address.
+
+2. **Install dependencies**:
    ```bash
    npm install
    ```
 
-3. **Start the App**
+## Testing with Multiple Emulators
+
+### Option 1: Using Expo Go (Recommended for Quick Testing)
+
+1. **Start the Expo development server**:
    ```bash
-   npx expo start
+   npm start
    ```
 
-## Test Cases
+2. **On each physical device**:
+   - Install Expo Go from Play Store/App Store
+   - Scan the QR code shown in terminal
+   - App will load on the device
 
-### 1. Sign-out Bug Fix ✅
+3. **Create test accounts**:
+   - Device 1: Create account (e.g., user1)
+   - Device 2: Create account (e.g., user2)
+   - Device 3: Create account (e.g., user3)
+   - Device 4: Create account (e.g., user4)
 
-**Before:** Sign-out button kept spinning forever
+### Option 2: Using Android Emulators
 
-**Test Steps:**
-1. Login to the app
-2. Go to Account tab
-3. Click "Sign Out" button
-4. **Expected:** Should logout in <1 second with loading spinner
-5. **Expected:** Should redirect to login screen
-6. **Expected:** No infinite spinner
+1. **Setup Android Studio and AVDs**:
+   ```bash
+   # Create multiple AVDs with different names
+   # Example: Pixel_5_API_33_1, Pixel_5_API_33_2, etc.
+   ```
 
-**Alternative Test (Settings):**
-1. Login to the app
-2. Go to Account → Settings
-3. Scroll to bottom → "Logout"
-4. Confirm logout
-5. **Expected:** Immediate logout with redirect
+2. **Start multiple emulators**:
+   ```bash
+   # Terminal 1
+   emulator -avd Pixel_5_API_33_1
+   
+   # Terminal 2
+   emulator -avd Pixel_5_API_33_2
+   
+   # Terminal 3
+   emulator -avd Pixel_5_API_33_3
+   
+   # Terminal 4
+   emulator -avd Pixel_5_API_33_4
+   ```
 
----
+3. **Run app on each emulator**:
+   ```bash
+   npm run android
+   # Or use Expo Go as described above
+   ```
 
-### 2. Messaging Functionality ✅
+## Test Scenarios
 
-**Before:** Messages not sending/receiving properly
+### 1. Inbox Real-time Messaging Test
 
-**Test Steps:**
+**Objective**: Verify that messages appear in real-time across all devices and that avatars/names display correctly.
 
-#### 2a. Send Message
-1. Login to the app
-2. Go to Inbox tab
-3. Open any conversation (or create new one)
-4. Type a message
-5. Click send
-6. **Expected:** Message appears immediately (optimistic)
-7. **Expected:** Checkmark or confirmation after ~1-2s
-8. **Expected:** If fails, shows error message
+**Steps**:
+1. **Setup** (Devices 1 & 2):
+   - Login on Device 1 as user1
+   - Login on Device 2 as user2
+   - Navigate to Connection tab on Device 1
+   - Find user2 and tap to view profile
+   - Tap "Message" button to create DM conversation
 
-#### 2b. Receive Message
-1. Have another device/user send you a message
-2. **Expected:** Message appears in real-time (within 2s)
-3. **Expected:** Chat list updates with latest message
-4. **Expected:** Unread badge shows
+2. **Test Real-time Message Delivery**:
+   - Device 1: Send message "Hello from user1"
+   - Device 2: Verify message appears immediately in inbox
+   - Device 2: Open chat, verify user1's name and avatar show correctly
+   - Device 2: Send reply "Hello from user2"
+   - Device 1: Verify reply appears immediately in chat
+   - Device 1: Go back to inbox, verify conversation shows user2's name and avatar
 
-#### 2c. Typing Indicator
-1. Open a conversation
-2. Start typing
-3. **Expected:** Other user sees "typing..." indicator
-4. Stop typing for 3 seconds
-5. **Expected:** Typing indicator disappears
+3. **Test Multiple Conversations**:
+   - Device 1: Create DM with user3
+   - Device 1: Create DM with user4
+   - Send messages in each conversation
+   - Verify inbox list updates in real-time
+   - Verify each conversation shows correct avatar and name
 
-#### 2d. WebSocket Fallback
-1. Disconnect from network briefly
-2. Try sending a message
-3. **Expected:** Message still sends via API
-4. Reconnect network
-5. **Expected:** WebSocket reconnects automatically
+4. **Expected Results**:
+   - ✅ Messages appear instantly on both devices
+   - ✅ Inbox list updates in real-time when new message arrives
+   - ✅ Avatar always shows the other user's profile picture
+   - ✅ Name always shows the other user's display name (NEVER "Direct Message")
+   - ✅ Unread count increments correctly
+   - ✅ Most recent conversation moves to top of list
 
----
+5. **Edge Cases to Test**:
+   - Send message when other user is in inbox screen (not in chat)
+   - Send message when other user is in different tab
+   - Send message when app is in background
+   - Create new conversation with user who hasn't messaged before
+   - Verify avatar loads correctly even if it's a URL
 
-### 3. Follow/Unfollow Feature ✅
+### 2. Hangout Feature Test
 
-**Test Steps:**
+**Objective**: Verify Tinder-style swipe mechanics work correctly and only online users appear.
 
-#### 3a. Follow from Profile
-1. Login to the app
-2. Go to Connection tab
-3. Click on any user card
-4. **Expected:** Follow button shows correct state (Follow/Following)
-5. Click "Follow" button
-6. **Expected:** Button changes to "Following" immediately
-7. **Expected:** Follower count increases by 1
-8. Click "Following" button to unfollow
-9. **Expected:** Button changes to "Follow"
-10. **Expected:** Follower count decreases by 1
+**Steps**:
+1. **Setup Online Users**:
+   - Login on all 4 devices (user1, user2, user3, user4)
+   - On each device, navigate to Hangout tab
+   - Tap the visibility toggle to make profile visible in Hangout
+   - Upload a background image on at least 2 devices
 
-#### 3b. Follow from Connection Screen
-1. Go to Connection tab
-2. Look at user cards
-3. **Expected:** Each card has a circular follow button in top-right
-4. Click follow button
-5. **Expected:** Button fills with blue color (Following state)
-6. **Expected:** Can click card to view full profile
-7. Click button again to unfollow
-8. **Expected:** Button returns to outline style
+2. **Test Hangout Visibility Toggle**:
+   - Device 1: Toggle visibility ON
+   - Verify toggle shows "Visible"
+   - Device 1: Toggle visibility OFF
+   - Verify toggle shows "Hidden"
+   - Device 2: Navigate to Hangout, verify user1 does NOT appear (because hidden)
+   - Device 1: Toggle visibility ON again
+   - Device 2: Pull down to refresh, verify user1 now appears
 
----
+3. **Test Swipe Mechanics** (Device 1):
+   - Swipe RIGHT on a card → Next user should appear
+   - Swipe LEFT on a card → User's profile should open
+   - Verify profile shows correct information
+   - Go back to Hangout
+   - Use bottom buttons:
+     - Tap ✓ button → Should skip to next user
+     - Tap ✕ button → Should open user profile
 
-### 4. Event Participation ✅
+4. **Test Background Image Display**:
+   - Verify users with background images show their background
+   - Verify users without background show their avatar
+   - Verify users without avatar show default placeholder
 
-**Before:** Event detail always showed as not participating
+5. **Test Online Status**:
+   - Device 4: Logout
+   - Devices 1-3: Pull down to refresh Hangout
+   - Verify user4 no longer appears in the list
+   - Device 4: Login again
+   - Devices 1-3: Wait 30 seconds (auto-refresh interval)
+   - Verify user4 reappears in the list
 
-**Test Steps:**
-1. Login to the app
-2. Go to My Events tab
-3. Join an event
-4. Click on the event to see details
-5. **Expected:** Event shows as "Joined" or "Going"
-6. Leave the event
-7. **Expected:** Event shows as "Not Joined"
+6. **Expected Results**:
+   - ✅ Only users with visibility ON appear in Hangout
+   - ✅ Only online users appear
+   - ✅ Swipe left opens profile
+   - ✅ Swipe right shows next user
+   - ✅ Background images display correctly
+   - ✅ Avatar fallback works when no background
+   - ✅ Default placeholder shows when no background or avatar
+   - ✅ List auto-refreshes every 30 seconds
+   - ✅ Visibility toggle works instantly
 
----
+### 3. Stress Test - Many Users
 
-### 5. Network Error Recovery ✅
+**Objective**: Test system performance with multiple simultaneous users.
 
-**Test Steps:**
+**Steps**:
+1. **Setup 8 users** (if possible, use 8 devices/emulators)
+2. **Create DM conversations**:
+   - User1 creates DM with users 2-8 (7 conversations)
+   - User2 creates DM with users 3-8 (6 new conversations)
+   - Continue pattern...
 
-#### 5a. Temporary Network Error
-1. Disconnect from WiFi
-2. Try to load users in Connection tab
-3. **Expected:** Shows error but doesn't crash
-4. Reconnect to WiFi
-5. Pull to refresh
-6. **Expected:** Data loads successfully
+3. **Simulate Active Chat**:
+   - All users send messages rapidly in multiple conversations
+   - Verify messages arrive in correct order
+   - Verify no messages are lost
+   - Verify inbox updates smoothly without lag
 
-#### 5b. API Request Retry
-1. Temporarily block API access
-2. Try to perform any action
-3. **Expected:** App automatically retries once
-4. **Expected:** Shows user-friendly error if still fails
-5. Restore API access
-6. **Expected:** Next request succeeds
+4. **Expected Results**:
+   - ✅ All messages delivered correctly
+   - ✅ Correct message order maintained
+   - ✅ Inbox list stays responsive
+   - ✅ No UI freezing or crashes
 
----
+## Common Issues and Solutions
 
-## Performance Testing
+### Issue: Messages not appearing in real-time
+**Solution**:
+- Check if WebSocket is connected (look for "✅ WebSocket connected" in server logs)
+- Verify server URL is correct in client `.env` file
+- Ensure devices are on same network as server
+- Check firewall settings
 
-### Logout Speed
-**Target:** <1 second from button click to login screen
+### Issue: "Direct Message" or default avatar appearing
+**Solution**:
+- This should NOT happen with current code
+- If it does, check server logs for errors
+- Verify server is returning `other_participant` data in conversation list
+- Check if user profile has avatar URL set
 
-**Test:**
-1. Click Sign Out
-2. Count time until login screen appears
-3. **Expected:** Should be almost instant
+### Issue: Hangout showing offline users
+**Solution**:
+- Wait 30 seconds for auto-refresh
+- Manually pull down to refresh
+- Check server database - verify `is_online` field is updating correctly
 
-### Message Sending
-**Target:** Optimistic update <100ms, confirmation <2s
+### Issue: Background image not showing in Hangout
+**Solution**:
+- Verify image was uploaded successfully
+- Check server storage/Supabase bucket
+- Verify image URL is accessible
+- Check if image format is supported (JPEG, PNG)
 
-**Test:**
-1. Send a message
-2. Observe how quickly it appears
-3. **Expected:** Appears instantly in chat
-4. **Expected:** Confirmed within 2 seconds
+## Logging and Debugging
 
----
+### Enable Debug Logs
 
-## Error Scenarios
+The app has comprehensive logging. Check console output for:
+- `📨 New message received in inbox:` - WebSocket message events
+- `✅ Updated conversation in inbox:` - Inbox updates
+- `🔄 Reloading chats due to missing user data` - Data recovery
+- `📥 Fetching hangout users...` - Hangout data loading
+- `✅ WebSocket connected successfully` - Connection status
 
-### 1. Invalid Login
-1. Try to login with wrong credentials
-2. **Expected:** Shows "Invalid email or password" alert
-3. **Expected:** Doesn't crash
+### Server Logs
 
-### 2. Network Offline
-1. Turn off network completely
-2. Navigate around the app
-3. **Expected:** Graceful error messages
-4. **Expected:** No crashes
-5. **Expected:** Some data from cache still shows
+Monitor server logs for:
+- `🔌 WebSocket client connected:` - Client connections
+- `✅ User authenticated:` - User login
+- `Message sent in conversation` - Message delivery
 
-### 3. Server Down
-1. Stop the backend server
-2. Try various operations
-3. **Expected:** Clear error messages
-4. **Expected:** No infinite loading
-5. **Expected:** Logout still works
+## Performance Metrics
 
----
+Expected performance benchmarks:
+- Message delivery latency: < 200ms
+- Inbox refresh: < 1 second
+- Hangout list load: < 2 seconds
+- Image upload: < 5 seconds (depends on image size)
 
-## Edge Cases
+## Test Result Template
 
-### 1. Follow Yourself
-1. Try to follow your own profile
-2. **Expected:** Should not show follow button on own profile
+Use this template to document your test results:
 
-### 2. Empty Chat
-1. Open a conversation with no messages
-2. **Expected:** Shows empty state gracefully
+```markdown
+## Test Session: [Date]
+**Tester**: [Name]
+**Devices Used**: [Number and types]
+**Server Version**: [Commit hash or version]
+**Client Version**: [Commit hash or version]
 
-### 3. No Internet on Startup
-1. Close app completely
-2. Turn off network
-3. Open app
-4. **Expected:** Shows login screen
-5. **Expected:** Doesn't crash trying to connect
+### Inbox Real-time Test
+- [ ] Messages appear instantly
+- [ ] Avatars display correctly
+- [ ] Names display correctly (never "Direct Message")
+- [ ] Unread counts update
+- [ ] Inbox list reorders correctly
+- **Issues Found**: [List any issues]
 
----
+### Hangout Feature Test
+- [ ] Visibility toggle works
+- [ ] Swipe left opens profile
+- [ ] Swipe right shows next user
+- [ ] Only online users appear
+- [ ] Background images display
+- [ ] Auto-refresh works (30s)
+- **Issues Found**: [List any issues]
 
-## Regression Testing
-
-Make sure old features still work:
-
-- [ ] Login with valid credentials
-- [ ] Signup new account
-- [ ] Browse events
-- [ ] View user profiles
-- [ ] Search users
-- [ ] Filter users by distance/gender
-- [ ] Add event comments
-- [ ] Upload images
-- [ ] Join/leave events
-- [ ] Browse communities
-- [ ] View notifications
-- [ ] Edit profile
-- [ ] Update hangout status
-
----
-
-## Debugging
-
-### Enable Detailed Logging
-
-The app now logs all API requests and WebSocket events. Check the console for:
-
+### Overall Rating
+- **Stability**: [1-5 stars]
+- **Performance**: [1-5 stars]
+- **User Experience**: [1-5 stars]
+- **Notes**: [Additional comments]
 ```
-API Request: GET /users
-WebSocket connected successfully
-API Response Error: 404 Not Found
-```
 
-### Common Issues
+## Next Steps After Testing
 
-**Q: Messages not sending**
-- Check console for "WebSocket not connected" messages
-- Verify API endpoint in .env is correct
-- Check if backend server is running
-
-**Q: Follow button not working**
-- Check console for API errors
-- Verify user is logged in
-- Check if backend has follow endpoint
-
-**Q: Logout still spinning**
-- Check if you pulled latest changes
-- Verify AuthContext.tsx has immediate state clear
-
----
-
-## Report Issues
-
-If you find any bugs:
-
-1. **What happened:** Describe the bug
-2. **Expected behavior:** What should happen
-3. **Steps to reproduce:** How to trigger the bug
-4. **Console logs:** Any errors in console
-5. **Device/Platform:** iOS/Android/Web
-6. **Network state:** Online/Offline/Slow
-
----
-
-## Success Criteria
-
-✅ All test cases pass
-✅ No crashes during testing
-✅ Error messages are user-friendly
-✅ Performance meets targets
-✅ All regressions still work
-
-When all criteria are met, the app is ready for production! 🎉
+1. Document all bugs found
+2. Create GitHub issues for each bug
+3. Prioritize bugs by severity
+4. Re-test after fixes
+5. Deploy to production when all tests pass

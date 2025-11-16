@@ -9,7 +9,6 @@ import { useAuth } from '@/src/context/AuthContext';
 import { useTheme } from '@/src/context/ThemeContext';
 import ApiService from '@/src/services/api';
 import WebSocketService from '@/src/services/websocket';
-import { useFocusEffect } from '@react-navigation/native';
 
 export default function InboxScreen() {
   const router = useRouter();
@@ -229,10 +228,15 @@ export default function InboxScreen() {
         // Fall back to username
         displayName = otherUser.username;
       } else {
-        // Last resort: show "Loading..." and trigger a reload
-        displayName = 'Loading...';
-        // Trigger reload to get proper data
-        setTimeout(() => loadChats(), 100);
+        // EXTREME FALLBACK: This should never happen, but if it does,
+        // extract username from conversation ID or use a safe fallback
+        console.warn('⚠️ Missing otherUser data for conversation:', item.id);
+        displayName = 'User';
+        // Trigger reload to get proper data in background
+        setTimeout(() => {
+          console.log('🔄 Reloading chats due to missing user data');
+          loadChats();
+        }, 500);
       }
     } else {
       displayName = item.name || 'Group Chat';

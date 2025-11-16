@@ -80,9 +80,8 @@ export default function HangoutScreen() {
       const onlineUsers = hangoutData
         .map((h: any) => h.user || h)
         .filter((u: User) => {
-          const isOnline = u.isOnline || u.is_online;
+          const isOnline = u.isOnline;
           const isNotCurrentUser = u.username !== currentUser.username;
-          const hasBackground = u.backgroundImage || u.background_image;
           
           if (!isNotCurrentUser) {
             console.log('⏭️ Skipping current user');
@@ -307,9 +306,9 @@ export default function HangoutScreen() {
           {...panResponder.panHandlers}
         >
           {/* Background Image */}
-          {(user.backgroundImage || user.background_image) ? (
+          {user.backgroundImage ? (
             <Image
-              source={{ uri: user.backgroundImage || user.background_image }}
+              source={{ uri: user.backgroundImage }}
               style={styles.cardImage}
               resizeMode="cover"
               onError={(e) => {
@@ -438,9 +437,9 @@ export default function HangoutScreen() {
           },
         ]}
       >
-        {(user.backgroundImage || user.background_image) ? (
+        {user.backgroundImage ? (
           <Image
-            source={{ uri: user.backgroundImage || user.background_image }}
+            source={{ uri: user.backgroundImage }}
             style={styles.cardImage}
             resizeMode="cover"
           />
@@ -453,8 +452,6 @@ export default function HangoutScreen() {
         ) : (
           <View style={[styles.cardImage, { backgroundColor: colors.border }]}>
             <Ionicons name="person" size={120} color="#ccc" />
-          </View>
-        )}
           </View>
         )}
         <LinearGradient
