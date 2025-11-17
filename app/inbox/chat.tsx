@@ -112,6 +112,11 @@ export default function ChatScreen() {
     const imageUrl: string | undefined =
       raw?.image || raw?.message_media?.[0]?.media_url || undefined;
 
+    // CRITICAL: Ensure we use the server's timestamp, not current time
+    // Priority: timestamp (WebSocket) > created_at (REST API) > fallback only for temp messages
+    const messageTimestamp = raw?.timestamp || raw?.created_at;
+    const timestamp = messageTimestamp || (raw?.id?.toString().startsWith('temp-') ? new Date().toISOString() : '');
+
     return {
       id: String(raw?.id ?? `${Date.now()}`),
       chatId: String(raw?.chatId ?? raw?.conversation_id ?? chatId),
@@ -119,7 +124,7 @@ export default function ChatScreen() {
       sender,
       content: raw?.content ?? '',
       image: imageUrl,
-      timestamp: raw?.timestamp ?? raw?.created_at ?? new Date().toISOString(),
+      timestamp: timestamp,
       read: Boolean(raw?.read ?? false),
     };
   };

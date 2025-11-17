@@ -157,6 +157,9 @@ export default function InboxScreen() {
           }
           
           // Create updated chat object and move to top
+          // CRITICAL: Always use server timestamp, never generate current time
+          const messageTimestamp = message.timestamp || message.created_at;
+          
           const updatedChat = {
             ...existingChat,
             participants: updatedParticipants,
@@ -166,7 +169,7 @@ export default function InboxScreen() {
               senderId: senderId || 'unknown',
               sender: senderInfo,
               content: message.content || '',
-              timestamp: message.timestamp || message.created_at || new Date().toISOString(),
+              timestamp: messageTimestamp || '',
               read: false,
             },
             // Increment unread count if message is from someone else
@@ -198,6 +201,9 @@ export default function InboxScreen() {
             interests: [],
           };
 
+          // CRITICAL: Always use server timestamp
+          const messageTimestamp = message.timestamp || message.created_at;
+
           const minimalChat: Chat = {
             id: conversationId,
             type: 'dm',
@@ -209,7 +215,7 @@ export default function InboxScreen() {
               senderId: senderId || 'unknown',
               sender: minimalSender,
               content: message.content || '',
-              timestamp: message.timestamp || message.created_at || new Date().toISOString(),
+              timestamp: messageTimestamp || '',
               read: false,
             },
             unreadCount: senderId !== user.username ? 1 : 0,
