@@ -686,8 +686,21 @@ async getChatMessages(conversationId: string): Promise<Message[]> {
   }
 
   // Pro subscription endpoints
-  async activateProSubscription(username: string): Promise<void> {
-    await this.client.post('/payments/subscribe', { username, plan_type: 'pro' });
+  async createPaymentIntent(username: string, amount: number = 1): Promise<{ clientSecret: string; paymentIntentId: string }> {
+    const response = await this.client.post('/payments/create-payment-intent', { 
+      username, 
+      amount 
+    });
+    return response.data;
+  }
+
+  async activateProSubscription(username: string, paymentIntentId?: string): Promise<void> {
+    await this.client.post('/payments/subscribe', { 
+      username, 
+      plan_type: 'pro',
+      payment_method: paymentIntentId ? 'stripe' : 'test',
+      payment_intent_id: paymentIntentId
+    });
   }
 
   async deactivateProSubscription(username: string): Promise<void> {
