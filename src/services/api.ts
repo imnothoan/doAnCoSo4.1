@@ -601,24 +601,33 @@ class ApiService {
     };
   }
 
-async getChatMessages(conversationId: string): Promise<Message[]> {
-  const response = await this.client.get(`/messages/conversations/${conversationId}/messages`);
-  return response.data.map((m: any) => ({
-    id: String(m.id),
-    chatId: String(m.chatId),
-    senderId: m.senderId,
-    sender: {
-      id: m.sender?.id,
-      username: m.sender?.username,
-      name: m.sender?.name,
-      avatar: m.sender?.avatar,
-    },
-    content: m.content,
-    image: m.image,
-    timestamp: m.timestamp,
-    read: m.read ?? false,
-  }));
-}
+ async getChatMessages(conversationId: string): Promise<Message[]> {
+   const response = await this.client.get(`/messages/conversations/${conversationId}/messages`);
+   return response.data.map((m: any) => ({
+     id: String(m.id),
+     chatId: String(m.conversation_id ?? conversationId),
+     senderId: m.sender_username ?? m.sender?.username,
+     sender: mapServerUserToClient({
+       id: m.sender?.id ?? m.sender_username,
+       username: m.sender?.username ?? m.sender_username,
+       name: m.sender?.name ?? m.sender_username,
+       email: m.sender?.email ?? `${m.sender_username}@example.com`,
+       avatar: m.sender?.avatar ?? '',
+       country: m.sender?.country ?? '',
+       city: m.sender?.city ?? '',
+       status: m.sender?.status ?? 'Chilling',
+       languages: m.sender?.languages ?? [],
+       interests: m.sender?.interests ?? [],
+       bio: m.sender?.bio,
+       gender: m.sender?.gender,
+       age: m.sender?.age,
+     }),
+     content: m.content ?? '',
+     image: m.message_media?.[0]?.media_url ?? m.image,
+     timestamp: m.created_at ?? m.timestamp,
+     read: m.is_read ?? m.read ?? false,
+   }));
+ }
 
   async sendMessage(conversationId: string, senderUsername: string, content: string, replyToMessageId?: string): Promise<void> {
     await this.client.post(`/messages/conversations/${conversationId}/messages`, {

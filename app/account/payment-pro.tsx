@@ -1,9 +1,16 @@
 import React, { useState } from 'react';
-import { StyleSheet, View, Text, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { StyleSheet, View, Text, ScrollView, TouchableOpacity, Alert, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useStripe, CardField } from '@stripe/stripe-react-native';
+import { 
+  useStripe, 
+  CardField, 
+  isPlatformPaySupported,
+  PlatformPayButton,
+  PlatformPay,
+  confirmPlatformPayPayment,
+} from '@stripe/stripe-react-native';
 import { useAuth } from '@/src/context/AuthContext';
 import { useTheme } from '@/src/context/ThemeContext';
 import ApiService from '@/src/services/api';
@@ -15,8 +22,94 @@ export default function PaymentProScreen() {
   const { confirmPayment } = useStripe();
   const [processing, setProcessing] = useState(false);
   const [cardComplete, setCardComplete] = useState(false);
+  const [platformPayReady, setPlatformPayReady] = useState(false);
 
   const isPro = user?.isPro || false;
+
+  // Check if Apple Pay / Google Pay is available
+  React.useEffect(() => {
+    (async () => {
+      const isSupported = await isPlatformPaySupported();
+      setPlatformPayReady(isSupported);
+    })();
+  }, []);
+
+  /**
+   * Handle Apple Pay / Google Pay payment
+   */
+  const handlePlatformPayPayment = async () => {
+    if (!user?.username) {
+      Alert.alert('Error', 'User not authenticated');
+      return;
+    }
+
+    try {
+      setProcessing(true);
+
+      // Step 1: Create payment intent on server
+      const { clientSecret, paymentIntentId } = await ApiService.createPaymentIntent(
+        user.username,
+        1 // $0.01 USD (test price)
+      );
+
+      // Step 2: Confirm platform pay payment (Apple Pay / Google Pay)
+      const { error } = await confirmPlatformPayPayment(clientSecret, {
+        applePay: {
+          cartItems: [
+            {
+              label: 'Pro Subscription',
+              amount: '0.01',
+              paymentType: PlatformPay.PaymentType.Immediate,
+            },
+          ],
+          merchantCountryCode: 'US',
+          currencyCode: 'USD',
+          requiredShippingAddressFields: [],
+          requiredBillingContactFields: [],
+        },
+        googlePay: {
+          testEnv: true,
+          merchantName: 'ConnectSphere',
+          merchantCountryCode: 'US',
+          currencyCode: 'USD',
+          billingAddressConfig: {
+            format: PlatformPay.BillingAddressFormat.Min,
+            isPhoneNumberRequired: false,
+            isRequired: false,
+          },
+        },
+      });
+
+      if (error) {
+        console.error('Platform Pay error:', error);
+        Alert.alert('Payment Failed', error.message || 'Failed to process payment');
+        setProcessing(false);
+        return;
+      }
+
+      // Step 3: Activate Pro subscription on server
+      await ApiService.activateProSubscription(user.username, paymentIntentId);
+
+      // Step 4: Refresh user data
+      await refreshUser();
+
+      Alert.alert(
+        'Success!',
+        'Payment successful! You are now a Pro member. Enjoy your exclusive features.',
+        [
+          {
+            text: 'OK',
+            onPress: () => router.back(),
+          },
+        ]
+      );
+    } catch (error) {
+      console.error('Error processing platform pay:', error);
+      Alert.alert('Error', 'Failed to process payment. Please try again.');
+    } finally {
+      setProcessing(false);
+    }
+  };
 
   const handleStripePayment = async () => {
     if (!user?.username || !cardComplete) {
@@ -260,63 +353,71 @@ export default function PaymentProScreen() {
             </View>
           </View>
 
-          {/* Stripe Card Input (only show if not Pro) */}
+          {/* Payment Method Section (only show if not Pro) */}
           {!isPro && (
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Payment Method</Text>
-              <CardField
-                postalCodeEnabled={false}
-                placeholders={{
-                  number: '4242 4242 4242 4242',
-                }}
-                cardStyle={{
-                  backgroundColor: '#FFFFFF',
-                  textColor: '#000000',
-                }}
-                style={styles.cardField}
-                onCardChange={(cardDetails) => {
-                  setCardComplete(cardDetails.complete);
-                }}
-              />
-              <Text style={styles.cardHint}>
-                💳 Test card: 4242 4242 4242 4242 (any future expiry, any CVC)
-              </Text>
-            </View>
+            <>
+              {/* Platform Pay (Apple Pay / Google Pay) */}
+              {platformPayReady && (
+                <View style={styles.section}>
+                  <Text style={styles.sectionTitle}>
+                    {Platform.OS === 'ios' ? 'Apple Pay' : 'Google Pay'}
+                  </Text>
+                  <Text style={styles.sectionDescription}>
+                    Quick and secure payment with {Platform.OS === 'ios' ? 'Apple Pay' : 'Google Pay'}
+                  </Text>
+                  <PlatformPayButton
+                    onPress={handlePlatformPayPayment}
+                    type={PlatformPay.ButtonType.Subscribe}
+                    appearance={PlatformPay.ButtonStyle.Black}
+                    borderRadius={12}
+                    style={styles.platformPayButton}
+                    disabled={processing}
+                  />
+                  <Text style={styles.orDivider}>OR</Text>
+                </View>
+              )}
+
+              {/* Card Payment */}
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Pay with Card</Text>
+                <CardField
+                  postalCodeEnabled={false}
+                  placeholders={{
+                    number: '4242 4242 4242 4242',
+                  }}
+                  cardStyle={{
+                    backgroundColor: '#FFFFFF',
+                    textColor: '#000000',
+                  }}
+                  style={styles.cardField}
+                  onCardChange={(cardDetails) => {
+                    setCardComplete(cardDetails.complete);
+                  }}
+                />
+                <Text style={styles.cardHint}>
+                  💳 Test card: 4242 4242 4242 4242 (any future expiry, any CVC)
+                </Text>
+                
+                <TouchableOpacity 
+                  style={[
+                    styles.subscribeButton, 
+                    { backgroundColor: colors.primary }, 
+                    (processing || !cardComplete) && styles.subscribeButtonDisabled
+                  ]}
+                  onPress={handleStripePayment}
+                  disabled={processing || !cardComplete}
+                >
+                  <Ionicons name="card" size={20} color="#fff" />
+                  <Text style={styles.subscribeButtonText}>
+                    {processing ? 'Processing...' : 'Pay with Card'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </>
           )}
 
-          {/* Action Buttons */}
-          {!isPro ? (
-            <>
-              <TouchableOpacity 
-                style={[
-                  styles.subscribeButton, 
-                  { backgroundColor: colors.primary }, 
-                  (processing || !cardComplete) && styles.subscribeButtonDisabled
-                ]}
-                onPress={handleStripePayment}
-                disabled={processing || !cardComplete}
-              >
-                <Ionicons name="card" size={20} color="#fff" />
-                <Text style={styles.subscribeButtonText}>
-                  {processing ? 'Processing...' : 'Pay & Subscribe'}
-                </Text>
-              </TouchableOpacity>
-                {/*
-              <TouchableOpacity 
-                style={[styles.testButton, processing && styles.testButtonDisabled]}
-                onPress={handleTestModeSubscribe}
-                disabled={processing}
-              >
-                <Ionicons name="flash" size={20} color={colors.primary} />
-                <Text style={[styles.testButtonText, { color: colors.primary }]}>
-                  {processing ? 'Processing...' : 'Quick Test Mode'}
-                </Text>
-              </TouchableOpacity>
-              */}
-            </>
-         
-           
-          ) : (
+          {/* Cancel Subscription (if Pro) */}
+          {isPro && (
             <TouchableOpacity 
               style={[styles.cancelButton, processing && styles.cancelButtonDisabled]}
               onPress={handleCancelSubscription}
@@ -440,6 +541,23 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 8,
   },
+  sectionDescription: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 16,
+    lineHeight: 20,
+  },
+  platformPayButton: {
+    height: 50,
+    marginVertical: 8,
+  },
+  orDivider: {
+    textAlign: 'center',
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#999',
+    marginVertical: 16,
+  },
   testInstructions: {
     fontSize: 14,
     color: '#333',
@@ -449,7 +567,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginHorizontal: 16,
     marginTop: 16,
     padding: 16,
     borderRadius: 12,
