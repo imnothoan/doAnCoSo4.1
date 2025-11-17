@@ -3,6 +3,7 @@ import { StyleSheet, View, Text, ScrollView, TouchableOpacity, Alert } from 'rea
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useStripe, CardField } from '@stripe/stripe-react-native';
 import { useAuth } from '@/src/context/AuthContext';
 import { useTheme } from '@/src/context/ThemeContext';
 import ApiService from '@/src/services/api';
@@ -11,16 +12,73 @@ export default function PaymentProScreen() {
   const router = useRouter();
   const { user, refreshUser } = useAuth();
   const { colors } = useTheme();
+  const { confirmPayment } = useStripe();
   const [processing, setProcessing] = useState(false);
+  const [cardComplete, setCardComplete] = useState(false);
 
   const isPro = user?.isPro || false;
 
-  const handleSubscribe = async () => {
+  const handleStripePayment = async () => {
+    if (!user?.username || !cardComplete) {
+      Alert.alert('Error', 'Please complete your card details');
+      return;
+    }
+
+    try {
+      setProcessing(true);
+      
+      // Step 1: Create payment intent on server
+      const { clientSecret, paymentIntentId } = await ApiService.createPaymentIntent(
+        user.username,
+        1 // $0.01 USD (1 cent, closest to $0.001 as Stripe minimum is $0.50)
+      );
+
+      // Step 2: Confirm payment with Stripe
+      const { error, paymentIntent } = await confirmPayment(clientSecret, {
+        paymentMethodType: 'Card',
+      });
+
+      if (error) {
+        console.error('Payment confirmation error:', error);
+        Alert.alert('Payment Failed', error.message || 'Failed to process payment');
+        setProcessing(false);
+        return;
+      }
+
+      if (paymentIntent?.status === 'Succeeded') {
+        // Step 3: Activate Pro subscription on server
+        await ApiService.activateProSubscription(user.username, paymentIntentId);
+        
+        // Step 4: Refresh user data
+        await refreshUser();
+        
+        Alert.alert(
+          'Success!',
+          'Payment successful! You are now a Pro member. Enjoy your exclusive features.',
+          [
+            {
+              text: 'OK',
+              onPress: () => router.back(),
+            },
+          ]
+        );
+      } else {
+        Alert.alert('Payment Failed', 'Payment was not successful. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error processing payment:', error);
+      Alert.alert('Error', 'Failed to process payment. Please try again.');
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const handleTestModeSubscribe = async () => {
     if (!user?.username) return;
 
     Alert.alert(
       'Confirm Subscription',
-      'Subscribe to Pro for $9.99/month (Test Mode)?',
+      'Subscribe to Pro for $0.01 (Test Mode)?',
       [
         {
           text: 'Cancel',
@@ -31,7 +89,7 @@ export default function PaymentProScreen() {
           onPress: async () => {
             try {
               setProcessing(true);
-              // Call API to activate Pro subscription
+              // Call API to activate Pro subscription without Stripe
               if (user?.username) {
                 await ApiService.activateProSubscription(user.username);
                 
@@ -188,31 +246,73 @@ export default function PaymentProScreen() {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Pricing</Text>
             <View style={styles.pricingCard}>
-              <Text style={[styles.pricingAmount, { color: colors.primary }]}>$9.99</Text>
-              <Text style={styles.pricingPeriod}>per month</Text>
+              <Text style={[styles.pricingAmount, { color: colors.primary }]}>$0.01</Text>
+              <Text style={styles.pricingPeriod}>per month (test price)</Text>
               <Text style={styles.pricingNote}>
-                🧪 Test Mode - No real payment required
+                🧪 Test Mode - Using Stripe test payment
               </Text>
-              <Text style={[styles.pricingNote, { marginTop: 8 }]}>
+              <Text style={[styles.pricingNote, { marginTop: 4 }]}>
+                Test card: 4242 4242 4242 4242
+              </Text>
+              <Text style={[styles.pricingNote, { marginTop: 4 }]}>
                 You can cancel anytime
               </Text>
             </View>
           </View>
 
-
-
-          {/* Action Button */}
-          {!isPro ? (
-            <TouchableOpacity 
-              style={[styles.subscribeButton, { backgroundColor: colors.primary }, processing && styles.subscribeButtonDisabled]}
-              onPress={handleSubscribe}
-              disabled={processing}
-            >
-              <Ionicons name="star" size={20} color="#fff" />
-              <Text style={styles.subscribeButtonText}>
-                {processing ? 'Processing...' : 'Subscribe to Pro (Test Mode)'}
+          {/* Stripe Card Input (only show if not Pro) */}
+          {!isPro && (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Payment Method</Text>
+              <CardField
+                postalCodeEnabled={false}
+                placeholders={{
+                  number: '4242 4242 4242 4242',
+                }}
+                cardStyle={{
+                  backgroundColor: '#FFFFFF',
+                  textColor: '#000000',
+                }}
+                style={styles.cardField}
+                onCardChange={(cardDetails) => {
+                  setCardComplete(cardDetails.complete);
+                }}
+              />
+              <Text style={styles.cardHint}>
+                💳 Test card: 4242 4242 4242 4242 (any future expiry, any CVC)
               </Text>
-            </TouchableOpacity>
+            </View>
+          )}
+
+          {/* Action Buttons */}
+          {!isPro ? (
+            <>
+              <TouchableOpacity 
+                style={[
+                  styles.subscribeButton, 
+                  { backgroundColor: colors.primary }, 
+                  (processing || !cardComplete) && styles.subscribeButtonDisabled
+                ]}
+                onPress={handleStripePayment}
+                disabled={processing || !cardComplete}
+              >
+                <Ionicons name="card" size={20} color="#fff" />
+                <Text style={styles.subscribeButtonText}>
+                  {processing ? 'Processing...' : 'Pay with Stripe ($0.01)'}
+                </Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={[styles.testButton, processing && styles.testButtonDisabled]}
+                onPress={handleTestModeSubscribe}
+                disabled={processing}
+              >
+                <Ionicons name="flash" size={20} color={colors.primary} />
+                <Text style={[styles.testButtonText, { color: colors.primary }]}>
+                  {processing ? 'Processing...' : 'Quick Test Mode (No Card)'}
+                </Text>
+              </TouchableOpacity>
+            </>
           ) : (
             <TouchableOpacity 
               style={[styles.cancelButton, processing && styles.cancelButtonDisabled]}
@@ -326,6 +426,17 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     textAlign: 'center',
   },
+  cardField: {
+    height: 50,
+    marginVertical: 16,
+  },
+  cardHint: {
+    fontSize: 12,
+    color: '#666',
+    fontStyle: 'italic',
+    textAlign: 'center',
+    marginTop: 8,
+  },
   testInstructions: {
     fontSize: 14,
     color: '#333',
@@ -348,6 +459,27 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     color: '#fff',
+  },
+  testButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#fff',
+    marginHorizontal: 16,
+    marginTop: 12,
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#007AFF',
+    gap: 8,
+  },
+  testButtonDisabled: {
+    borderColor: '#ccc',
+    opacity: 0.5,
+  },
+  testButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
   },
   cancelButton: {
     alignItems: 'center',
