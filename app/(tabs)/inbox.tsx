@@ -61,7 +61,7 @@ export default function InboxScreen() {
 
     // Handle new messages to update conversation list
     const handleNewMessage = (message: any) => {
-      console.log('📨 New message received in inbox:', message);
+      
       
       const conversationId = String(message.chatId || message.conversation_id || message.conversationId);
       const senderId = message.senderId || message.sender_username || message.sender?.username;
@@ -179,11 +179,10 @@ export default function InboxScreen() {
           updatedChats.splice(existingIndex, 1);
           updatedChats.unshift(updatedChat);
           
-          console.log('✅ Updated conversation in inbox:', updatedChat.name || updatedChat.id);
           return updatedChats;
                 } else {
           // New conversation first message (we got it because server emitted directly to our socket)
-          console.log('🆕 First message of a new conversation:', conversationId);
+         
 
           // Tạo minimal sender
           const minimalSender = message.sender || {
@@ -293,7 +292,7 @@ export default function InboxScreen() {
         displayName = 'User';
         // Trigger reload to get proper data in background
         setTimeout(() => {
-          console.log('🔄 Reloading chats due to missing user data');
+          console.log('Reloading chats due to missing user data');
           loadChats();
         }, 500);
       }

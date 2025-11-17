@@ -65,25 +65,24 @@ export default function HangoutScreen() {
   // Load online users available for hangout
   const loadOnlineUsers = useCallback(async () => {
     if (!currentUser?.username) {
-      console.log('❌ Cannot load hangout users - no current user');
+      
       return;
     }
     
     try {
       setLoading(true);
-      console.log('📡 Fetching hangout users...');
+    
       
       // Get users available for hangout
       const hangoutData = await ApiService.getOpenHangouts({
         limit: 50,
       });
       
-      console.log(`📊 Received ${hangoutData.length} users from server`);
+      
       
       // Debug: Log first user to see structure
       if (hangoutData.length > 0) {
-        console.log('🔍 First user data:', JSON.stringify(hangoutData[0], null, 2));
-        console.log('🔍 First user username:', hangoutData[0].username);
+      
       }
       
       // Filter to only show online users and exclude current user
@@ -92,14 +91,14 @@ export default function HangoutScreen() {
       const onlineUsers = hangoutData.filter((u: User) => {
         // Skip users without username
         if (!u.username) {
-          console.warn('⚠️ Skipping user without username:', u.id);
+         
           return false;
         }
         
         // Skip current user
         const isNotCurrentUser = u.username !== currentUser.username;
         if (!isNotCurrentUser) {
-          console.log('⏭️  Skipping current user');
+    
           return false;
         }
         
@@ -107,9 +106,9 @@ export default function HangoutScreen() {
       });
       
       // Debug: Log filtered users
-      console.log(`✅ Filtered to ${onlineUsers.length} online users`);
+   
       if (onlineUsers.length > 0) {
-        console.log('🔍 First filtered user username:', onlineUsers[0].username);
+        
       }
       
       setUsers(onlineUsers);
@@ -118,7 +117,7 @@ export default function HangoutScreen() {
       usersRef.current = onlineUsers;
       currentIndexRef.current = 0;
     } catch (err) {
-      console.error('Error loading online users:', err);
+    
       Alert.alert('Error', 'Failed to load users. Please try again.');
       setUsers([]);
       // Update refs for panResponder closure
@@ -137,7 +136,7 @@ export default function HangoutScreen() {
       const status = await ApiService.getHangoutStatus(currentUser.username);
       setIsAvailable(status.is_available || false);
     } catch (error) {
-      console.error('Error loading hangout status:', error);
+    
       setIsAvailable(false);
     }
   }, [currentUser?.username]);
@@ -171,7 +170,7 @@ export default function HangoutScreen() {
         loadOnlineUsers();
       }
     } catch (error) {
-      console.error('Error updating hangout status:', error);
+
       Alert.alert('Error', 'Failed to update hangout status. Please try again.');
     } finally {
       setUpdatingStatus(false);
@@ -184,17 +183,17 @@ export default function HangoutScreen() {
       if (!currentUser?.username) return;
       
       try {
-        console.log('🔍 Checking hangout visibility status...');
+       
         const status = await ApiService.getHangoutStatus(currentUser.username);
         
-        console.log('📊 Current hangout status:', status);
+
         
         // Set the current visibility state
         setIsAvailable(status.is_available || false);
         
         // If user has never set status before OR is not available, suggest enabling
         if (!status.is_available) {
-          console.log('📍 User not visible in Hangout - suggesting to enable');
+  
           
           // Don't auto-enable, let user decide but show a helpful message
           setTimeout(() => {
@@ -220,7 +219,7 @@ export default function HangoutScreen() {
                       setIsAvailable(true);
                       loadOnlineUsers(); // Reload to see available users
                     } catch (error) {
-                      console.error('Error enabling visibility:', error);
+                      
                     }
                   },
                 },
@@ -229,7 +228,7 @@ export default function HangoutScreen() {
           }, 1000); // Delay to avoid showing immediately
         }
       } catch (error) {
-        console.error('❌ Error initializing hangout visibility:', error);
+
       }
     };
     
@@ -249,7 +248,7 @@ export default function HangoutScreen() {
   // Reload when coming back to this screen
   useFocusEffect(
     useCallback(() => {
-      console.log('📱 Hangout screen focused - reloading data');
+   
       loadHangoutStatus();
       loadOnlineUsers();
     }, [loadHangoutStatus, loadOnlineUsers])
@@ -269,25 +268,15 @@ export default function HangoutScreen() {
     const currentUserProfile = usersRef.current[currentIndexRef.current];
     
     // Debug logging
-    console.log('🎯 onSwipeComplete called:', {
-      direction,
-      currentIndex: currentIndexRef.current,
-      totalUsers: usersRef.current.length,
-      currentUserProfile: currentUserProfile ? {
-        id: currentUserProfile.id,
-        username: currentUserProfile.username,
-        name: currentUserProfile.name,
-      } : null,
-    });
+
 
     if (direction === 'right') {
       // Swipe right: Navigate to profile
       if (currentUserProfile?.username) {
-        console.log('📱 Navigating to profile:', currentUserProfile.username);
+      
         router.push(`/account/profile?username=${currentUserProfile.username}`);
       } else {
-        console.warn('⚠️ Cannot navigate to profile: username is missing');
-        console.warn('⚠️ Current user profile:', JSON.stringify(currentUserProfile, null, 2));
+
         // Show user-friendly error
         Alert.alert(
           'Profile Unavailable',
@@ -299,7 +288,7 @@ export default function HangoutScreen() {
       position.setValue({ x: 0, y: 0 });
     } else {
       // Swipe left: Skip to next card
-      console.log('⏭️ Skipping to next card');
+
       position.setValue({ x: 0, y: 0 });
       setCurrentIndex(prevIndex => {
         const newIndex = prevIndex + 1;
@@ -323,7 +312,7 @@ export default function HangoutScreen() {
     }
     
     try {
-      console.log('📷 Opening image picker for background...');
+
       const image = await ImageService.pickImageFromGallery({
         allowsEditing: true,
         aspect: [9, 16], // Portrait aspect ratio for hangout cards
@@ -331,11 +320,11 @@ export default function HangoutScreen() {
       });
       
       if (!image) {
-        console.log('❌ No image selected');
+  
         return;
       }
 
-      console.log('✅ Image selected:', image.uri);
+    
 
       if (!ImageService.validateImageSize(image, 10)) {
         Alert.alert('Error', 'Image size must be less than 10MB');
@@ -350,12 +339,12 @@ export default function HangoutScreen() {
         name: image.name || `background_${Date.now()}.jpg`,
       };
 
-      console.log('Uploading background image...');
-      
+   
+ 
       // Upload background image
       const result = await ApiService.uploadBackgroundImage(currentUser.id, imageFile);
       
-      console.log('✅ Background image uploaded successfully:', result.backgroundImageUrl);
+     
       
       Alert.alert(
         'Success', 
@@ -365,11 +354,11 @@ export default function HangoutScreen() {
       // Refresh user data to get new background image
       if (currentUser.username) {
         const updatedUser = await ApiService.getUserByUsername(currentUser.username);
-        console.log('🔄 Updated user background:', updatedUser.backgroundImage);
+     
       }
       
     } catch (error) {
-      console.error('❌ Error uploading background:', error);
+
       Alert.alert('Error', 'Failed to upload background image. Please try again.');
     } finally {
       setUploadingBackground(false);
@@ -417,7 +406,7 @@ export default function HangoutScreen() {
               style={styles.cardImage}
               resizeMode="cover"
               onError={(e) => {
-                console.log('Failed to load background image for', user.username);
+   
               }}
             />
           ) : user.avatar ? (
@@ -426,7 +415,7 @@ export default function HangoutScreen() {
               style={styles.cardImage}
               resizeMode="cover"
               onError={(e) => {
-                console.log('Failed to load avatar for', user.username);
+              
               }}
             />
           ) : (

@@ -56,7 +56,7 @@ class ApiService {
     // Add request interceptor for logging and deduplication
     this.client.interceptors.request.use(
       (config) => {
-        console.log(`API Request: ${config.method?.toUpperCase()} ${config.url}`);
+    
         return config;
       },
       (error) => {
@@ -90,7 +90,7 @@ class ApiService {
           if (!originalRequest._retry) {
             originalRequest._retry = true;
             try {
-              console.log('Retrying request...');
+     
               return this.client(originalRequest);
             } catch (retryError) {
               console.error('Retry failed:', retryError);
@@ -122,7 +122,7 @@ class ApiService {
     // Check if there's a pending request for the same endpoint
     const pending = pendingRequests.get(cacheKey);
     if (pending && (now - pending.timestamp) < REQUEST_CACHE_DURATION) {
-      console.log(`Deduplicating request: ${url}`);
+ 
       return pending.promise;
     }
     
@@ -401,16 +401,16 @@ class ApiService {
     }
     
     // Debug: Log raw server response
-    console.log('🔍 API: Raw server response count:', users.length);
+   
     if (users.length > 0) {
-      console.log('🔍 API: First raw user from server:', JSON.stringify(users[0], null, 2));
+
     }
     
     const mappedUsers = users.map((user: any) => mapServerUserToClient(user));
     
     // Debug: Log mapped response
     if (mappedUsers.length > 0) {
-      console.log('🔍 API: First mapped user:', JSON.stringify(mappedUsers[0], null, 2));
+     
     }
     
     return mappedUsers;

@@ -13,16 +13,16 @@ class WebSocketService {
 
   connect(url: string, token?: string) {
     if (this.socket?.connected) {
-      console.log('WebSocket already connected');
+    
       return;
     }
 
     if (this.isConnecting) {
-      console.log('WebSocket connection already in progress');
+    
       return;
     }
 
-    console.log('🔌 Connecting to WebSocket:', url);
+
     this.isConnecting = true;
 
     this.socket = io(url, {
@@ -40,14 +40,14 @@ class WebSocketService {
     });
 
     this.socket.on('connect', () => {
-      console.log('✅ WebSocket connected successfully');
+  
       this.reconnectAttempts = 0;
       this.isConnecting = false;
       this.startHeartbeat();
       
       // Rejoin all active conversation rooms
       if (this.activeConversations.size > 0) {
-        console.log('🔄 Rejoining', this.activeConversations.size, 'conversation rooms...');
+       
         this.activeConversations.forEach(conversationId => {
           this.socket?.emit('join_conversation', { conversationId });
         });
@@ -57,14 +57,14 @@ class WebSocketService {
     });
 
     this.socket.on('disconnect', (reason) => {
-      console.log('❌ WebSocket disconnected:', reason);
+    
       this.isConnecting = false;
       this.stopHeartbeat();
       this.notifyConnectionStatus(false);
     });
 
     this.socket.on('connect_error', (error) => {
-      console.error('WebSocket connection error:', error.message);
+ 
       this.reconnectAttempts++;
       this.isConnecting = false;
       this.notifyConnectionStatus(false);
@@ -99,7 +99,7 @@ class WebSocketService {
       try {
         listener(connected);
       } catch (error) {
-        console.error('Error in connection status listener:', error);
+      
       }
     });
   }
@@ -119,7 +119,7 @@ class WebSocketService {
 
   disconnect() {
     if (this.socket) {
-      console.log('Disconnecting WebSocket');
+
       this.stopHeartbeat();
       this.socket.disconnect();
       this.socket = null;
@@ -132,7 +132,7 @@ class WebSocketService {
 
   // Force reconnection
   forceReconnect() {
-    console.log('Forcing WebSocket reconnection...');
+ 
     if (this.socket && !this.socket.connected) {
       this.socket.connect();
     }
@@ -144,7 +144,7 @@ class WebSocketService {
       this.socket.emit('join_conversation', { conversationId });
       // Track this conversation so we can rejoin on reconnection
       this.activeConversations.add(conversationId);
-      console.log('📥 Joined conversation:', conversationId);
+  
     }
   }
 
@@ -154,7 +154,7 @@ class WebSocketService {
       this.socket.emit('leave_conversation', { conversationId });
       // Remove from active conversations
       this.activeConversations.delete(conversationId);
-      console.log('📤 Left conversation:', conversationId);
+ 
     }
   }
 
@@ -169,7 +169,7 @@ class WebSocketService {
       });
       return true;
     } else {
-      console.warn('WebSocket not connected, cannot send message');
+  
       return false;
     }
   }
