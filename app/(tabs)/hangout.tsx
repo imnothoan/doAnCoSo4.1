@@ -37,6 +37,10 @@ export default function HangoutScreen() {
   const [isAvailable, setIsAvailable] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
   
+  // Use refs to store current state for panResponder closure
+  const usersRef = useRef<User[]>([]);
+  const currentIndexRef = useRef(0);
+  
   const position = useRef(new Animated.ValueXY()).current;
   const panResponder = useRef(
     PanResponder.create({
@@ -110,10 +114,16 @@ export default function HangoutScreen() {
       
       setUsers(onlineUsers);
       setCurrentIndex(0);
+      // Update refs for panResponder closure
+      usersRef.current = onlineUsers;
+      currentIndexRef.current = 0;
     } catch (err) {
       console.error('Error loading online users:', err);
       Alert.alert('Error', 'Failed to load users. Please try again.');
       setUsers([]);
+      // Update refs for panResponder closure
+      usersRef.current = [];
+      currentIndexRef.current = 0;
     } finally {
       setLoading(false);
     }
@@ -230,6 +240,12 @@ export default function HangoutScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser?.username, loadOnlineUsers]);
 
+  // Sync refs whenever state changes
+  useEffect(() => {
+    usersRef.current = users;
+    currentIndexRef.current = currentIndex;
+  }, [users, currentIndex]);
+
   // Reload when coming back to this screen
   useFocusEffect(
     useCallback(() => {
@@ -249,13 +265,14 @@ export default function HangoutScreen() {
   };
 
   const onSwipeComplete = (direction: 'left' | 'right') => {
-    const currentUserProfile = users[currentIndex];
+    // Use refs to get the most current state
+    const currentUserProfile = usersRef.current[currentIndexRef.current];
     
     // Debug logging
     console.log('🎯 onSwipeComplete called:', {
       direction,
-      currentIndex,
-      totalUsers: users.length,
+      currentIndex: currentIndexRef.current,
+      totalUsers: usersRef.current.length,
       currentUserProfile: currentUserProfile ? {
         id: currentUserProfile.id,
         username: currentUserProfile.username,
@@ -284,7 +301,11 @@ export default function HangoutScreen() {
       // Swipe left: Skip to next card
       console.log('⏭️ Skipping to next card');
       position.setValue({ x: 0, y: 0 });
-      setCurrentIndex(prevIndex => prevIndex + 1);
+      setCurrentIndex(prevIndex => {
+        const newIndex = prevIndex + 1;
+        currentIndexRef.current = newIndex; // Update ref
+        return newIndex;
+      });
     }
   };
 
