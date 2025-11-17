@@ -6,8 +6,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { 
   useStripe, 
   CardField, 
-  initPaymentSheet, 
-  presentPaymentSheet,
   isPlatformPaySupported,
   PlatformPayButton,
   PlatformPay,

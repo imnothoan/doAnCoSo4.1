@@ -16,7 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Message, User } from '@/src/types';
-import { formatTime, formatMessageTime } from '@/src/utils/date';
+import { formatMessageTime } from '@/src/utils/date';
 import WebSocketService from '@/src/services/websocket';
 import ImageService from '@/src/services/image';
 import ApiService from '@/src/services/api';
