@@ -345,7 +345,7 @@ export default function PaymentProScreen() {
                 Test Mode - Using Stripe test payment
               </Text>
               <Text style={[styles.pricingNote, { marginTop: 4 }]}>
-                Test card: 4242 4242 4242 4242
+                Test card: 4242 4242 4242 4242 (exp: any future date, cvc: any 3 digits)
               </Text>
               <Text style={[styles.pricingNote, { marginTop: 4 }]}>
                 You can cancel anytime
@@ -394,9 +394,7 @@ export default function PaymentProScreen() {
                     setCardComplete(cardDetails.complete);
                   }}
                 />
-                <Text style={styles.cardHint}>
-                  💳 Test card: 4242 4242 4242 4242 (any future expiry, any CVC)
-                </Text>
+            
                 
                 <TouchableOpacity 
                   style={[
