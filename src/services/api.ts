@@ -400,7 +400,20 @@ class ApiService {
       return [];
     }
     
-    return users.map((user: any) => mapServerUserToClient(user));
+    // Debug: Log raw server response
+    console.log('🔍 API: Raw server response count:', users.length);
+    if (users.length > 0) {
+      console.log('🔍 API: First raw user from server:', JSON.stringify(users[0], null, 2));
+    }
+    
+    const mappedUsers = users.map((user: any) => mapServerUserToClient(user));
+    
+    // Debug: Log mapped response
+    if (mappedUsers.length > 0) {
+      console.log('🔍 API: First mapped user:', JSON.stringify(mappedUsers[0], null, 2));
+    }
+    
+    return mappedUsers;
   }
 
   async getMyHangouts(username: string): Promise<any[]> {

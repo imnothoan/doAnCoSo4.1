@@ -76,18 +76,37 @@ export default function HangoutScreen() {
       
       console.log(`📊 Received ${hangoutData.length} users from server`);
       
+      // Debug: Log first user to see structure
+      if (hangoutData.length > 0) {
+        console.log('🔍 First user data:', JSON.stringify(hangoutData[0], null, 2));
+        console.log('🔍 First user username:', hangoutData[0].username);
+      }
+      
       // Filter to only show online users and exclude current user
       // The server already filters for is_available and is_online
+      // ALSO filter out any users without a username (data integrity check)
       const onlineUsers = hangoutData.filter((u: User) => {
+        // Skip users without username
+        if (!u.username) {
+          console.warn('⚠️ Skipping user without username:', u.id);
+          return false;
+        }
+        
+        // Skip current user
         const isNotCurrentUser = u.username !== currentUser.username;
         if (!isNotCurrentUser) {
           console.log('⏭️  Skipping current user');
           return false;
         }
+        
         return true;
       });
       
- 
+      // Debug: Log filtered users
+      console.log(`✅ Filtered to ${onlineUsers.length} online users`);
+      if (onlineUsers.length > 0) {
+        console.log('🔍 First filtered user username:', onlineUsers[0].username);
+      }
       
       setUsers(onlineUsers);
       setCurrentIndex(0);
@@ -231,6 +250,18 @@ export default function HangoutScreen() {
 
   const onSwipeComplete = (direction: 'left' | 'right') => {
     const currentUserProfile = users[currentIndex];
+    
+    // Debug logging
+    console.log('🎯 onSwipeComplete called:', {
+      direction,
+      currentIndex,
+      totalUsers: users.length,
+      currentUserProfile: currentUserProfile ? {
+        id: currentUserProfile.id,
+        username: currentUserProfile.username,
+        name: currentUserProfile.name,
+      } : null,
+    });
 
     if (direction === 'right') {
       // Swipe right: Navigate to profile
@@ -239,6 +270,13 @@ export default function HangoutScreen() {
         router.push(`/account/profile?username=${currentUserProfile.username}`);
       } else {
         console.warn('⚠️ Cannot navigate to profile: username is missing');
+        console.warn('⚠️ Current user profile:', JSON.stringify(currentUserProfile, null, 2));
+        // Show user-friendly error
+        Alert.alert(
+          'Profile Unavailable',
+          'This user\'s profile is temporarily unavailable. Please try the next user.',
+          [{ text: 'OK' }]
+        );
       }
       // Reset position but DON'T increment index - user can come back to same card
       position.setValue({ x: 0, y: 0 });
