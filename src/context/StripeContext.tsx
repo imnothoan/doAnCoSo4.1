@@ -1,11 +1,9 @@
 import React, { createContext, useContext, ReactNode } from 'react';
 import { StripeProvider as StripeProviderNative } from '@stripe/stripe-react-native';
 
-// Stripe publishable key for test mode
-// In production, use environment variable: process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY
-// For testing, we use a test mode key that won't charge real money
+
 const STRIPE_PUBLISHABLE_KEY = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY || 
-  'pk_test_51QbPCyAQz...'; // Test mode key - replace with actual test key
+  'pk_test_51QbPCyAQz...'; 
 
 interface StripeContextType {
   publishableKey: string;

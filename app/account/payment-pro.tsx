@@ -249,7 +249,7 @@ export default function PaymentProScreen() {
               <Text style={[styles.pricingAmount, { color: colors.primary }]}>$0.01</Text>
               <Text style={styles.pricingPeriod}>per month (test price)</Text>
               <Text style={styles.pricingNote}>
-                🧪 Test Mode - Using Stripe test payment
+                Test Mode - Using Stripe test payment
               </Text>
               <Text style={[styles.pricingNote, { marginTop: 4 }]}>
                 Test card: 4242 4242 4242 4242
@@ -298,10 +298,10 @@ export default function PaymentProScreen() {
               >
                 <Ionicons name="card" size={20} color="#fff" />
                 <Text style={styles.subscribeButtonText}>
-                  {processing ? 'Processing...' : 'Pay with Stripe ($0.01)'}
+                  {processing ? 'Processing...' : 'Pay & Subscribe'}
                 </Text>
               </TouchableOpacity>
-              
+                {/*
               <TouchableOpacity 
                 style={[styles.testButton, processing && styles.testButtonDisabled]}
                 onPress={handleTestModeSubscribe}
@@ -309,10 +309,13 @@ export default function PaymentProScreen() {
               >
                 <Ionicons name="flash" size={20} color={colors.primary} />
                 <Text style={[styles.testButtonText, { color: colors.primary }]}>
-                  {processing ? 'Processing...' : 'Quick Test Mode (No Card)'}
+                  {processing ? 'Processing...' : 'Quick Test Mode'}
                 </Text>
               </TouchableOpacity>
+              */}
             </>
+         
+           
           ) : (
             <TouchableOpacity 
               style={[styles.cancelButton, processing && styles.cancelButtonDisabled]}
