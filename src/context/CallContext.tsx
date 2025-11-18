@@ -19,31 +19,33 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   const [incomingCallData, setIncomingCallData] = useState<CallData | undefined>();
 
   useEffect(() => {
+    console.log('[CallContext] Setting up CallingService listeners');
+    
     const handleIncomingCall = (callData: CallData) => {
-      console.log('Global incoming call:', callData);
+      console.log('[CallContext] Incoming call received:', callData);
       setIncomingCallData(callData);
       setShowIncomingCall(true);
     };
 
     const handleCallAccepted = () => {
-      console.log('Call accepted globally');
+      console.log('[CallContext] Call accepted');
       setShowIncomingCall(false);
     };
 
     const handleCallRejected = () => {
-      console.log('Call rejected globally');
+      console.log('[CallContext] Call rejected');
       setShowIncomingCall(false);
       setIncomingCallData(undefined);
     };
 
     const handleCallEnded = () => {
-      console.log('Call ended globally');
+      console.log('[CallContext] Call ended');
       setShowIncomingCall(false);
       setIncomingCallData(undefined);
     };
 
     const handleCallTimeout = () => {
-      console.log('Call timeout globally');
+      console.log('[CallContext] Call timeout');
       setShowIncomingCall(false);
       setIncomingCallData(undefined);
       Alert.alert('Missed Call', 'You missed a call');
