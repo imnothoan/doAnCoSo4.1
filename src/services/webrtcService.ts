@@ -1,283 +1,195 @@
-import { RTCPeerConnection, RTCIceCandidate, RTCSessionDescription, mediaDevices, MediaStream } from 'react-native-webrtc';
+/**
+ * Expo-compatible WebRTC Service (Mock/Stub for Expo Go)
+ * 
+ * This is a mock implementation for use with Expo Go.
+ * For full WebRTC functionality, you need to create a development build.
+ * 
+ * To enable real WebRTC:
+ * 1. Run: npx expo prebuild
+ * 2. Build with EAS: eas build --profile development
+ * 3. Install the development build on your device
+ * 4. Replace this file with the native webrtcService.ts
+ */
+
 import EventEmitter from 'eventemitter3';
 import WebSocketService from './websocket';
+import { Alert, Platform } from 'react-native';
 
-// WebRTC configuration with STUN servers
-const configuration = {
-  iceServers: [
-    { urls: 'stun:stun.l.google.com:19302' },
-    { urls: 'stun:stun1.l.google.com:19302' },
-    { urls: 'stun:stun2.l.google.com:19302' },
-  ],
-};
-
-export interface WebRTCStreamEvent {
-  stream: MediaStream;
+// Mock MediaStream type for Expo Go
+export interface MockMediaStream {
+  id: string;
+  active: boolean;
+  getTracks: () => MockMediaStreamTrack[];
+  getAudioTracks: () => MockMediaStreamTrack[];
+  getVideoTracks: () => MockMediaStreamTrack[];
 }
 
-class WebRTCService extends EventEmitter {
-  private peerConnection: RTCPeerConnection | null = null;
-  private localStream: MediaStream | null = null;
-  private remoteStream: MediaStream | null = null;
+export interface MockMediaStreamTrack {
+  id: string;
+  kind: 'audio' | 'video';
+  enabled: boolean;
+  stop: () => void;
+  _switchCamera?: () => void;
+}
+
+export interface WebRTCStreamEvent {
+  stream: MockMediaStream;
+}
+
+let hasShownWarning = false;
+
+class WebRTCServiceExpo extends EventEmitter {
+  private localStream: MockMediaStream | null = null;
+  private remoteStream: MockMediaStream | null = null;
   private callId: string | null = null;
   private isInitiator: boolean = false;
+  private isMuted: boolean = false;
+  private isVideoOff: boolean = false;
 
   constructor() {
     super();
   }
 
-  // Initialize WebRTC for a call
+  private showExpoGoWarning() {
+    if (!hasShownWarning) {
+      hasShownWarning = true;
+      console.warn(
+        '⚠️ WebRTC is NOT supported in Expo Go.\n' +
+        'You are seeing a mock implementation.\n\n' +
+        'For real video/voice calls:\n' +
+        '1. Create a development build: npx expo prebuild\n' +
+        '2. Build with EAS: eas build --profile development\n' +
+        '3. Install the build on your device\n\n' +
+        'See: https://docs.expo.dev/workflow/prebuild/'
+      );
+
+      // Show user-friendly alert
+      setTimeout(() => {
+        Alert.alert(
+          'Video/Voice Calls Unavailable',
+          'WebRTC is not supported in Expo Go.\n\n' +
+          'To enable video and voice calls, you need to create a development build.\n\n' +
+          'See the console for instructions.',
+          [{ text: 'OK', style: 'default' }]
+        );
+      }, 1000);
+    }
+  }
+
+  // Initialize WebRTC for a call (Mock)
   async initialize(callId: string, isInitiator: boolean, isVideoCall: boolean = true): Promise<void> {
-    console.log('[WebRTCService] Initializing WebRTC', { callId, isInitiator, isVideoCall });
+    console.log('[WebRTCService EXPO] Mock initialize', { callId, isInitiator, isVideoCall });
+    this.showExpoGoWarning();
     
     this.callId = callId;
     this.isInitiator = isInitiator;
 
     try {
-      // Get local media stream
-      const stream = await this.getLocalStream(isVideoCall);
-      this.localStream = stream;
-      this.emit('local_stream', { stream });
+      // Create mock local stream
+      this.localStream = this.createMockStream(isVideoCall);
+      this.emit('local_stream', { stream: this.localStream });
 
-      // Create peer connection
-      this.peerConnection = new RTCPeerConnection(configuration);
+      // Simulate connection process
+      setTimeout(() => {
+        console.log('[WebRTCService EXPO] Mock connection establishing...');
+        this.emit('connection_state_change', 'connecting');
+      }, 500);
 
-      // Add local stream tracks to peer connection
-      this.localStream.getTracks().forEach(track => {
-        console.log('[WebRTCService] Adding local track:', track.kind);
-        this.peerConnection?.addTrack(track, this.localStream!);
-      });
+      setTimeout(() => {
+        // Create mock remote stream
+        this.remoteStream = this.createMockStream(isVideoCall);
+        this.emit('remote_stream', { stream: this.remoteStream });
+        this.emit('connection_state_change', 'connected');
+        console.log('[WebRTCService EXPO] Mock connection established');
+      }, 1500);
 
-      // Handle ICE candidates
-      this.peerConnection.onicecandidate = (event) => {
-        if (event.candidate) {
-          console.log('[WebRTCService] Sending ICE candidate');
-          WebSocketService.emit('webrtc_ice_candidate', {
-            callId: this.callId,
-            candidate: event.candidate,
-          });
-        }
-      };
-
-      // Handle remote stream
-      this.peerConnection.ontrack = (event) => {
-        console.log('[WebRTCService] Received remote track:', event.track.kind);
-        if (event.streams && event.streams[0]) {
-          this.remoteStream = event.streams[0];
-          this.emit('remote_stream', { stream: event.streams[0] });
-        }
-      };
-
-      // Handle connection state changes
-      this.peerConnection.onconnectionstatechange = () => {
-        console.log('[WebRTCService] Connection state:', this.peerConnection?.connectionState);
-        this.emit('connection_state_change', this.peerConnection?.connectionState);
-      };
-
-      // Setup WebSocket listeners for signaling
-      this.setupSignalingListeners();
-
-      // If we're the initiator, create and send offer
-      if (this.isInitiator) {
-        await this.createOffer();
-      }
-
-      console.log('[WebRTCService] WebRTC initialized successfully');
+      console.log('[WebRTCService EXPO] Mock WebRTC initialized');
     } catch (error) {
-      console.error('[WebRTCService] Failed to initialize WebRTC:', error);
+      console.error('[WebRTCService EXPO] Mock initialization error:', error);
       throw error;
     }
   }
 
-  // Get local media stream (audio/video)
-  private async getLocalStream(isVideoCall: boolean): Promise<MediaStream> {
-    console.log('[WebRTCService] Getting local media stream, video:', isVideoCall);
-    
-    try {
-      const stream = await mediaDevices.getUserMedia({
-        audio: true,
-        video: isVideoCall ? {
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-          frameRate: { ideal: 30 },
-          facingMode: 'user',
-        } : false,
-      });
+  // Create a mock media stream
+  private createMockStream(hasVideo: boolean): MockMediaStream {
+    const audioTrack: MockMediaStreamTrack = {
+      id: `audio-${Date.now()}`,
+      kind: 'audio',
+      enabled: true,
+      stop: () => console.log('[WebRTCService EXPO] Mock audio track stopped'),
+    };
 
-      console.log('[WebRTCService] Got local stream with tracks:', stream.getTracks().map(t => t.kind));
-      return stream;
-    } catch (error) {
-      console.error('[WebRTCService] Failed to get user media:', error);
-      throw error;
-    }
+    const videoTrack: MockMediaStreamTrack = hasVideo ? {
+      id: `video-${Date.now()}`,
+      kind: 'video',
+      enabled: true,
+      stop: () => console.log('[WebRTCService EXPO] Mock video track stopped'),
+      _switchCamera: () => console.log('[WebRTCService EXPO] Mock camera switched'),
+    } : null;
+
+    const tracks = videoTrack ? [audioTrack, videoTrack] : [audioTrack];
+
+    return {
+      id: `stream-${Date.now()}`,
+      active: true,
+      getTracks: () => tracks,
+      getAudioTracks: () => [audioTrack],
+      getVideoTracks: () => videoTrack ? [videoTrack] : [],
+    };
   }
 
-  // Setup signaling listeners
-  private setupSignalingListeners(): void {
-    console.log('[WebRTCService] Setting up signaling listeners');
-
-    // Listen for WebRTC offer
-    WebSocketService.on('webrtc_offer', async (data: any) => {
-      if (data.callId === this.callId) {
-        console.log('[WebRTCService] Received WebRTC offer');
-        await this.handleOffer(data.offer);
-      }
-    });
-
-    // Listen for WebRTC answer
-    WebSocketService.on('webrtc_answer', async (data: any) => {
-      if (data.callId === this.callId) {
-        console.log('[WebRTCService] Received WebRTC answer');
-        await this.handleAnswer(data.answer);
-      }
-    });
-
-    // Listen for ICE candidates
-    WebSocketService.on('webrtc_ice_candidate', async (data: any) => {
-      if (data.callId === this.callId) {
-        console.log('[WebRTCService] Received ICE candidate');
-        await this.handleIceCandidate(data.candidate);
-      }
-    });
-  }
-
-  // Create and send offer (initiator)
-  private async createOffer(): Promise<void> {
-    if (!this.peerConnection) {
-      console.error('[WebRTCService] No peer connection');
-      return;
-    }
-
-    try {
-      console.log('[WebRTCService] Creating offer');
-      const offer = await this.peerConnection.createOffer({
-        offerToReceiveAudio: true,
-        offerToReceiveVideo: true,
-      });
-
-      await this.peerConnection.setLocalDescription(offer);
-      console.log('[WebRTCService] Sending offer to remote peer');
-
-      WebSocketService.emit('webrtc_offer', {
-        callId: this.callId,
-        offer: offer,
-      });
-    } catch (error) {
-      console.error('[WebRTCService] Failed to create offer:', error);
-    }
-  }
-
-  // Handle incoming offer (receiver)
-  private async handleOffer(offer: RTCSessionDescription): Promise<void> {
-    if (!this.peerConnection) {
-      console.error('[WebRTCService] No peer connection');
-      return;
-    }
-
-    try {
-      console.log('[WebRTCService] Setting remote description from offer');
-      await this.peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
-
-      console.log('[WebRTCService] Creating answer');
-      const answer = await this.peerConnection.createAnswer();
-      await this.peerConnection.setLocalDescription(answer);
-
-      console.log('[WebRTCService] Sending answer to remote peer');
-      WebSocketService.emit('webrtc_answer', {
-        callId: this.callId,
-        answer: answer,
-      });
-    } catch (error) {
-      console.error('[WebRTCService] Failed to handle offer:', error);
-    }
-  }
-
-  // Handle incoming answer (initiator)
-  private async handleAnswer(answer: RTCSessionDescription): Promise<void> {
-    if (!this.peerConnection) {
-      console.error('[WebRTCService] No peer connection');
-      return;
-    }
-
-    try {
-      console.log('[WebRTCService] Setting remote description from answer');
-      await this.peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
-    } catch (error) {
-      console.error('[WebRTCService] Failed to handle answer:', error);
-    }
-  }
-
-  // Handle incoming ICE candidate
-  private async handleIceCandidate(candidate: RTCIceCandidate): Promise<void> {
-    if (!this.peerConnection) {
-      console.error('[WebRTCService] No peer connection');
-      return;
-    }
-
-    try {
-      console.log('[WebRTCService] Adding ICE candidate');
-      await this.peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
-    } catch (error) {
-      console.error('[WebRTCService] Failed to add ICE candidate:', error);
-    }
-  }
-
-  // Toggle mute
+  // Toggle mute (Mock)
   toggleMute(): boolean {
     if (!this.localStream) return false;
 
     const audioTrack = this.localStream.getAudioTracks()[0];
     if (audioTrack) {
       audioTrack.enabled = !audioTrack.enabled;
-      console.log('[WebRTCService] Audio muted:', !audioTrack.enabled);
-      return !audioTrack.enabled;
+      this.isMuted = !audioTrack.enabled;
+      console.log('[WebRTCService EXPO] Mock audio muted:', this.isMuted);
+      return this.isMuted;
     }
     return false;
   }
 
-  // Toggle video
+  // Toggle video (Mock)
   toggleVideo(): boolean {
     if (!this.localStream) return false;
 
     const videoTrack = this.localStream.getVideoTracks()[0];
     if (videoTrack) {
       videoTrack.enabled = !videoTrack.enabled;
-      console.log('[WebRTCService] Video disabled:', !videoTrack.enabled);
-      return !videoTrack.enabled;
+      this.isVideoOff = !videoTrack.enabled;
+      console.log('[WebRTCService EXPO] Mock video disabled:', this.isVideoOff);
+      return this.isVideoOff;
     }
     return false;
   }
 
-  // Switch camera (front/back)
+  // Switch camera (Mock)
   async switchCamera(): Promise<void> {
     if (!this.localStream) return;
 
     const videoTrack = this.localStream.getVideoTracks()[0];
-    if (videoTrack) {
-      // @ts-ignore - _switchCamera is available in react-native-webrtc
+    if (videoTrack && videoTrack._switchCamera) {
       videoTrack._switchCamera();
-      console.log('[WebRTCService] Camera switched');
+      console.log('[WebRTCService EXPO] Mock camera switched');
     }
   }
 
   // Get local stream
-  getLocalStream(): MediaStream | null {
+  getLocalStream(): MockMediaStream | null {
     return this.localStream;
   }
 
   // Get remote stream
-  getRemoteStream(): MediaStream | null {
+  getRemoteStream(): MockMediaStream | null {
     return this.remoteStream;
   }
 
-  // Cleanup and close connection
+  // Cleanup and close connection (Mock)
   cleanup(): void {
-    console.log('[WebRTCService] Cleaning up WebRTC resources');
-
-    // Remove WebSocket listeners
-    WebSocketService.off('webrtc_offer');
-    WebSocketService.off('webrtc_answer');
-    WebSocketService.off('webrtc_ice_candidate');
+    console.log('[WebRTCService EXPO] Mock cleanup');
 
     // Stop all tracks
     if (this.localStream) {
@@ -287,18 +199,14 @@ class WebRTCService extends EventEmitter {
       this.localStream = null;
     }
 
-    // Close peer connection
-    if (this.peerConnection) {
-      this.peerConnection.close();
-      this.peerConnection = null;
-    }
-
     this.remoteStream = null;
     this.callId = null;
     this.isInitiator = false;
+    this.isMuted = false;
+    this.isVideoOff = false;
 
-    console.log('[WebRTCService] Cleanup complete');
+    console.log('[WebRTCService EXPO] Mock cleanup complete');
   }
 }
 
-export default new WebRTCService();
+export default new WebRTCServiceExpo();

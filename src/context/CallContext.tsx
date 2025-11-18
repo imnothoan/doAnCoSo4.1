@@ -1,9 +1,12 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import CallingService, { CallData } from '@/src/services/callingService';
 import WebRTCService from '@/src/services/webrtcService';
+import DailyCallService from '@/src/services/dailyCallService';
 import IncomingCallModal from '@/components/calls/IncomingCallModal';
 import VideoCallScreen from '@/components/calls/VideoCallScreen';
+import VideoCallWebView from '@/components/calls/VideoCallWebView';
 import { Alert, Modal } from 'react-native';
+import { useAuth } from './AuthContext';
 
 interface CallContextType {
   showIncomingCall: boolean;
@@ -20,6 +23,7 @@ const CallContext = createContext<CallContextType>({
 export const useCall = () => useContext(CallContext);
 
 export function CallProvider({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth();
   const [showIncomingCall, setShowIncomingCall] = useState(false);
   const [incomingCallData, setIncomingCallData] = useState<CallData | undefined>();
   const [activeCall, setActiveCall] = useState(false);
@@ -27,6 +31,8 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoEnabled, setIsVideoEnabled] = useState(true);
   const [isConnected, setIsConnected] = useState(false);
+  const [useDailyWebView, setUseDailyWebView] = useState(false);
+  const [dailyRoomUrl, setDailyRoomUrl] = useState<string>('');
 
   useEffect(() => {
     console.log('[CallContext] Setting up CallingService listeners');
@@ -109,6 +115,16 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   const handleAcceptCall = () => {
     console.log('[CallContext] Accepting call');
     CallingService.acceptCall();
+    
+    // Check if Daily.co is configured
+    if (DailyCallService.isConfigured() && incomingCallData) {
+      const roomUrl = DailyCallService.getRoomUrl(
+        incomingCallData.callId,
+        user?.name || user?.username
+      );
+      setDailyRoomUrl(roomUrl);
+      setUseDailyWebView(true);
+    }
     // Don't hide incoming call modal immediately - wait for call_accepted event
   };
 
