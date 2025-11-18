@@ -12,8 +12,7 @@
  */
 
 import EventEmitter from 'eventemitter3';
-import WebSocketService from './websocket';
-import { Alert, Platform } from 'react-native';
+import { Alert } from 'react-native';
 
 // Mock MediaStream type for Expo Go
 export interface MockMediaStream {
@@ -45,10 +44,6 @@ class WebRTCServiceExpo extends EventEmitter {
   private isInitiator: boolean = false;
   private isMuted: boolean = false;
   private isVideoOff: boolean = false;
-
-  constructor() {
-    super();
-  }
 
   private showExpoGoWarning() {
     if (!hasShownWarning) {
