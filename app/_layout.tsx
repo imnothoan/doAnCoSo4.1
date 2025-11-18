@@ -27,18 +27,32 @@ export default function RootLayout() {
               <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
            
               <Stack.Screen 
-                name="feed/notification" 
+                name="overview/notification" 
                 options={{ 
                   presentation: 'card',
                   title: 'Notifications',
                 }} 
               />
               <Stack.Screen 
-                name="feed/event-detail" 
+                name="overview/event-detail" 
                 options={{ 
                   presentation: 'card',
                   title: 'Event Details',
                 }} 
+            />
+            <Stack.Screen 
+              name="overview/post"
+              options={{ 
+                presentation: 'card',
+                title: 'Create Post',
+              }}
+            />
+            <Stack.Screen 
+              name="overview/community"
+              options={{ 
+                presentation: 'card',
+                title: 'Create Post',
+              }}
               />
               <Stack.Screen 
                 name="inbox/chat" 

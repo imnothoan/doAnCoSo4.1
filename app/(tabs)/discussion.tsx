@@ -5,8 +5,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { Community } from '@/src/types';
 import ApiService from '@/src/services/api';
 import { useTheme } from '@/src/context/ThemeContext';
+import { useRouter } from "expo-router";
 
 export default function DiscussionScreen() {
+  const router = useRouter();
   const { colors } = useTheme();
   const [communities, setCommunities] = useState<Community[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -45,9 +47,17 @@ export default function DiscussionScreen() {
   }, [loadCommunities]);
 
   const renderCommunityCard = ({ item }: { item: Community }) => (
-    <TouchableOpacity style={styles.communityCard}>
-      {item.image && (
-        <Image source={{ uri: item.image }} style={styles.communityImage} />
+    <TouchableOpacity 
+      style={styles.communityCard}
+      onPress={() => 
+        router.push({
+          pathname: '/overview/community',
+          params: { id: String(item.id) },
+        })
+      }
+    >
+      {item.image_url && (
+        <Image source={{ uri: item.image_url }} style={styles.communityImage} />
       )}
       <View style={styles.communityContent}>
         <Text style={styles.communityName}>{item.name}</Text>
@@ -60,7 +70,7 @@ export default function DiscussionScreen() {
           <View style={styles.memberCount}>
             <Ionicons name="people-outline" size={16} color="#666" />
             <Text style={styles.memberCountText}>
-              {item.memberCount} members
+              {item.member_count} members
             </Text>
           </View>
         </View>
@@ -71,7 +81,7 @@ export default function DiscussionScreen() {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.header, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
-        <Text style={styles.headerTitle}>Discussion</Text>
+        <Text style={styles.headerTitle}>OverView</Text>
       </View>
 
       <View style={[styles.searchContainer, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
@@ -85,11 +95,6 @@ export default function DiscussionScreen() {
         />
       </View>
 
-      <TouchableOpacity style={[styles.uploadButton, { backgroundColor: colors.card, borderColor: colors.primary }]}>
-        <Ionicons name="add-circle-outline" size={24} color={colors.primary} />
-        <Text style={[styles.uploadButtonText, { color: colors.primary }]}>Upload to Communities</Text>
-      </TouchableOpacity>
-
       <Text style={styles.sectionTitle}>Suggested Communities</Text>
 
       {loading && !refreshing ? (
@@ -100,7 +105,7 @@ export default function DiscussionScreen() {
         <FlatList
           data={communities}
           renderItem={renderCommunityCard}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item) => item.id.toString()}
           contentContainerStyle={styles.listContent}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />

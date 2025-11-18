@@ -42,7 +42,7 @@ function mapServerUserToClient(serverUser: any): User {
 }
 
 class ApiService {
-  private client: AxiosInstance;
+  public client: AxiosInstance;
 
   constructor() {
     this.client = axios.create({
@@ -114,7 +114,7 @@ class ApiService {
   }
 
   // Helper method to deduplicate GET requests
-  private async deduplicatedGet<T>(url: string, params?: any): Promise<T> {
+  public async deduplicatedGet<T>(url: string, params?: any): Promise<T> {
     // Only deduplicate GET requests (safe for read operations)
     const cacheKey = `GET:${url}:${JSON.stringify(params || {})}`;
     const now = Date.now();
@@ -751,11 +751,6 @@ class ApiService {
 
   async leaveCommunity(communityId: string, username: string): Promise<void> {
     await this.client.delete(`/communities/${communityId}/leave`, { data: { username } });
-  }
-
-  async getCommunityPosts(communityId: string): Promise<Post[]> {
-    const response = await this.client.get(`/communities/${communityId}/posts`);
-    return response.data;
   }
 
   async createPost(communityId: string, authorUsername: string, content: string, image?: any): Promise<Post> {

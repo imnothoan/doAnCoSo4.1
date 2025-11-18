@@ -62,16 +62,6 @@ export interface Event {
   timeEnd?: string;
 }
 
-export interface Comment {
-  id: string;
-  userId: string;
-  user: User;
-  content: string;
-  image?: string;
-  timestamp: string;
-  likes?: number;
-}
-
 // Hangout related types
 export interface Hangout {
   id: string;
@@ -123,24 +113,76 @@ export interface QuickMessage {
 
 // Community/Discussion related types
 export interface Community {
-  id: string;
+  id: number;
   name: string;
-  description?: string;
-  image?: string;
-  memberCount?: number;
-  posts: Post[];
+  description?: string | null;
+  image_url?: string | null;
+
+  created_by: string;
+
+  member_count: number;
+  post_count: number;
+  is_private: boolean;
+
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PostMedia {
+  id: number;
+  post_id: number;
+  media_url: string;
+  media_type: "image" | "video";
+  position: number;
+  created_at: string;
 }
 
 export interface Post {
-  id: string;
-  communityId: string;
-  userId: string;
-  user: User;
+  id: number;
+  author_username: string;
+  content?: string | null;
+  status?: string | null;
+  audience: "public" | "followers" | "close_friends" | "private";
+  disable_comments: boolean;
+  hide_like_count: boolean;
+  like_count: number;
+  comment_count: number;
+  post_media: PostMedia[];
+  community_id?: number | null;
+  community_name?: string | null;
+  created_at: string;
+  updated_at?: string | null;
+  authorAvatar?: string;
+  authorDisplayName?: string;
+}
+
+export interface Comment {
+  id: number;
+  post_id: number;
+  author_username: string;
   content: string;
-  image?: string;
-  timestamp: string;
-  likes: number;
-  comments: Comment[];
+  parent_id: number | null;
+  created_at: string;
+};
+
+export interface UserLite {
+  username: string;
+  avatar?: string | null;
+  name?: string | null;
+}
+
+export interface CommentsSheetProps {
+  visible: boolean;
+  onClose: () => void;
+  communityId: number;
+  postId: number;
+  me?: UserLite | null;
+}
+
+export interface LocalMediaFile {
+  uri: string;
+  type: string;
+  name: string;
 }
 
 // Notification related types
