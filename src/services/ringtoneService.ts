@@ -10,6 +10,8 @@ class RingtoneService {
 
   async playRingtone(onComplete?: () => void): Promise<void> {
     try {
+      console.log('[RingtoneService] Starting ringtone playback');
+      
       // Store the callback
       this.onCompleteCallback = onComplete || null;
       
@@ -21,6 +23,7 @@ class RingtoneService {
       // Import expo-av
       const { Audio } = await import('expo-av');
 
+      console.log('[RingtoneService] Loading ringtone file');
       // Load the ringtone
       const { sound } = await Audio.Sound.createAsync(
         require('@/assets/music/soundPhoneCall1.mp3'),
@@ -32,10 +35,11 @@ class RingtoneService {
       this.isPlaying = true;
       this.loopCount = 0;
 
+      console.log('[RingtoneService] Ringtone loaded and playing');
       // Play the sound
       await sound.playAsync();
     } catch (error) {
-      console.error('Error playing ringtone:', error);
+      console.error('[RingtoneService] Error playing ringtone:', error);
       this.isPlaying = false;
     }
   }
@@ -43,15 +47,19 @@ class RingtoneService {
   private onPlaybackStatusUpdate(status: any) {
     if (status.isLoaded && status.didJustFinish && !status.isLooping) {
       this.loopCount++;
+      console.log(`[RingtoneService] Ringtone loop ${this.loopCount} completed`);
       
       if (this.loopCount < this.maxLoops && this.player) {
+        console.log('[RingtoneService] Replaying ringtone');
         // Replay the sound
         (this.player as any).replayAsync();
       } else {
+        console.log('[RingtoneService] Max loops reached, stopping ringtone');
         // Stop after max loops
         this.stopRingtone();
         // Call the completion callback
         if (this.onCompleteCallback) {
+          console.log('[RingtoneService] Calling completion callback');
           this.onCompleteCallback();
           this.onCompleteCallback = null;
         }
@@ -62,6 +70,7 @@ class RingtoneService {
   async stopRingtone(): Promise<void> {
     try {
       if (this.player) {
+        console.log('[RingtoneService] Stopping ringtone');
         await (this.player as any).stopAsync();
         await (this.player as any).unloadAsync();
         this.player = null;
@@ -70,7 +79,7 @@ class RingtoneService {
       this.loopCount = 0;
       this.onCompleteCallback = null;
     } catch (error) {
-      console.error('Error stopping ringtone:', error);
+      console.error('[RingtoneService] Error stopping ringtone:', error);
     }
   }
 

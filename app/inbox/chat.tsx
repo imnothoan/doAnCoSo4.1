@@ -348,6 +348,12 @@ export default function ChatScreen() {
       return;
     }
 
+    // Check WebSocket connection
+    if (!WebSocketService.isConnected()) {
+      Alert.alert('Connection Error', 'Not connected to server. Please check your internet connection.');
+      return;
+    }
+
     // Check if users mutually follow each other
     const areMutual = await ApiService.areMutualFollowers(
       currentUser.username,
@@ -377,7 +383,7 @@ export default function ChatScreen() {
       setShowActiveCall(true);
     } catch (error) {
       console.error('Error initiating call:', error);
-      Alert.alert('Error', 'Failed to initiate call');
+      Alert.alert('Error', 'Failed to initiate call. Please try again.');
     }
   };
 
