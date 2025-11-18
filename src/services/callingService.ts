@@ -33,10 +33,31 @@ class CallingService extends EventEmitter {
   };
 
   private callTimeoutTimer: ReturnType<typeof setTimeout> | null = null;
+  private listenersSetup: boolean = false;
 
   constructor() {
     super();
-    this.setupWebSocketListeners();
+    
+    // Setup listeners immediately if WebSocket is already connected
+    if (WebSocketService.isConnected()) {
+      console.log('[CallingService] WebSocket already connected, setting up listeners');
+      this.setupWebSocketListeners();
+      this.listenersSetup = true;
+    } else {
+      console.log('[CallingService] WebSocket not connected yet');
+    }
+    
+    // Re-setup listeners when WebSocket connects/reconnects
+    WebSocketService.onConnectionStatusChange((connected) => {
+      if (connected && !this.listenersSetup) {
+        console.log('[CallingService] WebSocket connected, setting up listeners');
+        this.setupWebSocketListeners();
+        this.listenersSetup = true;
+      } else if (!connected) {
+        console.log('[CallingService] WebSocket disconnected');
+        this.listenersSetup = false;
+      }
+    });
   }
 
   private setupWebSocketListeners() {
@@ -93,6 +114,12 @@ class CallingService extends EventEmitter {
       to: receiverId,
       type: callType,
     });
+    
+    // Check if WebSocket is connected
+    if (!WebSocketService.isConnected()) {
+      console.error('[CallingService] WebSocket not connected, cannot initiate call');
+      throw new Error('Not connected to server');
+    }
     
     const callId = `call_${Date.now()}_${callerId}_${receiverId}`;
     
