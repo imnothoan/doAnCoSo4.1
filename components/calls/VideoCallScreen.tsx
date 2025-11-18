@@ -8,11 +8,10 @@ import {
   StatusBar,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { RTCView } from 'react-native-webrtc';
 import WebRTCService from '@/src/services/webrtcService';
 import { CallData } from '@/src/services/callingService';
 
-const { width, height } = Dimensions.get('window');
+const { width } = Dimensions.get('window');
 
 interface VideoCallScreenProps {
   callData: CallData;
@@ -111,23 +110,17 @@ export default function VideoCallScreen({
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#000" />
       
-      {/* Remote video (full screen) */}
+      {/* Remote video (full screen) - Mock placeholder */}
       <View style={styles.remoteVideoContainer}>
-        {remoteStream && isVideoEnabled ? (
-          <RTCView
-            streamURL={remoteStream.toURL()}
-            style={styles.remoteVideo}
-            objectFit="cover"
-            mirror={false}
-          />
-        ) : (
-          <View style={styles.placeholderContainer}>
-            <Ionicons name="person-circle-outline" size={120} color="#666" />
-            <Text style={styles.placeholderText}>
-              {remoteStream ? 'Camera is off' : 'Connecting...'}
-            </Text>
-          </View>
-        )}
+        <View style={styles.placeholderContainer}>
+          <Ionicons name="person-circle-outline" size={120} color="#666" />
+          <Text style={styles.placeholderText}>
+            Mock Video Call (Expo Go)
+          </Text>
+          <Text style={styles.placeholderSubtext}>
+            Configure Daily.co for real video calls
+          </Text>
+        </View>
 
         {/* Call info overlay (top) */}
         <View style={styles.topOverlay}>
@@ -136,25 +129,13 @@ export default function VideoCallScreen({
         </View>
       </View>
 
-      {/* Local video (picture-in-picture, like Messenger) */}
-      {localStream && isVideoEnabled && (
-        <View style={styles.localVideoContainer}>
-          <RTCView
-            streamURL={localStream.toURL()}
-            style={styles.localVideo}
-            objectFit="cover"
-            mirror={true}
-          />
-          
-          {/* Camera switch button */}
-          <TouchableOpacity
-            style={styles.switchCameraButton}
-            onPress={onSwitchCamera}
-          >
-            <Ionicons name="camera-reverse" size={24} color="#fff" />
-          </TouchableOpacity>
+      {/* Local video (picture-in-picture) - Mock placeholder */}
+      <View style={styles.localVideoContainer}>
+        <View style={styles.localVideoPlaceholder}>
+          <Ionicons name="person-circle" size={60} color="#999" />
+          <Text style={styles.localVideoText}>You</Text>
         </View>
-      )}
+      </View>
 
       {/* Control buttons (bottom) */}
       <View style={styles.controlsContainer}>
@@ -219,6 +200,13 @@ const styles = StyleSheet.create({
     color: '#666',
     marginTop: 16,
   },
+  placeholderSubtext: {
+    fontSize: 14,
+    color: '#555',
+    marginTop: 8,
+    textAlign: 'center',
+    paddingHorizontal: 40,
+  },
   topOverlay: {
     position: 'absolute',
     top: 40,
@@ -253,6 +241,17 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 8,
+  },
+  localVideoPlaceholder: {
+    flex: 1,
+    backgroundColor: '#2a2a2a',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  localVideoText: {
+    fontSize: 12,
+    color: '#999',
+    marginTop: 8,
   },
   localVideo: {
     width: '100%',

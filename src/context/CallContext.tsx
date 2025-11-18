@@ -49,6 +49,21 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       setActiveCall(true);
       setActiveCallData(callData);
       setIsVideoEnabled(callData.callType === 'video');
+      
+      // Check if Daily.co is configured for WebView calls
+      if (DailyCallService.isConfigured()) {
+        const roomUrl = DailyCallService.getRoomUrl(
+          callData.callId,
+          user?.name || user?.username
+        );
+        setDailyRoomUrl(roomUrl);
+        setUseDailyWebView(true);
+        console.log('[CallContext] Using Daily.co WebView for call:', roomUrl);
+      } else {
+        // Fallback to mock WebRTC (show warning)
+        setUseDailyWebView(false);
+        console.warn('[CallContext] Daily.co not configured, using mock WebRTC');
+      }
     };
 
     const handleCallConnected = (data: any) => {
@@ -61,6 +76,18 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
         setActiveCall(true);
         setActiveCallData(callState.callData);
         setIsVideoEnabled(callState.callData.callType === 'video');
+        
+        // Setup Daily.co if configured
+        if (DailyCallService.isConfigured()) {
+          const roomUrl = DailyCallService.getRoomUrl(
+            callState.callData.callId,
+            user?.name || user?.username
+          );
+          setDailyRoomUrl(roomUrl);
+          setUseDailyWebView(true);
+        } else {
+          setUseDailyWebView(false);
+        }
       }
     };
 
@@ -82,6 +109,8 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       setIsConnected(false);
       setIsMuted(false);
       setIsVideoEnabled(true);
+      setUseDailyWebView(false);
+      setDailyRoomUrl('');
     };
 
     const handleCallTimeout = () => {
@@ -166,7 +195,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
         onReject={handleRejectCall}
       />
 
-      {/* Active video call screen */}
+      {/* Active video call screen - use Daily.co WebView if configured, otherwise mock */}
       {activeCall && activeCallData && (
         <Modal
           visible={true}
@@ -174,16 +203,25 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
           presentationStyle="fullScreen"
           statusBarTranslucent
         >
-          <VideoCallScreen
-            callData={activeCallData}
-            isMuted={isMuted}
-            isVideoEnabled={isVideoEnabled}
-            isConnected={isConnected}
-            onToggleMute={handleToggleMute}
-            onToggleVideo={handleToggleVideo}
-            onEndCall={handleEndCall}
-            onSwitchCamera={handleSwitchCamera}
-          />
+          {useDailyWebView && dailyRoomUrl ? (
+            <VideoCallWebView
+              callData={activeCallData}
+              roomUrl={dailyRoomUrl}
+              userName={user?.name || user?.username || 'User'}
+              onEndCall={handleEndCall}
+            />
+          ) : (
+            <VideoCallScreen
+              callData={activeCallData}
+              isMuted={isMuted}
+              isVideoEnabled={isVideoEnabled}
+              isConnected={isConnected}
+              onToggleMute={handleToggleMute}
+              onToggleVideo={handleToggleVideo}
+              onEndCall={handleEndCall}
+              onSwitchCamera={handleSwitchCamera}
+            />
+          )}
         </Modal>
       )}
     </CallContext.Provider>
