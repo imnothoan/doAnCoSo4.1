@@ -38,8 +38,10 @@ export default function IncomingCallModal({
       animationType="fade"
       statusBarTranslucent
     >
-      <BlurView intensity={80} style={styles.container}>
-        <View style={styles.content}>
+      {/* Semi-transparent black background overlay */}
+      <View style={styles.overlay}>
+        <BlurView intensity={80} style={styles.container}>
+          <View style={styles.content}>
           {/* Caller Avatar */}
           <View style={styles.avatarContainer}>
             {callData.callerAvatar ? (
@@ -80,11 +82,16 @@ export default function IncomingCallModal({
           </View>
         </View>
       </BlurView>
+      </View>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)', // Semi-transparent black background
+  },
   container: {
     flex: 1,
     justifyContent: 'center',
