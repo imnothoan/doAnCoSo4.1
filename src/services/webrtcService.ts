@@ -114,7 +114,7 @@ class WebRTCServiceExpo extends EventEmitter {
       stop: () => console.log('[WebRTCService EXPO] Mock audio track stopped'),
     };
 
-    const videoTrack: MockMediaStreamTrack = hasVideo ? {
+    const videoTrack: MockMediaStreamTrack | null = hasVideo ? {
       id: `video-${Date.now()}`,
       kind: 'video',
       enabled: true,
