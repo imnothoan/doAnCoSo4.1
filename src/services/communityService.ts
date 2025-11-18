@@ -142,7 +142,14 @@ const communityService = {
         before: params?.before,
       },
     });
-    return res.data || [];
+    const rawPosts = res.data || [];
+    
+    // Map server field names to client field names
+    return rawPosts.map((post: any) => ({
+      ...post,
+      authorAvatar: post.author_avatar || post.authorAvatar,
+      authorDisplayName: post.author_display_name || post.authorDisplayName,
+    }));
   },
 
   async createCommunityPost(
