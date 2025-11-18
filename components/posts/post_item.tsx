@@ -2,7 +2,7 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { View, Text, Image, StyleSheet, Pressable, ScrollView, Dimensions } from 'react-native';
 import { AntDesign, Feather, Ionicons } from '@expo/vector-icons';
 import { Video, ResizeMode } from 'expo-av';
-import { formatCount, formatToVietnamTime } from '@/src/utils/timeUtils';
+import { formatCount, formatToVietnamTime } from '@/src/utils/date';
 import type { Post } from '@/src/types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
