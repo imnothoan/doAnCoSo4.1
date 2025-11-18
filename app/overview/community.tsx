@@ -195,7 +195,7 @@ export default function CommunityScreen() {
             style={styles.postInput}
             onPress={() => router.push(`/overview/post?communityId=${communityId}`)}
           >
-            <Text style={{ color: '#777' }}>What's on your mind?</Text>
+            <Text style={{ color: '#777' }}>What&apos;s on your mind?</Text>
           </Pressable>
         </View>
 
