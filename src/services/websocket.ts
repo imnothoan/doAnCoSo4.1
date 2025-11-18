@@ -238,6 +238,22 @@ class WebSocketService {
     }
   }
 
+  // Generic event listener for any socket event
+  on(event: string, callback: (...args: any[]) => void) {
+    if (this.socket) {
+      this.socket.on(event, callback);
+    }
+  }
+
+  // Generic event emitter for any socket event
+  emit(event: string, ...args: any[]) {
+    if (this.socket?.connected) {
+      this.socket.emit(event, ...args);
+      return true;
+    }
+    return false;
+  }
+
   // Check if connected
   isConnected(): boolean {
     return this.socket?.connected || false;
