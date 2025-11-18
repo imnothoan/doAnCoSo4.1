@@ -1,4 +1,4 @@
-import { EventEmitter } from 'events';
+import EventEmitter from 'eventemitter3';
 import WebSocketService from './websocket';
 
 export type CallType = 'voice' | 'video';
