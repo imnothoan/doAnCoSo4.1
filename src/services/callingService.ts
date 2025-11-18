@@ -60,6 +60,11 @@ class CallingService extends EventEmitter {
       this.handleCallEnded(data);
     });
 
+    // Listen for call timeout from server
+    WebSocketService.on('call_timeout', (data: any) => {
+      this.handleCallTimeout();
+    });
+
     // Listen for video upgrade requests
     WebSocketService.on('upgrade_to_video', (data: any) => {
       this.handleVideoUpgradeRequest(data);
