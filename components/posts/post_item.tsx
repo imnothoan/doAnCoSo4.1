@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { View, Text, Image, StyleSheet, Pressable, ScrollView, Dimensions } from 'react-native';
 import { AntDesign, Feather, Ionicons } from '@expo/vector-icons';
-import { Video, ResizeMode } from 'expo-av';
+import { VideoView, useVideoPlayer } from 'expo-video';
 import { formatCount, formatToVietnamTime } from '@/src/utils/date';
 import type { Post } from '@/src/types';
 
@@ -18,6 +18,23 @@ export interface PostItemProps {
   isFollowingAuthor?: boolean;
   onFollowClick?: (username: string) => void;
   showMoreMenu?: boolean;
+}
+
+// Video component for single media
+function VideoPlayer({ uri, style }: { uri: string; style: any }) {
+  const player = useVideoPlayer(uri, (player) => {
+    player.loop = false;
+    player.muted = false;
+  });
+
+  return (
+    <VideoView
+      player={player}
+      style={style}
+      nativeControls
+      contentFit="cover"
+    />
+  );
 }
 
 export default function PostItem({
@@ -78,12 +95,7 @@ export default function PostItem({
       {media.length > 0 && (
         media.length === 1 ? (
           media[0].media_type === 'video' ? (
-            <Video
-              source={{ uri: media[0].media_url }}
-              style={styles.singleMedia}
-              useNativeControls
-              resizeMode={ResizeMode.COVER}
-            />
+            <VideoPlayer uri={media[0].media_url} style={styles.singleMedia} />
           ) : (
             <Image
               source={{ uri: media[0].media_url }}
@@ -95,11 +107,10 @@ export default function PostItem({
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ paddingHorizontal: 8 }}>
             {media.map((m, idx) =>
               m.media_type === 'video' ? (
-                <Video
+                <VideoPlayer
                   key={m.id ?? idx}
-                  source={{ uri: m.media_url }}
+                  uri={m.media_url}
                   style={styles.multiMedia}
-                  useNativeControls
                 />
               ) : (
                 <Image
