@@ -1,6 +1,7 @@
 import EventEmitter from 'eventemitter3';
 import WebSocketService from './websocket';
 import RingtoneService from './ringtoneService';
+import WebRTCService from './webrtcService';
 
 export type CallType = 'voice' | 'video';
 
@@ -192,8 +193,20 @@ class CallingService extends EventEmitter {
   acceptCall() {
     if (!this.callState.callData) return;
 
+    console.log('[CallingService] Accepting call:', this.callState.callData.callId);
+
     // Stop ringtone when call is accepted
     RingtoneService.stopRingtone();
+
+    // Initialize WebRTC as receiver (not initiator)
+    const isVideoCall = this.callState.callData.callType === 'video';
+    WebRTCService.initialize(this.callState.callData.callId, false, isVideoCall)
+      .then(() => {
+        console.log('[CallingService] WebRTC initialized for receiver');
+      })
+      .catch((error) => {
+        console.error('[CallingService] Failed to initialize WebRTC:', error);
+      });
 
     WebSocketService.emit('accept_call', {
       callId: this.callState.callData.callId,
@@ -224,8 +237,13 @@ class CallingService extends EventEmitter {
   endCall() {
     if (!this.callState.callData) return;
 
+    console.log('[CallingService] Ending call');
+
     // Stop ringtone if still playing
     RingtoneService.stopRingtone();
+
+    // Cleanup WebRTC
+    WebRTCService.cleanup();
 
     const callerId = this.callState.callData.callerId;
     const receiverId = this.callState.callData.receiverId;
@@ -261,10 +279,25 @@ class CallingService extends EventEmitter {
 
   // Handle call accepted by receiver
   private handleCallAccepted(data: any) {
+    console.log('[CallingService] Call accepted, initializing WebRTC as initiator');
+    
     // Stop ringtone when call is accepted
     RingtoneService.stopRingtone();
     
     this.callState.isConnected = true;
+
+    // Initialize WebRTC as initiator
+    if (this.callState.callData) {
+      const isVideoCall = this.callState.callData.callType === 'video';
+      WebRTCService.initialize(this.callState.callData.callId, true, isVideoCall)
+        .then(() => {
+          console.log('[CallingService] WebRTC initialized for initiator');
+        })
+        .catch((error) => {
+          console.error('[CallingService] Failed to initialize WebRTC:', error);
+        });
+    }
+
     this.emit('call_connected', data);
   }
 
@@ -279,8 +312,13 @@ class CallingService extends EventEmitter {
 
   // Handle call ended by either party
   private handleCallEnded(data: any) {
+    console.log('[CallingService] Call ended by other party');
+    
     // Stop ringtone if still playing
     RingtoneService.stopRingtone();
+    
+    // Cleanup WebRTC
+    WebRTCService.cleanup();
     
     this.resetCallState();
     this.emit('call_ended', data);
