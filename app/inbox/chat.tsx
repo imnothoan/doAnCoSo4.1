@@ -306,10 +306,20 @@ export default function ChatScreen() {
       setIsVideoEnabled(true);
     };
 
+    const handleCallTimeout = () => {
+      setShowIncomingCall(false);
+      setShowActiveCall(false);
+      setIsCallConnected(false);
+      setIsMuted(false);
+      setIsVideoEnabled(true);
+      Alert.alert('Call Timeout', 'The call was not answered');
+    };
+
     CallingService.on('incoming_call', handleIncomingCall);
     CallingService.on('call_accepted', handleCallAccepted);
     CallingService.on('call_rejected', handleCallRejected);
     CallingService.on('call_ended', handleCallEnded);
+    CallingService.on('call_timeout', handleCallTimeout);
     
     // Video upgrade listeners
     const handleVideoUpgrade = (callData: CallData) => {
@@ -326,6 +336,7 @@ export default function ChatScreen() {
       CallingService.off('call_accepted', handleCallAccepted);
       CallingService.off('call_rejected', handleCallRejected);
       CallingService.off('call_ended', handleCallEnded);
+      CallingService.off('call_timeout', handleCallTimeout);
       CallingService.off('video_upgrade_received', handleVideoUpgrade);
       CallingService.off('call_upgraded_to_video', handleVideoUpgrade);
     };

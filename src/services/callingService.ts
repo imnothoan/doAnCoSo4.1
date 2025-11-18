@@ -1,5 +1,6 @@
 import EventEmitter from 'eventemitter3';
 import WebSocketService from './websocket';
+import RingtoneService from './ringtoneService';
 
 export type CallType = 'voice' | 'video';
 
@@ -31,6 +32,8 @@ class CallingService extends EventEmitter {
     isVideoEnabled: true,
   };
 
+  private callTimeoutTimer: ReturnType<typeof setTimeout> | null = null;
+
   constructor() {
     super();
     this.setupWebSocketListeners();
@@ -55,6 +58,11 @@ class CallingService extends EventEmitter {
     // Listen for call ended
     WebSocketService.on('call_ended', (data: any) => {
       this.handleCallEnded(data);
+    });
+
+    // Listen for call timeout from server
+    WebSocketService.on('call_timeout', (data: any) => {
+      this.handleCallTimeout();
     });
 
     // Listen for video upgrade requests
@@ -93,6 +101,14 @@ class CallingService extends EventEmitter {
       isVideoEnabled: callType === 'video',
     };
 
+    // Start playing ringtone and set up timeout
+    await RingtoneService.playRingtone(() => {
+      // After 2 loops of ringtone, auto-end the call if not answered
+      if (!this.callState.isConnected) {
+        this.handleCallTimeout();
+      }
+    });
+
     // Send call initiation through WebSocket
     WebSocketService.emit('initiate_call', callData);
     
@@ -110,6 +126,14 @@ class CallingService extends EventEmitter {
       isVideoEnabled: callData.callType === 'video',
     };
 
+    // Play ringtone for incoming call
+    RingtoneService.playRingtone(() => {
+      // After 2 loops, auto-reject if not answered
+      if (this.callState.isIncoming && !this.callState.isConnected) {
+        this.rejectCall();
+      }
+    });
+
     this.emit('incoming_call', callData);
   }
 
@@ -117,8 +141,12 @@ class CallingService extends EventEmitter {
   acceptCall() {
     if (!this.callState.callData) return;
 
+    // Stop ringtone when call is accepted
+    RingtoneService.stopRingtone();
+
     WebSocketService.emit('accept_call', {
       callId: this.callState.callData.callId,
+      acceptedBy: this.callState.callData.receiverId,
     });
 
     this.callState.isConnected = true;
@@ -129,8 +157,12 @@ class CallingService extends EventEmitter {
   rejectCall() {
     if (!this.callState.callData) return;
 
+    // Stop ringtone when call is rejected
+    RingtoneService.stopRingtone();
+
     WebSocketService.emit('reject_call', {
       callId: this.callState.callData.callId,
+      rejectedBy: this.callState.callData.receiverId,
     });
 
     this.resetCallState();
@@ -141,28 +173,64 @@ class CallingService extends EventEmitter {
   endCall() {
     if (!this.callState.callData) return;
 
+    // Stop ringtone if still playing
+    RingtoneService.stopRingtone();
+
+    const callerId = this.callState.callData.callerId;
+    const receiverId = this.callState.callData.receiverId;
+    
+    // Determine who is ending the call (we need current user info)
+    // For now, we'll send both IDs and let server handle it
     WebSocketService.emit('end_call', {
       callId: this.callState.callData.callId,
+      endedBy: this.callState.isIncoming ? receiverId : callerId,
     });
 
     this.resetCallState();
     this.emit('call_ended');
   }
 
+  // Handle call timeout (no answer after ringtone loops)
+  private handleCallTimeout() {
+    console.log('Call timeout - no answer');
+    
+    // Stop ringtone
+    RingtoneService.stopRingtone();
+
+    if (this.callState.callData) {
+      // Send timeout notification to server
+      WebSocketService.emit('call_timeout', {
+        callId: this.callState.callData.callId,
+      });
+    }
+
+    this.resetCallState();
+    this.emit('call_timeout');
+  }
+
   // Handle call accepted by receiver
   private handleCallAccepted(data: any) {
+    // Stop ringtone when call is accepted
+    RingtoneService.stopRingtone();
+    
     this.callState.isConnected = true;
     this.emit('call_connected', data);
   }
 
   // Handle call rejected by receiver
   private handleCallRejected(data: any) {
+    // Stop ringtone when call is rejected
+    RingtoneService.stopRingtone();
+    
     this.resetCallState();
     this.emit('call_rejected', data);
   }
 
   // Handle call ended by either party
   private handleCallEnded(data: any) {
+    // Stop ringtone if still playing
+    RingtoneService.stopRingtone();
+    
     this.resetCallState();
     this.emit('call_ended', data);
   }
@@ -226,6 +294,9 @@ class CallingService extends EventEmitter {
 
   // Reset call state
   private resetCallState() {
+    // Stop ringtone when resetting state
+    RingtoneService.stopRingtone();
+    
     this.callState = {
       isActive: false,
       isIncoming: false,
