@@ -16,11 +16,13 @@ import communityService, { CommunityPost } from '@/src/services/communityService
 import type { Community, User, UserLite } from '@/src/types';
 import PostItem from '@/components/posts/post_item';
 import CommentsSheet from '@/components/posts/comments_sheet';
+import { useTheme } from '@/src/context/ThemeContext';
 
 export default function CommunityScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const communityId = useMemo(() => Number(id), [id]);
+  const { colors, isPro } = useTheme();
 
   const [me, setMe] = useState<User | null>(null);
   const [community, setCommunity] = useState<(Community & { is_member?: boolean }) | null>(null);
@@ -154,30 +156,30 @@ export default function CommunityScreen() {
   const renderHeader = useMemo(() => {
     if (!community) return null;
     return (
-      <View>
+      <View style={{ backgroundColor: colors.card }}>
         {/* TOP BANNER */}
         {!!community.image_url && (
           <Image source={{ uri: community.image_url }} style={styles.banner} />
         )}
 
         {/* HEADER */}
-        <View style={styles.headerBox}>
-          <Text style={styles.communityName}>{community.name}</Text>
+        <View style={[styles.headerBox, { backgroundColor: colors.card }]}>
+          <Text style={[styles.communityName, { color: colors.text }]}>{community.name}</Text>
           <View style={styles.subInfoRow}>
-            <Ionicons name="globe-outline" size={16} color="#555" />
-            <Text style={styles.subText}>
+            <Ionicons name="globe-outline" size={16} color={colors.textSecondary} />
+            <Text style={[styles.subText, { color: colors.textSecondary }]}>
               {community.is_private ? 'Private' : 'Public'} · {community.member_count ?? 0} members
             </Text>
           </View>
 
           <View style={styles.btnRow}>
             {community.is_member ? (
-              <Pressable style={styles.joinedBtn} onPress={onLeavePress}>
-                <Ionicons name="checkmark-circle-outline" size={20} color="#111" />
-                <Text style={styles.joinedText}>Joined</Text>
+              <Pressable style={[styles.joinedBtn, { backgroundColor: colors.surface, borderColor: colors.border }]} onPress={onLeavePress}>
+                <Ionicons name="checkmark-circle-outline" size={20} color={colors.text} />
+                <Text style={[styles.joinedText, { color: colors.text }]}>Joined</Text>
               </Pressable>
             ) : (
-              <Pressable style={styles.inviteBtn} onPress={onJoinPress}>
+              <Pressable style={[styles.inviteBtn, { backgroundColor: colors.primary }]} onPress={onJoinPress}>
                 <Ionicons name="person-add-outline" size={20} color="#fff" />
                 <Text style={styles.inviteText}>Join</Text>
               </Pressable>
@@ -186,23 +188,23 @@ export default function CommunityScreen() {
         </View>
 
         {/* POST INPUT */}
-        <View style={styles.postBox}>
+        <View style={[styles.postBox, { backgroundColor: colors.card }]}>
           <Image
             source={{ uri: me?.avatar || 'https://i.pravatar.cc/100' }}
             style={styles.avatar}
           />
           <Pressable
-            style={styles.postInput}
+            style={[styles.postInput, { borderColor: colors.border, backgroundColor: colors.surface }]}
             onPress={() => router.push(`/overview/post?communityId=${communityId}`)}
           >
-            <Text style={{ color: '#777' }}>What&apos;s on your mind?</Text>
+            <Text style={{ color: colors.textMuted }}>What&apos;s on your mind?</Text>
           </Pressable>
         </View>
 
-        <View style={styles.separator} />
+        <View style={[styles.separator, { backgroundColor: colors.surfaceVariant }]} />
       </View>
     );
-  }, [community, me?.avatar, onJoinPress, onLeavePress, router, communityId]);
+  }, [community, me?.avatar, onJoinPress, onLeavePress, router, communityId, colors]);
 
   const renderItem = useCallback(({ item }: { item: CommunityPost }) => {
     return (
@@ -221,8 +223,8 @@ export default function CommunityScreen() {
 
   if (loading && posts.length === 0) {
     return (
-      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
-        <ActivityIndicator />
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background }]}>
+        <ActivityIndicator color={colors.primary} />
       </View>
     );
   }
@@ -230,7 +232,7 @@ export default function CommunityScreen() {
   return (
     <>
       <FlatList
-        style={styles.container}
+        style={[styles.container, { backgroundColor: colors.background }]}
         data={posts}
         keyExtractor={(it) => String(it.id)}
         renderItem={renderItem}
@@ -238,12 +240,12 @@ export default function CommunityScreen() {
         onEndReachedThreshold={0.3}
         onEndReached={loadMore}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
         }
         ListFooterComponent={
           hasMore ? (
-            <View style={{ paddingVertical: 16 }}>
-              <ActivityIndicator />
+            <View style={{ paddingVertical: 16, backgroundColor: colors.background }}>
+              <ActivityIndicator color={colors.primary} />
             </View>
           ) : <View style={{ height: 16 }} />
         }
@@ -262,25 +264,25 @@ export default function CommunityScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
+  container: { flex: 1 },
   banner: { width: '100%', height: 200, backgroundColor: '#ddd' },
   headerBox: { padding: 16 },
-  communityName: { fontSize: 22, fontWeight: '700', color: '#111' },
+  communityName: { fontSize: 22, fontWeight: '700' },
   subInfoRow: { flexDirection: 'row', alignItems: 'center', marginTop: 6 },
-  subText: { marginLeft: 6, fontSize: 14, color: '#555' },
+  subText: { marginLeft: 6, fontSize: 14 },
   btnRow: { flexDirection: 'row', marginTop: 16, gap: 12 },
   joinedBtn: {
     flexDirection: 'row', alignItems: 'center',
-    paddingVertical: 10, paddingHorizontal: 16, backgroundColor: '#ececec', borderRadius: 8,
+    paddingVertical: 10, paddingHorizontal: 16, borderRadius: 8, borderWidth: 1,
   },
-  joinedText: { fontSize: 15, marginLeft: 6, color: '#111' },
+  joinedText: { fontSize: 15, marginLeft: 6 },
   inviteBtn: {
     flexDirection: 'row', alignItems: 'center',
-    paddingVertical: 10, paddingHorizontal: 20, borderRadius: 8, backgroundColor: '#000',
+    paddingVertical: 10, paddingHorizontal: 20, borderRadius: 8,
   },
   inviteText: { color: '#fff', marginLeft: 6, fontSize: 15 },
   postBox: { flexDirection: 'row', alignItems: 'center', padding: 16, gap: 10 },
   avatar: { width: 42, height: 42, borderRadius: 21, backgroundColor: '#ccc' },
-  postInput: { flex: 1, borderWidth: 1, borderColor: '#ddd', borderRadius: 25, paddingVertical: 10, paddingHorizontal: 16 },
-  separator: { height: 7, backgroundColor: '#f1f1f1', width: '100%' },
+  postInput: { flex: 1, borderWidth: 1, borderRadius: 25, paddingVertical: 10, paddingHorizontal: 16 },
+  separator: { height: 7, width: '100%' },
 });
