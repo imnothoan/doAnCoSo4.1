@@ -310,12 +310,24 @@ export default function ChatScreen() {
     CallingService.on('call_accepted', handleCallAccepted);
     CallingService.on('call_rejected', handleCallRejected);
     CallingService.on('call_ended', handleCallEnded);
+    
+    // Video upgrade listeners
+    const handleVideoUpgrade = (callData: CallData) => {
+      setActiveCallData(callData);
+      setIsVideoEnabled(true);
+      Alert.alert('Video Call', 'The other party has upgraded to video call');
+    };
+    
+    CallingService.on('video_upgrade_received', handleVideoUpgrade);
+    CallingService.on('call_upgraded_to_video', handleVideoUpgrade);
 
     return () => {
       CallingService.off('incoming_call', handleIncomingCall);
       CallingService.off('call_accepted', handleCallAccepted);
       CallingService.off('call_rejected', handleCallRejected);
       CallingService.off('call_ended', handleCallEnded);
+      CallingService.off('video_upgrade_received', handleVideoUpgrade);
+      CallingService.off('call_upgraded_to_video', handleVideoUpgrade);
     };
   }, [currentUser?.username]);
 
@@ -388,6 +400,17 @@ export default function ChatScreen() {
   const handleToggleVideo = () => {
     const newVideoEnabled = CallingService.toggleVideo();
     setIsVideoEnabled(newVideoEnabled);
+  };
+
+  const handleUpgradeToVideo = () => {
+    const success = CallingService.upgradeToVideoCall();
+    if (success) {
+      // Update the active call data to reflect video call
+      const callState = CallingService.getCallState();
+      setActiveCallData(callState.callData);
+      setIsVideoEnabled(true);
+      Alert.alert('Video Call', 'Upgrading to video call...');
+    }
   };
 
   const handleSendMessage = async () => {
@@ -783,6 +806,7 @@ export default function ChatScreen() {
             onToggleMute={handleToggleMute}
             onToggleVideo={handleToggleVideo}
             onEndCall={handleEndCall}
+            onUpgradeToVideo={handleUpgradeToVideo}
           />
         )}
       </Modal>

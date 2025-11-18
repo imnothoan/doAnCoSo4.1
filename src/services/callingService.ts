@@ -56,6 +56,11 @@ class CallingService extends EventEmitter {
     WebSocketService.on('call_ended', (data: any) => {
       this.handleCallEnded(data);
     });
+
+    // Listen for video upgrade requests
+    WebSocketService.on('upgrade_to_video', (data: any) => {
+      this.handleVideoUpgradeRequest(data);
+    });
   }
 
   // Initiate a call to another user
@@ -174,6 +179,44 @@ class CallingService extends EventEmitter {
     this.callState.isVideoEnabled = !this.callState.isVideoEnabled;
     this.emit('video_toggled', this.callState.isVideoEnabled);
     return this.callState.isVideoEnabled;
+  }
+
+  // Upgrade voice call to video call (like Messenger)
+  upgradeToVideoCall() {
+    if (!this.callState.callData) return false;
+    
+    // Only allow upgrade if currently in a voice call
+    if (this.callState.callData.callType === 'video') {
+      return false; // Already a video call
+    }
+
+    // Update call type to video
+    this.callState.callData.callType = 'video';
+    this.callState.isVideoEnabled = true;
+
+    // Notify the other party about the upgrade request
+    WebSocketService.emit('upgrade_to_video', {
+      callId: this.callState.callData.callId,
+    });
+
+    this.emit('call_upgraded_to_video', this.callState.callData);
+    return true;
+  }
+
+  // Handle incoming video upgrade request
+  private handleVideoUpgradeRequest(data: any) {
+    if (this.callState.callData && this.callState.callData.callId === data.callId) {
+      // Update call type to video
+      this.callState.callData.callType = 'video';
+      this.callState.isVideoEnabled = true;
+      
+      // Automatically accept the upgrade
+      WebSocketService.emit('video_upgrade_accepted', {
+        callId: data.callId,
+      });
+
+      this.emit('video_upgrade_received', this.callState.callData);
+    }
   }
 
   // Get current call state

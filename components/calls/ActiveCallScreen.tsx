@@ -17,6 +17,7 @@ interface ActiveCallScreenProps {
   onToggleMute: () => void;
   onToggleVideo: () => void;
   onEndCall: () => void;
+  onUpgradeToVideo?: () => void; // New prop for upgrading to video
 }
 
 export default function ActiveCallScreen({
@@ -27,6 +28,7 @@ export default function ActiveCallScreen({
   onToggleMute,
   onToggleVideo,
   onEndCall,
+  onUpgradeToVideo,
 }: ActiveCallScreenProps) {
   const [callDuration, setCallDuration] = useState(0);
   const isVideoCall = callData.callType === 'video';
@@ -101,8 +103,8 @@ export default function ActiveCallScreen({
           />
         </TouchableOpacity>
 
-        {/* Video Toggle (only for video calls) */}
-        {isVideoCall && (
+        {/* Video Toggle (only for video calls) OR Upgrade to Video (for voice calls) */}
+        {isVideoCall ? (
           <TouchableOpacity
             style={[
               styles.controlButton,
@@ -116,6 +118,19 @@ export default function ActiveCallScreen({
               color={!isVideoEnabled ? '#fff' : '#333'}
             />
           </TouchableOpacity>
+        ) : (
+          onUpgradeToVideo && isConnected && (
+            <TouchableOpacity
+              style={[styles.controlButton, styles.upgradeVideoButton]}
+              onPress={onUpgradeToVideo}
+            >
+              <Ionicons
+                name="videocam"
+                size={28}
+                color="#fff"
+              />
+            </TouchableOpacity>
+          )
         )}
 
         {/* End Call Button */}
@@ -206,6 +221,9 @@ const styles = StyleSheet.create({
   },
   controlButtonActive: {
     backgroundColor: '#666',
+  },
+  upgradeVideoButton: {
+    backgroundColor: '#007AFF', // Blue color like Messenger
   },
   endCallButton: {
     backgroundColor: '#FF3B30',
