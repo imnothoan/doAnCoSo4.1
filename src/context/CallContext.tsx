@@ -4,9 +4,9 @@ import WebRTCService from '@/src/services/webrtcService';
 import DailyCallService from '@/src/services/dailyCallService';
 import IncomingCallModal from '@/components/calls/IncomingCallModal';
 import VideoCallScreen from '@/components/calls/VideoCallScreen';
-import VideoCallWebView from '@/components/calls/VideoCallWebView';
 import { Alert, Modal } from 'react-native';
 import { useAuth } from './AuthContext';
+import * as WebBrowser from 'expo-web-browser';
 
 interface CallContextType {
   showIncomingCall: boolean;
@@ -31,8 +31,6 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoEnabled, setIsVideoEnabled] = useState(true);
   const [isConnected, setIsConnected] = useState(false);
-  const [useDailyWebView, setUseDailyWebView] = useState(false);
-  const [dailyRoomUrl, setDailyRoomUrl] = useState<string>('');
 
   useEffect(() => {
     console.log('[CallContext] Setting up CallingService listeners');
@@ -43,50 +41,86 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       setShowIncomingCall(true);
     };
 
-    const handleCallAccepted = (callData: CallData) => {
+    const handleCallAccepted = async (callData: CallData) => {
       console.log('[CallContext] Call accepted, showing active call screen');
       setShowIncomingCall(false);
       setActiveCall(true);
       setActiveCallData(callData);
       setIsVideoEnabled(callData.callType === 'video');
       
-      // Check if Daily.co is configured for WebView calls
+      // Check if Daily.co is configured - open in browser instead of WebView
       if (DailyCallService.isConfigured()) {
         const roomUrl = DailyCallService.getRoomUrl(
           callData.callId,
           user?.name || user?.username
         );
-        setDailyRoomUrl(roomUrl);
-        setUseDailyWebView(true);
-        console.log('[CallContext] Using Daily.co WebView for call:', roomUrl);
+        
+        console.log('[CallContext] Opening Daily.co in browser:', roomUrl);
+        
+        try {
+          // Open in in-app browser (works 100% with Expo Go on iOS + Android)
+          await WebBrowser.openBrowserAsync(roomUrl, {
+            // iOS settings
+            dismissButtonStyle: 'close',
+            readerMode: false,
+            controlsColor: '#007AFF',
+            // Android settings
+            showTitle: true,
+            enableBarCollapsing: false,
+            toolbarColor: '#007AFF',
+          });
+          
+          // Browser closed - end call
+          console.log('[CallContext] Browser closed, ending call');
+          handleEndCall();
+        } catch (error) {
+          console.error('[CallContext] Error opening browser:', error);
+          Alert.alert('Error', 'Failed to open video call. Please try again.');
+        }
       } else {
         // Fallback to mock WebRTC (show warning)
-        setUseDailyWebView(false);
         console.warn('[CallContext] Daily.co not configured, using mock WebRTC');
+        DailyCallService.showSetupInstructions();
       }
     };
 
-    const handleCallConnected = (data: any) => {
+    const handleCallConnected = async (data: any) => {
       console.log('[CallContext] Call connected');
       setIsConnected(true);
       
-      // If we initiated the call, show active call screen
+      // If we initiated the call, open Daily.co browser
       const callState = CallingService.getCallState();
       if (callState.callData && !callState.isIncoming) {
         setActiveCall(true);
         setActiveCallData(callState.callData);
         setIsVideoEnabled(callState.callData.callType === 'video');
         
-        // Setup Daily.co if configured
+        // Open Daily.co if configured
         if (DailyCallService.isConfigured()) {
           const roomUrl = DailyCallService.getRoomUrl(
             callState.callData.callId,
             user?.name || user?.username
           );
-          setDailyRoomUrl(roomUrl);
-          setUseDailyWebView(true);
+          
+          console.log('[CallContext] Opening Daily.co for outgoing call:', roomUrl);
+          
+          try {
+            await WebBrowser.openBrowserAsync(roomUrl, {
+              dismissButtonStyle: 'close',
+              readerMode: false,
+              controlsColor: '#007AFF',
+              showTitle: true,
+              enableBarCollapsing: false,
+              toolbarColor: '#007AFF',
+            });
+            
+            // Browser closed
+            handleEndCall();
+          } catch (error) {
+            console.error('[CallContext] Error opening browser:', error);
+          }
         } else {
-          setUseDailyWebView(false);
+          DailyCallService.showSetupInstructions();
         }
       }
     };
@@ -109,8 +143,6 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       setIsConnected(false);
       setIsMuted(false);
       setIsVideoEnabled(true);
-      setUseDailyWebView(false);
-      setDailyRoomUrl('');
     };
 
     const handleCallTimeout = () => {
@@ -141,20 +173,10 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  const handleAcceptCall = () => {
+  const handleAcceptCall = async () => {
     console.log('[CallContext] Accepting call');
     CallingService.acceptCall();
-    
-    // Check if Daily.co is configured
-    if (DailyCallService.isConfigured() && incomingCallData) {
-      const roomUrl = DailyCallService.getRoomUrl(
-        incomingCallData.callId,
-        user?.name || user?.username
-      );
-      setDailyRoomUrl(roomUrl);
-      setUseDailyWebView(true);
-    }
-    // Don't hide incoming call modal immediately - wait for call_accepted event
+    // Call accepted event will trigger handleCallAccepted which opens browser
   };
 
   const handleRejectCall = () => {
@@ -195,33 +217,25 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
         onReject={handleRejectCall}
       />
 
-      {/* Active video call screen - use Daily.co WebView if configured, otherwise mock */}
-      {activeCall && activeCallData && (
+      {/* Mock call screen - only shown if Daily.co not configured */}
+      {/* Real calls open in browser via WebBrowser.openBrowserAsync */}
+      {activeCall && activeCallData && !DailyCallService.isConfigured() && (
         <Modal
           visible={true}
           animationType="fade"
           presentationStyle="fullScreen"
           statusBarTranslucent
         >
-          {useDailyWebView && dailyRoomUrl ? (
-            <VideoCallWebView
-              callData={activeCallData}
-              roomUrl={dailyRoomUrl}
-              userName={user?.name || user?.username || 'User'}
-              onEndCall={handleEndCall}
-            />
-          ) : (
-            <VideoCallScreen
-              callData={activeCallData}
-              isMuted={isMuted}
-              isVideoEnabled={isVideoEnabled}
-              isConnected={isConnected}
-              onToggleMute={handleToggleMute}
-              onToggleVideo={handleToggleVideo}
-              onEndCall={handleEndCall}
-              onSwitchCamera={handleSwitchCamera}
-            />
-          )}
+          <VideoCallScreen
+            callData={activeCallData}
+            isMuted={isMuted}
+            isVideoEnabled={isVideoEnabled}
+            isConnected={isConnected}
+            onToggleMute={handleToggleMute}
+            onToggleVideo={handleToggleVideo}
+            onEndCall={handleEndCall}
+            onSwitchCamera={handleSwitchCamera}
+          />
         </Modal>
       )}
     </CallContext.Provider>
