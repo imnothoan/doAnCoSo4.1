@@ -62,7 +62,7 @@ export default function PostItem({
           <Text style={styles.username} numberOfLines={1}>
             {post?.author_username}
             {post?.community_name ? (
-              <Text style={styles.inCommunity}>  in "{post.community_name}"</Text>
+              <Text style={styles.inCommunity}>  in &quot;{post.community_name}&quot;</Text>
             ) : null}
           </Text>
         </View>
