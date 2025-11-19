@@ -343,10 +343,11 @@ const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://api.example.com
 ### Future Enhancements
 - [ ] AI-based user matching
 - [ ] Message translation
-- [ ] Video/voice calls
 - [ ] Real-time location sharing
 - [ ] AI Gemini integration
 - [ ] Story/status features
+
+**Note:** Video/voice call functionality has been removed as WebRTC is not supported in Expo Go and requires a custom development build.
 
 ## 🤝 Contributing
 
