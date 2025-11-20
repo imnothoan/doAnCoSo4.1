@@ -195,10 +195,22 @@ export default function CommunityScreen() {
 
           <View style={styles.btnRow}>
             {community.is_member ? (
-              <Pressable style={[styles.joinedBtn, { backgroundColor: colors.surface, borderColor: colors.border }]} onPress={onLeavePress}>
-                <Ionicons name="checkmark-circle-outline" size={20} color={colors.text} />
-                <Text style={[styles.joinedText, { color: colors.text }]}>Joined</Text>
-              </Pressable>
+              <>
+                <Pressable style={[styles.joinedBtn, { backgroundColor: colors.surface, borderColor: colors.border }]} onPress={onLeavePress}>
+                  <Ionicons name="checkmark-circle-outline" size={20} color={colors.text} />
+                  <Text style={[styles.joinedText, { color: colors.text }]}>Joined</Text>
+                </Pressable>
+                <Pressable 
+                  style={[styles.chatBtn, { backgroundColor: colors.primary }]}
+                  onPress={() => router.push({
+                    pathname: '/overview/community-chat',
+                    params: { id: String(communityId), name: community.name },
+                  })}
+                >
+                  <Ionicons name="chatbubbles" size={20} color="#fff" />
+                  <Text style={styles.chatText}>Chat</Text>
+                </Pressable>
+              </>
             ) : (
               <Pressable style={[styles.inviteBtn, { backgroundColor: colors.primary }]} onPress={onJoinPress}>
                 <Ionicons name="person-add-outline" size={20} color="#fff" />
@@ -304,6 +316,11 @@ const styles = StyleSheet.create({
     paddingVertical: 10, paddingHorizontal: 20, borderRadius: 8,
   },
   inviteText: { color: '#fff', marginLeft: 6, fontSize: 15 },
+  chatBtn: {
+    flexDirection: 'row', alignItems: 'center',
+    paddingVertical: 10, paddingHorizontal: 20, borderRadius: 8,
+  },
+  chatText: { color: '#fff', marginLeft: 6, fontSize: 15 },
   postBox: { flexDirection: 'row', alignItems: 'center', padding: 16, gap: 10 },
   avatar: { width: 42, height: 42, borderRadius: 21, backgroundColor: '#ccc' },
   postInput: { flex: 1, borderWidth: 1, borderRadius: 25, paddingVertical: 10, paddingHorizontal: 16 },
