@@ -11,7 +11,6 @@ import {
   Image,
   Alert,
   ActivityIndicator,
-  Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useLocalSearchParams } from 'expo-router';
@@ -23,9 +22,6 @@ import ImageService from '@/src/services/image';
 import ApiService from '@/src/services/api';
 import { useAuth } from '@/src/context/AuthContext';
 import { useTheme } from '@/src/context/ThemeContext';
-import CallingService, { CallData } from '@/src/services/callingService';
-import IncomingCallModal from '@/components/calls/IncomingCallModal';
-import ActiveCallScreen from '@/components/calls/ActiveCallScreen';
 
 export default function ChatScreen() {
   const params = useLocalSearchParams();
@@ -40,15 +36,6 @@ export default function ChatScreen() {
   const [otherUserTyping, setOtherUserTyping] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [showQuickMessages, setShowQuickMessages] = useState(false);
-
-  // Calling state
-  const [showIncomingCall, setShowIncomingCall] = useState(false);
-  const [showActiveCall, setShowActiveCall] = useState(false);
-  const [incomingCallData, setIncomingCallData] = useState<CallData | undefined>();
-  const [activeCallData, setActiveCallData] = useState<CallData | undefined>();
-  const [isMuted, setIsMuted] = useState(false);
-  const [isVideoEnabled, setIsVideoEnabled] = useState(true);
-  const [isCallConnected, setIsCallConnected] = useState(false);
 
   const flatListRef = useRef<FlatList<Message>>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -276,160 +263,6 @@ export default function ChatScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chatId]);
 
-  // Setup calling event listeners
-  useEffect(() => {
-    const handleIncomingCall = (callData: CallData) => {
-      // Only show if the call is for this chat
-      if (callData.receiverId === currentUser?.username) {
-        setIncomingCallData(callData);
-        setShowIncomingCall(true);
-      }
-    };
-
-    const handleCallAccepted = () => {
-      setShowIncomingCall(false);
-      setShowActiveCall(true);
-      setIsCallConnected(true);
-    };
-
-    const handleCallRejected = () => {
-      setShowIncomingCall(false);
-      setShowActiveCall(false);
-      Alert.alert('Call Rejected', 'The call was rejected');
-    };
-
-    const handleCallEnded = () => {
-      setShowIncomingCall(false);
-      setShowActiveCall(false);
-      setIsCallConnected(false);
-      setIsMuted(false);
-      setIsVideoEnabled(true);
-    };
-
-    const handleCallTimeout = () => {
-      setShowIncomingCall(false);
-      setShowActiveCall(false);
-      setIsCallConnected(false);
-      setIsMuted(false);
-      setIsVideoEnabled(true);
-      Alert.alert('Call Timeout', 'The call was not answered');
-    };
-
-    CallingService.on('incoming_call', handleIncomingCall);
-    CallingService.on('call_accepted', handleCallAccepted);
-    CallingService.on('call_rejected', handleCallRejected);
-    CallingService.on('call_ended', handleCallEnded);
-    CallingService.on('call_timeout', handleCallTimeout);
-    
-    // Video upgrade listeners
-    const handleVideoUpgrade = (callData: CallData) => {
-      setActiveCallData(callData);
-      setIsVideoEnabled(true);
-      Alert.alert('Video Call', 'The other party has upgraded to video call');
-    };
-    
-    CallingService.on('video_upgrade_received', handleVideoUpgrade);
-    CallingService.on('call_upgraded_to_video', handleVideoUpgrade);
-
-    return () => {
-      CallingService.off('incoming_call', handleIncomingCall);
-      CallingService.off('call_accepted', handleCallAccepted);
-      CallingService.off('call_rejected', handleCallRejected);
-      CallingService.off('call_ended', handleCallEnded);
-      CallingService.off('call_timeout', handleCallTimeout);
-      CallingService.off('video_upgrade_received', handleVideoUpgrade);
-      CallingService.off('call_upgraded_to_video', handleVideoUpgrade);
-    };
-  }, [currentUser?.username]);
-
-  const handleInitiateCall = async (callType: 'voice' | 'video') => {
-    if (!currentUser?.username || !otherUser?.username) {
-      Alert.alert('Error', 'Unable to initiate call');
-      return;
-    }
-
-    // Check WebSocket connection
-    if (!WebSocketService.isConnected()) {
-      Alert.alert('Connection Error', 'Not connected to server. Please check your internet connection.');
-      return;
-    }
-
-    // Check if users mutually follow each other
-    const areMutual = await ApiService.areMutualFollowers(
-      currentUser.username,
-      otherUser.username
-    );
-
-    if (!areMutual) {
-      Alert.alert(
-        'Cannot Call',
-        'You can only call users who you follow and who follow you back.'
-      );
-      return;
-    }
-
-    try {
-      await CallingService.initiateCall(
-        otherUser.username,
-        otherUser.name,
-        callType,
-        currentUser.username,
-        currentUser.name,
-        currentUser.avatar
-      );
-
-      const callState = CallingService.getCallState();
-      setActiveCallData(callState.callData);
-      setShowActiveCall(true);
-    } catch (error) {
-      console.error('Error initiating call:', error);
-      Alert.alert('Error', 'Failed to initiate call. Please try again.');
-    }
-  };
-
-  const handleAcceptCall = () => {
-    CallingService.acceptCall();
-    setShowIncomingCall(false);
-    setActiveCallData(incomingCallData);
-    setShowActiveCall(true);
-  };
-
-  const handleRejectCall = () => {
-    CallingService.rejectCall();
-    setShowIncomingCall(false);
-    setIncomingCallData(undefined);
-  };
-
-  const handleEndCall = () => {
-    CallingService.endCall();
-    setShowActiveCall(false);
-    setActiveCallData(undefined);
-    setIsCallConnected(false);
-    setIsMuted(false);
-    setIsVideoEnabled(true);
-  };
-
-  const handleToggleMute = () => {
-    const newMuted = CallingService.toggleMute();
-    setIsMuted(newMuted);
-  };
-
-  const handleToggleVideo = () => {
-    const newVideoEnabled = CallingService.toggleVideo();
-    setIsVideoEnabled(newVideoEnabled);
-  };
-
-  const handleUpgradeToVideo = () => {
-    const success = CallingService.upgradeToVideoCall();
-    if (success) {
-      // Update the active call data to reflect video call
-      const callState = CallingService.getCallState();
-      setActiveCallData(callState.callData);
-      setIsVideoEnabled(true);
-      Alert.alert('Video Call', 'Upgrading to video call...');
-    }
-  };
-
   const handleSendMessage = async () => {
     if (!inputText.trim() || !currentUser?.username) return;
     const messageContent = inputText;
@@ -635,19 +468,6 @@ export default function ChatScreen() {
           title: otherUser?.name || 'Conversation',
           headerRight: () => (
             <View style={styles.headerRight}>
-
-              <TouchableOpacity 
-                style={styles.headerButton}
-                onPress={() => handleInitiateCall('voice')}
-              >
-                <Ionicons name="call-outline" size={24} color={colors.primary} />
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={styles.headerButton}
-                onPress={() => handleInitiateCall('video')}
-              >
-                <Ionicons name="videocam-outline" size={24} color={colors.primary} />
-              </TouchableOpacity>
               <TouchableOpacity style={styles.headerButton}>
                 <Ionicons name="ellipsis-vertical" size={24} color={colors.primary} />
               </TouchableOpacity>
@@ -803,30 +623,6 @@ export default function ChatScreen() {
           )}
         </KeyboardAvoidingView>
       </SafeAreaView>
-
-      {/* Incoming Call Modal */}
-      <IncomingCallModal
-        visible={showIncomingCall}
-        callData={incomingCallData}
-        onAccept={handleAcceptCall}
-        onReject={handleRejectCall}
-      />
-
-      {/* Active Call Screen */}
-      <Modal visible={showActiveCall} animationType="slide">
-        {activeCallData && (
-          <ActiveCallScreen
-            callData={activeCallData}
-            isMuted={isMuted}
-            isVideoEnabled={isVideoEnabled}
-            isConnected={isCallConnected}
-            onToggleMute={handleToggleMute}
-            onToggleVideo={handleToggleVideo}
-            onEndCall={handleEndCall}
-            onUpgradeToVideo={handleUpgradeToVideo}
-          />
-        )}
-      </Modal>
     </>
   );
 }

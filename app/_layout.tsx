@@ -7,7 +7,6 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { AuthProvider } from '@/src/context/AuthContext';
 import { ThemeProvider as AppThemeProvider } from '@/src/context/ThemeContext';
 import { StripeProvider } from '@/src/context/StripeContext';
-import { CallProvider } from '@/src/context/CallContext';
 
 export const unstable_settings = {
   initialRouteName: 'index',
@@ -20,8 +19,7 @@ export default function RootLayout() {
     <StripeProvider>
       <AuthProvider>
         <AppThemeProvider>
-          <CallProvider>
-            <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+          <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
               <Stack>
                 <Stack.Screen name="index" options={{ headerShown: false }} />
                 <Stack.Screen name="auth/login" options={{ headerShown: false }} />
@@ -98,7 +96,6 @@ export default function RootLayout() {
               </Stack>
               <StatusBar style="auto" />
             </ThemeProvider>
-          </CallProvider>
         </AppThemeProvider>
       </AuthProvider>
     </StripeProvider>
