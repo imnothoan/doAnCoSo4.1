@@ -325,10 +325,15 @@ export default function ChatScreen() {
         await ApiService.sendMessageWithImage(
           chatId,
           currentUser.username,
-            inputText || '📷 Photo',
+          inputText || '📷 Photo',
           imageFile
         );
         setInputText('');
+        
+        // Reload messages to show the newly sent image
+        setTimeout(() => {
+          loadMessages();
+        }, 500);
       }
 
       setUploading(false);

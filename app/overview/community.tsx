@@ -155,6 +155,14 @@ export default function CommunityScreen() {
 
   const renderHeader = useMemo(() => {
     if (!community) return null;
+    
+    // Check if current user is admin/moderator
+    const isUserAdmin = me?.username && (
+      me.username === community.created_by ||
+      // We'll check this properly later when we fetch member role
+      false
+    );
+    
     return (
       <View style={{ backgroundColor: colors.card }}>
         {/* TOP BANNER */}
@@ -164,7 +172,20 @@ export default function CommunityScreen() {
 
         {/* HEADER */}
         <View style={[styles.headerBox, { backgroundColor: colors.card }]}>
-          <Text style={[styles.communityName, { color: colors.text }]}>{community.name}</Text>
+          <View style={styles.titleRow}>
+            <Text style={[styles.communityName, { color: colors.text }]}>{community.name}</Text>
+            {me?.username === community.created_by && (
+              <Pressable 
+                style={styles.settingsButton}
+                onPress={() => router.push({
+                  pathname: '/overview/community-settings',
+                  params: { id: String(communityId) },
+                })}
+              >
+                <Ionicons name="settings-outline" size={24} color={colors.text} />
+              </Pressable>
+            )}
+          </View>
           <View style={styles.subInfoRow}>
             <Ionicons name="globe-outline" size={16} color={colors.textSecondary} />
             <Text style={[styles.subText, { color: colors.textSecondary }]}>
@@ -174,10 +195,22 @@ export default function CommunityScreen() {
 
           <View style={styles.btnRow}>
             {community.is_member ? (
-              <Pressable style={[styles.joinedBtn, { backgroundColor: colors.surface, borderColor: colors.border }]} onPress={onLeavePress}>
-                <Ionicons name="checkmark-circle-outline" size={20} color={colors.text} />
-                <Text style={[styles.joinedText, { color: colors.text }]}>Joined</Text>
-              </Pressable>
+              <>
+                <Pressable style={[styles.joinedBtn, { backgroundColor: colors.surface, borderColor: colors.border }]} onPress={onLeavePress}>
+                  <Ionicons name="checkmark-circle-outline" size={20} color={colors.text} />
+                  <Text style={[styles.joinedText, { color: colors.text }]}>Joined</Text>
+                </Pressable>
+                <Pressable 
+                  style={[styles.chatBtn, { backgroundColor: colors.primary }]}
+                  onPress={() => router.push({
+                    pathname: '/overview/community-chat',
+                    params: { id: String(communityId), name: community.name },
+                  })}
+                >
+                  <Ionicons name="chatbubbles" size={20} color="#fff" />
+                  <Text style={styles.chatText}>Chat</Text>
+                </Pressable>
+              </>
             ) : (
               <Pressable style={[styles.inviteBtn, { backgroundColor: colors.primary }]} onPress={onJoinPress}>
                 <Ionicons name="person-add-outline" size={20} color="#fff" />
@@ -267,7 +300,9 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   banner: { width: '100%', height: 200, backgroundColor: '#ddd' },
   headerBox: { padding: 16 },
-  communityName: { fontSize: 22, fontWeight: '700' },
+  titleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  communityName: { fontSize: 22, fontWeight: '700', flex: 1 },
+  settingsButton: { padding: 4, marginLeft: 8 },
   subInfoRow: { flexDirection: 'row', alignItems: 'center', marginTop: 6 },
   subText: { marginLeft: 6, fontSize: 14 },
   btnRow: { flexDirection: 'row', marginTop: 16, gap: 12 },
@@ -281,6 +316,11 @@ const styles = StyleSheet.create({
     paddingVertical: 10, paddingHorizontal: 20, borderRadius: 8,
   },
   inviteText: { color: '#fff', marginLeft: 6, fontSize: 15 },
+  chatBtn: {
+    flexDirection: 'row', alignItems: 'center',
+    paddingVertical: 10, paddingHorizontal: 20, borderRadius: 8,
+  },
+  chatText: { color: '#fff', marginLeft: 6, fontSize: 15 },
   postBox: { flexDirection: 'row', alignItems: 'center', padding: 16, gap: 10 },
   avatar: { width: 42, height: 42, borderRadius: 21, backgroundColor: '#ccc' },
   postInput: { flex: 1, borderWidth: 1, borderRadius: 25, paddingVertical: 10, paddingHorizontal: 16 },

@@ -64,8 +64,8 @@ export default function DiscussionScreen() {
       return;
     }
     
-    // TODO: Navigate to create community screen
-    Alert.alert('Create Community', 'Create community feature coming soon!');
+    // Navigate to create community screen
+    router.push('/overview/create-community');
   }, [isPro, router]);
 
   const renderCommunityCard = ({ item }: { item: Community }) => (
