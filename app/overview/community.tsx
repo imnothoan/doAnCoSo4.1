@@ -78,7 +78,7 @@ export default function CommunityScreen() {
         setLoading(false);
       }
     })();
-  }, [communityId]);
+  }, [communityId, me?.username]);
 
   const onRefresh = useCallback(async () => {
     if (!communityId) return;

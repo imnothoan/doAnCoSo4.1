@@ -51,8 +51,29 @@ export default function RootLayout() {
                 name="overview/community"
                 options={{ 
                   presentation: 'card',
-                  title: 'Create Post',
+                  headerShown: false,
                 }}
+                />
+                <Stack.Screen 
+                  name="overview/create-community"
+                  options={{ 
+                    presentation: 'card',
+                    headerShown: false,
+                  }}
+                />
+                <Stack.Screen 
+                  name="overview/community-chat"
+                  options={{ 
+                    presentation: 'card',
+                    title: 'Community Chat',
+                  }}
+                />
+                <Stack.Screen 
+                  name="overview/community-settings"
+                  options={{ 
+                    presentation: 'card',
+                    title: 'Community Settings',
+                  }}
                 />
                 <Stack.Screen 
                   name="inbox/chat" 
