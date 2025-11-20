@@ -71,8 +71,12 @@ class RingtoneService {
     try {
       if (this.player) {
         console.log('[RingtoneService] Stopping ringtone');
-        await (this.player as any).stopAsync();
-        await (this.player as any).unloadAsync();
+        // Check if the player is loaded before stopping
+        const status = await (this.player as any).getStatusAsync();
+        if (status.isLoaded) {
+          await (this.player as any).stopAsync();
+          await (this.player as any).unloadAsync();
+        }
         this.player = null;
       }
       this.isPlaying = false;
@@ -80,6 +84,11 @@ class RingtoneService {
       this.onCompleteCallback = null;
     } catch (error) {
       console.error('[RingtoneService] Error stopping ringtone:', error);
+      // Force cleanup even if there's an error
+      this.player = null;
+      this.isPlaying = false;
+      this.loopCount = 0;
+      this.onCompleteCallback = null;
     }
   }
 
