@@ -86,12 +86,14 @@ export interface HangoutActivity {
 // Chat related types
 export interface Chat {
   id: string;
-  type: 'event' | 'user' | 'group'|'dm';
+  type: 'event' | 'user' | 'group' | 'dm' | 'community';
   name?: string;
   participants?: User[];
   lastMessage?: Message;
   unreadCount?: number;
   eventId?: string;
+  communityId?: number;
+  communityAvatar?: string;
 }
 
 export interface Message {
@@ -117,12 +119,15 @@ export interface Community {
   name: string;
   description?: string | null;
   image_url?: string | null;
+  cover_image?: string | null;
 
   created_by: string;
 
   member_count: number;
   post_count: number;
   is_private: boolean;
+  
+  chat_conversation_id?: number | null;
 
   created_at: string;
   updated_at: string;
