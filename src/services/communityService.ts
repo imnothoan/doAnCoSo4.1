@@ -16,6 +16,7 @@ export type CommunityPost = Post & {
 export interface CommunityPostsParams {
   limit?: number;
   before?: string; // ISO string cursor (created_at của bài cuối)
+  viewer?: string; // username of viewer for private community access check
 }
 
 const communityService = {
@@ -169,6 +170,7 @@ const communityService = {
       params: {
         limit: params?.limit,
         before: params?.before,
+        viewer: params?.viewer,
       },
     });
     const rawPosts = res.data || [];

@@ -68,7 +68,10 @@ export default function CommunityScreen() {
         const c = await communityService.getCommunity(communityId, viewer);
         setCommunity(c);
 
-        const first = await communityService.getCommunityPosts(communityId, { limit: 10 });
+        const first = await communityService.getCommunityPosts(communityId, { 
+          limit: 10, 
+          viewer: me?.username 
+        });
         setPosts(first);
         cursorRef.current = first.length ? first[first.length - 1].created_at : null;
         setHasMore(first.length >= 10);
@@ -78,7 +81,7 @@ export default function CommunityScreen() {
         setLoading(false);
       }
     })();
-  }, [communityId]);
+  }, [communityId, me?.username]);
 
   const onRefresh = useCallback(async () => {
     if (!communityId) return;
@@ -88,7 +91,10 @@ export default function CommunityScreen() {
       const c = await communityService.getCommunity(communityId, viewer);
       setCommunity(c);
 
-      const fresh = await communityService.getCommunityPosts(communityId, { limit: 10 });
+      const fresh = await communityService.getCommunityPosts(communityId, { 
+        limit: 10,
+        viewer: me?.username
+      });
       setPosts(fresh);
       cursorRef.current = fresh.length ? fresh[fresh.length - 1].created_at : null;
       setHasMore(fresh.length >= 10);
@@ -105,6 +111,7 @@ export default function CommunityScreen() {
       const next = await communityService.getCommunityPosts(communityId, {
         limit: 10,
         before: cursorRef.current || undefined,
+        viewer: me?.username,
       });
       if (next.length === 0) {
         setHasMore(false);
@@ -220,19 +227,31 @@ export default function CommunityScreen() {
           </View>
         </View>
 
-        {/* POST INPUT */}
-        <View style={[styles.postBox, { backgroundColor: colors.card }]}>
-          <Image
-            source={{ uri: me?.avatar || 'https://i.pravatar.cc/100' }}
-            style={styles.avatar}
-          />
-          <Pressable
-            style={[styles.postInput, { borderColor: colors.border, backgroundColor: colors.surface }]}
-            onPress={() => router.push(`/overview/post?communityId=${communityId}`)}
-          >
-            <Text style={{ color: colors.textMuted }}>What&apos;s on your mind?</Text>
-          </Pressable>
-        </View>
+        {/* POST INPUT - Only show for members */}
+        {community.is_member && (
+          <View style={[styles.postBox, { backgroundColor: colors.card }]}>
+            <Image
+              source={{ uri: me?.avatar || 'https://i.pravatar.cc/100' }}
+              style={styles.avatar}
+            />
+            <Pressable
+              style={[styles.postInput, { borderColor: colors.border, backgroundColor: colors.surface }]}
+              onPress={() => router.push(`/overview/post?communityId=${communityId}`)}
+            >
+              <Text style={{ color: colors.textMuted }}>What&apos;s on your mind?</Text>
+            </Pressable>
+          </View>
+        )}
+
+        {/* Private community message for non-members */}
+        {community.is_private && !community.is_member && (
+          <View style={[styles.privateNotice, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <Ionicons name="lock-closed-outline" size={20} color={colors.textSecondary} />
+            <Text style={[styles.privateNoticeText, { color: colors.textSecondary }]}>
+              This is a private community. Join to see posts and participate in discussions.
+            </Text>
+          </View>
+        )}
 
         <View style={[styles.separator, { backgroundColor: colors.surfaceVariant }]} />
       </View>
@@ -324,5 +343,20 @@ const styles = StyleSheet.create({
   postBox: { flexDirection: 'row', alignItems: 'center', padding: 16, gap: 10 },
   avatar: { width: 42, height: 42, borderRadius: 21, backgroundColor: '#ccc' },
   postInput: { flex: 1, borderWidth: 1, borderRadius: 25, paddingVertical: 10, paddingHorizontal: 16 },
+  privateNotice: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    padding: 16, 
+    gap: 12, 
+    marginHorizontal: 16, 
+    marginVertical: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  privateNoticeText: { 
+    flex: 1, 
+    fontSize: 14, 
+    lineHeight: 20,
+  },
   separator: { height: 7, width: '100%' },
 });
