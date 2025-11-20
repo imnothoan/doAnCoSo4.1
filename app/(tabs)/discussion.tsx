@@ -1,15 +1,17 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { StyleSheet, View, Text, FlatList, TouchableOpacity, Image, TextInput, RefreshControl, ActivityIndicator } from 'react-native';
+import { StyleSheet, View, Text, FlatList, TouchableOpacity, Image, TextInput, RefreshControl, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Community } from '@/src/types';
 import ApiService from '@/src/services/api';
 import { useTheme } from '@/src/context/ThemeContext';
+import { useAuth } from '@/src/context/AuthContext';
 import { useRouter } from "expo-router";
 
 export default function DiscussionScreen() {
   const router = useRouter();
-  const { colors } = useTheme();
+  const { colors, isPro } = useTheme();
+  const { user } = useAuth();
   const [communities, setCommunities] = useState<Community[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
@@ -45,6 +47,26 @@ export default function DiscussionScreen() {
     await loadCommunities();
     setRefreshing(false);
   }, [loadCommunities]);
+
+  const handleCreateCommunity = useCallback(() => {
+    if (!isPro) {
+      Alert.alert(
+        'PRO Feature',
+        'Creating communities is a PRO feature. Upgrade to PRO to create your own community!',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Upgrade to PRO',
+            onPress: () => router.push('/account/payment-pro'),
+          },
+        ]
+      );
+      return;
+    }
+    
+    // TODO: Navigate to create community screen
+    Alert.alert('Create Community', 'Create community feature coming soon!');
+  }, [isPro, router]);
 
   const renderCommunityCard = ({ item }: { item: Community }) => (
     <TouchableOpacity 
@@ -99,6 +121,22 @@ export default function DiscussionScreen() {
         />
       </View>
 
+      <TouchableOpacity
+        style={[
+          styles.createButton,
+          {
+            backgroundColor: isPro ? colors.primary : colors.border,
+            borderColor: isPro ? colors.primary : colors.border,
+          },
+        ]}
+        onPress={handleCreateCommunity}
+      >
+        <Ionicons name="add-circle-outline" size={20} color={isPro ? '#fff' : colors.textMuted} />
+        <Text style={[styles.createButtonText, { color: isPro ? '#fff' : colors.textMuted }]}>
+          {isPro ? 'Create Community' : 'Create Community (PRO)'}
+        </Text>
+      </TouchableOpacity>
+
       <Text style={[styles.sectionTitle, { color: colors.text }]}>Suggested Communities</Text>
 
       {loading && !refreshing ? (
@@ -152,17 +190,17 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 16,
   },
-  uploadButton: {
+  createButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 14,
+    paddingVertical: 12,
     marginHorizontal: 16,
     marginTop: 12,
     borderRadius: 8,
     borderWidth: 1,
   },
-  uploadButtonText: {
+  createButtonText: {
     fontSize: 16,
     fontWeight: '600',
     marginLeft: 8,

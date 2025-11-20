@@ -135,6 +135,19 @@ const communityService = {
     return res.data || [];
   },
 
+  async getMemberRole(
+    communityId: number | string,
+    username: string
+  ): Promise<'admin' | 'moderator' | 'member' | null> {
+    try {
+      const members = await this.getCommunityMembers(communityId);
+      const member = members.find((m: any) => m.username === username);
+      return member ? member.role : null;
+    } catch {
+      return null;
+    }
+  },
+
   async getUserJoinedCommunities(
     username: string,
     limit?: number
