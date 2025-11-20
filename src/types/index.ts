@@ -118,6 +118,7 @@ export interface Community {
   id: number;
   name: string;
   description?: string | null;
+  bio?: string | null;
   image_url?: string | null;
   cover_image?: string | null;
 
@@ -131,6 +132,27 @@ export interface Community {
 
   created_at: string;
   updated_at: string;
+}
+
+export interface CommunityMember {
+  id: number;
+  community_id: number;
+  username: string;
+  role: 'admin' | 'moderator' | 'member';
+  joined_at: string;
+  user?: User;
+}
+
+export interface CommunityJoinRequest {
+  id: number;
+  community_id: number;
+  username: string;
+  status: 'pending' | 'approved' | 'rejected';
+  reviewed_by?: string | null;
+  reviewed_at?: string | null;
+  created_at: string;
+  updated_at: string;
+  users?: User;
 }
 
 export interface PostMedia {
