@@ -200,24 +200,29 @@ export default function DiscussionScreen() {
             placeholderTextColor={colors.textMuted}
           />
         </View>
-      )}
 
-      {/* Create Community Button */}
-      <TouchableOpacity
-        style={[
-          styles.createButton,
-          {
-            backgroundColor: isPro ? colors.primary : colors.border,
-            borderColor: isPro ? colors.primary : colors.border,
-          },
-        ]}
-        onPress={handleCreateCommunity}
-      >
-        <Ionicons name="add-circle-outline" size={20} color={isPro ? '#fff' : colors.textMuted} />
-        <Text style={[styles.createButtonText, { color: isPro ? '#fff' : colors.textMuted }]}>
-          {isPro ? 'Create Community' : 'Create Community (PRO)'}
-        </Text>
-      </TouchableOpacity>
+        
+      )}
+      
+      {/* Create Community Button - chỉ hiển thị khi đang ở tab Discover */}
+{activeTab === 'discover' && (
+  <TouchableOpacity
+    style={[
+      styles.createButton,
+      {
+        backgroundColor: isPro ? colors.primary : colors.border,
+        borderColor: isPro ? colors.primary : colors.border,
+      },
+    ]}
+    onPress={handleCreateCommunity}
+  >
+    <Ionicons name="add-circle-outline" size={20} color={isPro ? '#fff' : colors.textMuted} />
+    <Text style={[styles.createButtonText, { color: isPro ? '#fff' : colors.textMuted }]}>
+      {isPro ? 'Create Community' : 'Create Community (PRO)'}
+    </Text>
+  </TouchableOpacity>
+)}
+
 
       {loading && !refreshing ? (
         <View style={styles.loadingContainer}>
