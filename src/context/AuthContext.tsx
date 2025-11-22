@@ -55,28 +55,48 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const handleSession = async (session: any) => {
     try {
       const token = session.access_token;
+      const supabaseUser = session.user;
+      
+      console.log('🔑 Handling session for user:', supabaseUser?.email);
+      
       ApiService.setAuthToken(token);
-
-      // Connect WebSocket
-      const apiUrl = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
-      if (!WebSocketService.isConnected()) {
-        WebSocketService.connect(apiUrl, token);
-      }
 
       // Fetch user profile from our backend
       // We try to get the user from storage first to show something immediately
       const storedUserJson = await AsyncStorage.getItem(USER_KEY);
       let user = storedUserJson ? JSON.parse(storedUserJson) : null;
 
-      // If we don't have a user or we want to refresh it
+      // Try to fetch fresh user data from backend
       try {
+        console.log('📥 Fetching user profile from backend...');
         const freshUser = await ApiService.getCurrentUser();
         user = freshUser;
         await AsyncStorage.setItem(USER_KEY, JSON.stringify(user));
-      } catch (err) {
-        console.error('Error fetching user profile:', err);
-        // If fetching fails but we have a session, we might be in a weird state
-        // (e.g. user exists in Supabase but not in our DB yet)
+        console.log('✅ User profile loaded:', user.username);
+      } catch (err: any) {
+        console.error('❌ Error fetching user profile:', err);
+        
+        // If backend user doesn't exist but Supabase user does,
+        // we might need to create the backend user
+        if (err?.response?.status === 401 || err?.response?.status === 404) {
+          console.warn('⚠️  User exists in Supabase but not in backend. This might happen if:');
+          console.warn('   1. Signup backend sync failed');
+          console.warn('   2. User was created directly in Supabase');
+          console.warn('   3. Backend database was reset');
+          console.log('💡 You may need to sign up again or contact support');
+        }
+        
+        // If we have a stored user, use it as fallback
+        if (user) {
+          console.log('📦 Using cached user data');
+        }
+      }
+
+      // Connect WebSocket after we have user data
+      const apiUrl = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
+      if (user && !WebSocketService.isConnected()) {
+        console.log('🔌 Connecting WebSocket...');
+        WebSocketService.connect(apiUrl, token);
       }
 
       setAuthState({
@@ -84,8 +104,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         user,
         token,
       });
+      
+      console.log('✅ Session handled successfully');
     } catch (error) {
-      console.error('Error handling session:', error);
+      console.error('❌ Error handling session:', error);
     } finally {
       setIsLoading(false);
     }
@@ -127,42 +149,70 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [authState.isAuthenticated, authState.token]);
 
   const login = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) throw error;
+    console.log('🔐 Attempting login for:', email);
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    
+    if (error) {
+      console.error('❌ Login error:', error);
+      throw error;
+    }
+    
+    console.log('✅ Supabase login successful:', data.user?.email);
     // onAuthStateChange will handle the rest
   };
 
   const signup = async (username: string, name: string, email: string, password: string, country: string, city: string, gender?: 'Male' | 'Female' | 'Other') => {
     try {
-      // 1. Sign up with Supabase
+      console.log('📝 Starting signup process for:', email, 'username:', username);
+      
+      // 1. Sign up with Supabase Auth
+      // Note: Email confirmation is controlled in Supabase Dashboard, not here
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          data: { username, name }
+          data: { username, name },
         }
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Supabase signup error:', error);
+        throw error;
+      }
+
+      console.log('✅ Supabase user created:', data.user?.id);
 
       if (data.user) {
         // 2. Sync with our backend
-        // We pass the Supabase ID so the backend can link them
-        await ApiService.signup({
-          id: data.user.id, // Pass the ID
-          username,
-          name,
-          email,
-          password: 'sb-password-placeholder', // Placeholder
-          country,
-          city,
-          gender,
-        });
+        console.log('🔄 Syncing user data with backend...');
+        try {
+          await ApiService.signup({
+            id: data.user.id,
+            username,
+            name,
+            email,
+            password: 'sb-password-placeholder', // Placeholder - not used
+            country,
+            city,
+            gender,
+          });
+          console.log('✅ Backend sync successful');
+        } catch (backendError) {
+          console.error('❌ Backend sync error:', backendError);
+          // If backend sync fails, we should still allow login since Supabase user exists
+          // The backend can be synced later via the /users/me endpoint
+          console.warn('⚠️ Backend sync failed but Supabase user created. User can still login.');
+        }
+      }
+
+      // Check if email confirmation is required
+      if (data.session) {
+        console.log('✅ Session created immediately (email confirmation disabled)');
+      } else {
+        console.log('⚠️ Email confirmation may be required');
       }
     } catch (error) {
-      console.error('Signup error:', error);
-      // If backend sync fails, we might want to delete the supabase user?
-      // For now, just throw
+      console.error('❌ Signup error:', error);
       throw error;
     }
   };

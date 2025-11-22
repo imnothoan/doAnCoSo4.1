@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/src/context/AuthContext';
+import { formatAuthError } from '@/src/utils/auth-helper';
 
 // Default values for optional fields - user can update these in profile later
 const DEFAULT_COUNTRY = '';
@@ -58,15 +59,13 @@ export default function SignupScreen() {
     } catch (error: any) {
       console.error('Signup error:', error);
       
-      // Show specific error message
-      let errorMessage = 'Unable to create account. Please try again.';
+      // Handle specific backend errors
+      let errorMessage = formatAuthError(error);
       
       if (error?.response?.status === 409) {
-        errorMessage = 'Email already registered. Please use a different email or sign in.';
+        errorMessage = 'Email or username already registered. Please use a different one or sign in.';
       } else if (error?.response?.data?.message) {
         errorMessage = error.response.data.message;
-      } else if (error?.message) {
-        errorMessage = error.message;
       }
       
       Alert.alert('Signup Failed', errorMessage);
@@ -166,7 +165,12 @@ export default function SignupScreen() {
                 </TouchableOpacity>
               </View>
 
-  
+              <View style={styles.infoContainer}>
+                <Ionicons name="information-circle-outline" size={20} color="#007AFF" />
+                <Text style={styles.infoText}>
+                  You can update your profile details (full name, country, city, etc.) after creating your account.
+                </Text>
+              </View>
 
               <View style={styles.termsContainer}>
                 <Text style={styles.termsText}>
