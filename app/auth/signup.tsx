@@ -5,6 +5,11 @@ import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/src/context/AuthContext';
 
+// Default values for optional fields - user can update these in profile later
+const DEFAULT_COUNTRY = '';
+const DEFAULT_CITY = '';
+const DEFAULT_GENDER = 'Male' as const;
+
 export default function SignupScreen() {
   const router = useRouter();
   const { signup } = useAuth();
@@ -37,9 +42,6 @@ export default function SignupScreen() {
     try {
       // Use username as temporary full name, other fields will be null
       // User can edit these later in their profile
-      const DEFAULT_COUNTRY = '';
-      const DEFAULT_CITY = '';
-      const DEFAULT_GENDER = 'Male' as const;
       await signup(username, username, email, password, DEFAULT_COUNTRY, DEFAULT_CITY, DEFAULT_GENDER);
       
       // Show success message and redirect to login
