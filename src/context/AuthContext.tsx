@@ -166,12 +166,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log('📝 Starting signup process for:', email, 'username:', username);
       
       // 1. Sign up with Supabase Auth
+      // Note: Email confirmation is controlled in Supabase Dashboard, not here
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
           data: { username, name },
-          emailRedirectTo: undefined, // Disable email confirmation for development
         }
       });
 

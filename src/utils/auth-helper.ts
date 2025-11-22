@@ -8,11 +8,11 @@ import { supabase } from '../lib/supabase';
 import ApiService from '../services/api';
 
 /**
- * Check if a user exists in Supabase Auth
+ * Check if current session user matches the given email
+ * Note: This only checks the currently logged-in user, not if a user exists in the system
  */
-export async function checkSupabaseUser(email: string): Promise<boolean> {
+export async function checkCurrentUserEmail(email: string): Promise<boolean> {
   try {
-    // This will only work if user is already logged in
     const { data: { user } } = await supabase.auth.getUser();
     return user?.email === email;
   } catch {
@@ -34,6 +34,9 @@ export async function checkBackendUser(username: string): Promise<boolean> {
 
 /**
  * Sync Supabase user with backend (for cases where backend sync failed during signup)
+ * 
+ * Note: The password field is a placeholder since actual authentication is handled by Supabase.
+ * The backend should not validate or use this password field.
  */
 export async function syncUserWithBackend(
   supabaseUserId: string,
@@ -44,12 +47,15 @@ export async function syncUserWithBackend(
   try {
     console.log('🔄 Syncing user with backend...');
     
+    // Password is a placeholder - backend should use Supabase ID for authentication
+    const PLACEHOLDER_PASSWORD = 'supabase-auth-managed';
+    
     await ApiService.signup({
       id: supabaseUserId,
       username,
       name: name || username,
       email,
-      password: 'sb-password-placeholder',
+      password: PLACEHOLDER_PASSWORD, // Not used for authentication
       country: '',
       city: '',
       gender: 'Male',
@@ -63,21 +69,30 @@ export async function syncUserWithBackend(
 }
 
 /**
+ * Auth status result interface
+ */
+interface AuthStatus {
+  hasSupabaseSession: boolean;
+  supabaseUser: {
+    id: string;
+    email?: string;
+    [key: string]: any;
+  } | null;
+  backendReachable: boolean;
+  backendUser: any | null; // Type depends on backend User model
+  issue?: string;
+}
+
+/**
  * Get detailed auth status for debugging
  */
-export async function getAuthStatus(): Promise<{
-  hasSupabaseSession: boolean;
-  supabaseUser: any | null;
-  backendReachable: boolean;
-  backendUser: any | null;
-  issue?: string;
-}> {
-  const status = {
+export async function getAuthStatus(): Promise<AuthStatus> {
+  const status: AuthStatus = {
     hasSupabaseSession: false,
     supabaseUser: null,
     backendReachable: false,
     backendUser: null,
-    issue: undefined as string | undefined,
+    issue: undefined,
   };
 
   try {
@@ -118,10 +133,12 @@ export async function getAuthStatus(): Promise<{
 /**
  * Format error message for user display
  */
-export function formatAuthError(error: any): string {
+export function formatAuthError(error: Error | { message?: string } | string | unknown): string {
   if (!error) return 'An unknown error occurred';
 
-  const message = error.message || error.toString();
+  const message = typeof error === 'string' 
+    ? error 
+    : (error as any).message || String(error);
 
   // Map common errors to user-friendly messages
   if (message.includes('Invalid login credentials')) {
