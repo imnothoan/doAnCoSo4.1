@@ -166,12 +166,7 @@ export default function SignupScreen() {
                 </TouchableOpacity>
               </View>
 
-              <View style={styles.infoContainer}>
-                <Ionicons name="information-circle-outline" size={16} color="#007AFF" />
-                <Text style={styles.infoText}>
-                  You can add more details like country, city, and full name later in your profile.
-                </Text>
-              </View>
+  
 
               <View style={styles.termsContainer}>
                 <Text style={styles.termsText}>
