@@ -4,6 +4,7 @@ import { User, AuthState } from '../types';
 import ApiService from '../services/api';
 import WebSocketService from '../services/websocket';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { supabase } from '../lib/supabase';
 
 interface AuthContextType extends AuthState {
   login: (email: string, password: string) => Promise<void>;
@@ -16,7 +17,6 @@ interface AuthContextType extends AuthState {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const TOKEN_KEY = '@auth_token';
 const USER_KEY = '@auth_user';
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -27,10 +27,81 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   });
   const [isLoading, setIsLoading] = useState(true);
 
-  // Load stored auth on mount
+  // Handle Supabase Auth State Changes
   useEffect(() => {
-    loadStoredAuth();
+    // Check initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        handleSession(session);
+      } else {
+        setIsLoading(false);
+      }
+    });
+
+    // Listen for changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (session) {
+        handleSession(session);
+      } else {
+        handleSignOut();
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
+
+  const handleSession = async (session: any) => {
+    try {
+      const token = session.access_token;
+      ApiService.setAuthToken(token);
+
+      // Connect WebSocket
+      const apiUrl = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
+      if (!WebSocketService.isConnected()) {
+        WebSocketService.connect(apiUrl, token);
+      }
+
+      // Fetch user profile from our backend
+      // We try to get the user from storage first to show something immediately
+      const storedUserJson = await AsyncStorage.getItem(USER_KEY);
+      let user = storedUserJson ? JSON.parse(storedUserJson) : null;
+
+      // If we don't have a user or we want to refresh it
+      try {
+        const freshUser = await ApiService.getCurrentUser();
+        user = freshUser;
+        await AsyncStorage.setItem(USER_KEY, JSON.stringify(user));
+      } catch (err) {
+        console.error('Error fetching user profile:', err);
+        // If fetching fails but we have a session, we might be in a weird state
+        // (e.g. user exists in Supabase but not in our DB yet)
+      }
+
+      setAuthState({
+        isAuthenticated: true,
+        user,
+        token,
+      });
+    } catch (error) {
+      console.error('Error handling session:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSignOut = async () => {
+    await AsyncStorage.removeItem(USER_KEY);
+    ApiService.removeAuthToken();
+    WebSocketService.disconnect();
+    setAuthState({
+      isAuthenticated: false,
+      user: null,
+      token: null,
+    });
+    setIsLoading(false);
+  };
 
   // Keep WebSocket connected when app comes to foreground
   useEffect(() => {
@@ -40,7 +111,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const handleAppStateChange = (nextAppState: AppStateStatus) => {
       if (nextAppState === 'active') {
-        // App came to foreground - ensure WebSocket is connected
         console.log('📱 App came to foreground - checking WebSocket connection');
         if (!WebSocketService.isConnected()) {
           const apiUrl = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
@@ -56,151 +126,66 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, [authState.isAuthenticated, authState.token]);
 
-  const loadStoredAuth = async () => {
-    try {
-      const token = await AsyncStorage.getItem(TOKEN_KEY);
-      const userJson = await AsyncStorage.getItem(USER_KEY);
-      
-      if (token && userJson) {
-        const user = JSON.parse(userJson);
-        ApiService.setAuthToken(token);
-        
-        // Initialize WebSocket connection
-        const apiUrl = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
-        WebSocketService.connect(apiUrl, token);
-        
-        // Check Pro status from server
-        try {
-          if (user.username) {
-            const proStatus = await ApiService.getProStatus(user.username);
-            user.isPro = proStatus.isPro;
-            // Update stored user with Pro status
-            await AsyncStorage.setItem(USER_KEY, JSON.stringify(user));
-          }
-        } catch (proError) {
-          console.error('Error loading pro status:', proError);
-          // Continue with stored isPro value
-        }
-        
-        setAuthState({
-          isAuthenticated: true,
-          user,
-          token,
-        });
-      }
-    } catch (error) {
-      console.error('Error loading stored auth:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const login = async (email: string, password: string) => {
-    try {
-      const { user, token } = await ApiService.login({ email, password });
-      
-      // Check Pro status from server
-      try {
-        if (user.username) {
-          const proStatus = await ApiService.getProStatus(user.username);
-          user.isPro = proStatus.isPro;
-        }
-      } catch (proError) {
-        console.error('Error loading pro status:', proError);
-        // Continue without Pro status
-      }
-      
-      // Store auth data
-      await AsyncStorage.setItem(TOKEN_KEY, token);
-      await AsyncStorage.setItem(USER_KEY, JSON.stringify(user));
-      
-      ApiService.setAuthToken(token);
-      
-      // Initialize WebSocket connection
-      const apiUrl = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
-      WebSocketService.connect(apiUrl, token);
-      
-      setAuthState({
-        isAuthenticated: true,
-        user,
-        token,
-      });
-    } catch (error) {
-      console.error('Login error:', error);
-      throw error;
-    }
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) throw error;
+    // onAuthStateChange will handle the rest
   };
 
   const signup = async (username: string, name: string, email: string, password: string, country: string, city: string, gender?: 'Male' | 'Female' | 'Other') => {
     try {
-      // Just call the signup API without auto-login
-      // User will need to login manually after signup
-      await ApiService.signup({
-        username,
-        name,
+      // 1. Sign up with Supabase
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
-        country,
-        city,
-        gender,
+        options: {
+          data: { username, name }
+        }
       });
-      
-      // Don't auto-login after signup
-      // User should be redirected to login screen to verify their credentials
+
+      if (error) throw error;
+
+      if (data.user) {
+        // 2. Sync with our backend
+        // We pass the Supabase ID so the backend can link them
+        await ApiService.signup({
+          id: data.user.id, // Pass the ID
+          username,
+          name,
+          email,
+          password: 'sb-password-placeholder', // Placeholder
+          country,
+          city,
+          gender,
+        });
+      }
     } catch (error) {
       console.error('Signup error:', error);
+      // If backend sync fails, we might want to delete the supabase user?
+      // For now, just throw
       throw error;
     }
   };
 
   const logout = async () => {
-    try {
-      // Disconnect WebSocket immediately
-      WebSocketService.disconnect();
-      
-      // Clear stored auth data immediately
-      await AsyncStorage.removeItem(TOKEN_KEY);
-      await AsyncStorage.removeItem(USER_KEY);
-      
-      // Clear auth token
-      ApiService.removeAuthToken();
-      
-      // Update state immediately
-      setAuthState({
-        isAuthenticated: false,
-        user: null,
-        token: null,
-      });
-      
-      // Call logout API in background (don't wait for it)
-      ApiService.logout().catch(error => {
-        console.error('Logout API error:', error);
-      });
-    } catch (error) {
-      console.error('Logout error:', error);
-    }
+    const { error } = await supabase.auth.signOut();
+    if (error) console.error('Logout error:', error);
+    // onAuthStateChange will handle state cleanup
   };
 
   const updateUser = async (data: Partial<User>) => {
     if (!authState.user?.username) return;
 
     try {
-      // Use the user ID from the current authState if available
-      // If not, fetch the latest user data to get the correct ID
       let userId = authState.user.id;
-      
-      // Only fetch fresh user if we don't have an ID
       if (!userId) {
         const freshUser = await ApiService.getUserByUsername(authState.user.username);
         userId = freshUser.id;
       }
-      
-      // Update using the user ID
+
       const updatedUser = await ApiService.updateUser(userId, data);
-      
-      // Update stored user
       await AsyncStorage.setItem(USER_KEY, JSON.stringify(updatedUser));
-      
+
       setAuthState(prev => ({
         ...prev,
         user: updatedUser,
@@ -212,15 +197,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const refreshUser = async () => {
-    if (!authState.user?.username) return;
+    if (!authState.token) return;
 
     try {
-      // Fetch fresh user data from server
-      const freshUser = await ApiService.getUserByUsername(authState.user.username);
-      
-      // Update stored user
+      const freshUser = await ApiService.getCurrentUser();
       await AsyncStorage.setItem(USER_KEY, JSON.stringify(freshUser));
-      
+
       setAuthState(prev => ({
         ...prev,
         user: freshUser,

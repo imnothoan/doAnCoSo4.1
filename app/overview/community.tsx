@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   FlatList,
   RefreshControl,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -68,9 +69,9 @@ export default function CommunityScreen() {
         const c = await communityService.getCommunity(communityId, viewer);
         setCommunity(c);
 
-        const first = await communityService.getCommunityPosts(communityId, { 
-          limit: 10, 
-          viewer: me?.username 
+        const first = await communityService.getCommunityPosts(communityId, {
+          limit: 10,
+          viewer: me?.username
         });
         setPosts(first);
         cursorRef.current = first.length ? first[first.length - 1].created_at : null;
@@ -97,7 +98,7 @@ export default function CommunityScreen() {
       const c = await communityService.getCommunity(communityId, viewer);
       setCommunity(c);
 
-      const fresh = await communityService.getCommunityPosts(communityId, { 
+      const fresh = await communityService.getCommunityPosts(communityId, {
         limit: 10,
         viewer: me?.username
       });
@@ -142,8 +143,17 @@ export default function CommunityScreen() {
     try {
       await communityService.joinCommunity(communityId, me.username);
       setCommunity((prev) => prev ? { ...prev, is_member: true, member_count: (prev.member_count ?? 0) + 1 } : prev);
-    } catch (e) {
-      console.error(e);
+    } catch (e: any) {
+      if (e.message === 'REQUIRES_REQUEST') {
+        Alert.alert(
+          'Request Sent',
+          'This community requires approval. Your join request has been sent to the admins.',
+          [{ text: 'OK' }]
+        );
+      } else {
+        console.error(e);
+        Alert.alert('Error', 'Failed to join community.');
+      }
     }
   }, [communityId, me?.username]);
 
@@ -177,14 +187,14 @@ export default function CommunityScreen() {
 
   const renderHeader = useMemo(() => {
     if (!community) return null;
-    
+
     // Check if current user is admin/moderator
     const isUserAdmin = me?.username && (
       me.username === community.created_by ||
       // We'll check this properly later when we fetch member role
       false
     );
-    
+
     return (
       <View style={{ backgroundColor: colors.card }}>
         {/* TOP BANNER */}
@@ -197,7 +207,7 @@ export default function CommunityScreen() {
           <View style={styles.titleRow}>
             <Text style={[styles.communityName, { color: colors.text }]}>{community.name}</Text>
             {me?.username === community.created_by && (
-              <Pressable 
+              <Pressable
                 style={styles.settingsButton}
                 onPress={() => router.push({
                   pathname: '/overview/community-settings',
@@ -222,7 +232,7 @@ export default function CommunityScreen() {
                   <Ionicons name="checkmark-circle-outline" size={20} color={colors.text} />
                   <Text style={[styles.joinedText, { color: colors.text }]}>Joined</Text>
                 </Pressable>
-                <Pressable 
+                <Pressable
                   style={[styles.chatBtn, { backgroundColor: colors.primary }]}
                   onPress={() => router.push({
                     pathname: '/overview/community-chat',
@@ -358,19 +368,19 @@ const styles = StyleSheet.create({
   postBox: { flexDirection: 'row', alignItems: 'center', padding: 16, gap: 10 },
   avatar: { width: 42, height: 42, borderRadius: 21, backgroundColor: '#ccc' },
   postInput: { flex: 1, borderWidth: 1, borderRadius: 25, paddingVertical: 10, paddingHorizontal: 16 },
-  privateNotice: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    padding: 16, 
-    gap: 12, 
-    marginHorizontal: 16, 
+  privateNotice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    gap: 12,
+    marginHorizontal: 16,
     marginVertical: 12,
     borderRadius: 8,
     borderWidth: 1,
   },
-  privateNoticeText: { 
-    flex: 1, 
-    fontSize: 14, 
+  privateNoticeText: {
+    flex: 1,
+    fontSize: 14,
     lineHeight: 20,
   },
   separator: { height: 7, width: '100%' },

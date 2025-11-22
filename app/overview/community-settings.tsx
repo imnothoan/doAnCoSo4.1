@@ -54,6 +54,8 @@ export default function CommunitySettingsScreen() {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [isPrivate, setIsPrivate] = useState(false);
+  const [requiresPostApproval, setRequiresPostApproval] = useState(false);
+  const [requiresMemberApproval, setRequiresMemberApproval] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const loadCommunity = useCallback(async () => {
@@ -62,7 +64,9 @@ export default function CommunitySettingsScreen() {
       setCommunity(data);
       setName(data.name);
       setDescription(data.description || '');
-      setIsPrivate(data.is_private);
+      setIsPrivate(data.is_private || false);
+      setRequiresPostApproval(data.requires_post_approval || false);
+      setRequiresMemberApproval(data.requires_member_approval || false);
 
       // Check if current user is admin
       if (user?.username) {
@@ -88,9 +92,9 @@ export default function CommunitySettingsScreen() {
 
   const loadPosts = useCallback(async () => {
     try {
-      const data = await communityService.getCommunityPosts(communityId, { 
+      const data = await communityService.getCommunityPosts(communityId, {
         limit: 50,
-        viewer: user?.username 
+        viewer: user?.username
       });
       setPosts(data);
     } catch (error) {
@@ -132,6 +136,8 @@ export default function CommunitySettingsScreen() {
         name: name.trim(),
         description: description.trim() || undefined,
         is_private: isPrivate,
+        requires_post_approval: requiresPostApproval,
+        requires_member_approval: requiresMemberApproval,
       });
 
       Alert.alert('Success', 'Community settings updated');
@@ -351,8 +357,8 @@ export default function CommunitySettingsScreen() {
         </Text>
       )}
       {item.post_media && item.post_media.length > 0 && (
-        <Image 
-          source={{ uri: item.post_media[0].media_url }} 
+        <Image
+          source={{ uri: item.post_media[0].media_url }}
           style={styles.postImage}
           resizeMode="cover"
         />
@@ -451,8 +457,8 @@ export default function CommunitySettingsScreen() {
       </View>
 
       {/* Tabs */}
-      <ScrollView 
-        horizontal 
+      <ScrollView
+        horizontal
         showsHorizontalScrollIndicator={false}
         style={[styles.tabs, { backgroundColor: colors.card, borderBottomColor: colors.border }]}
       >
@@ -547,7 +553,7 @@ export default function CommunitySettingsScreen() {
               <View style={styles.switchLabel}>
                 <Text style={[styles.sectionTitle, { color: colors.text }]}>Private Community</Text>
                 <Text style={[styles.hint, { color: colors.textSecondary }]}>
-                  Require approval for new members
+                  Only members can see posts.
                 </Text>
               </View>
               <Switch
@@ -555,6 +561,42 @@ export default function CommunitySettingsScreen() {
                 onValueChange={setIsPrivate}
                 trackColor={{ false: colors.border, true: colors.primary }}
                 thumbColor={isPrivate ? '#fff' : '#f4f3f4'}
+              />
+            </View>
+          </View>
+
+          {/* Member Approval */}
+          <View style={styles.section}>
+            <View style={styles.switchRow}>
+              <View style={styles.switchLabel}>
+                <Text style={[styles.sectionTitle, { color: colors.text }]}>Require Member Approval</Text>
+                <Text style={[styles.hint, { color: colors.textSecondary }]}>
+                  Admins must approve new members.
+                </Text>
+              </View>
+              <Switch
+                value={requiresMemberApproval}
+                onValueChange={setRequiresMemberApproval}
+                trackColor={{ false: colors.border, true: colors.primary }}
+                thumbColor={requiresMemberApproval ? '#fff' : '#f4f3f4'}
+              />
+            </View>
+          </View>
+
+          {/* Post Approval */}
+          <View style={styles.section}>
+            <View style={styles.switchRow}>
+              <View style={styles.switchLabel}>
+                <Text style={[styles.sectionTitle, { color: colors.text }]}>Require Post Approval</Text>
+                <Text style={[styles.hint, { color: colors.textSecondary }]}>
+                  Admins must approve posts from members.
+                </Text>
+              </View>
+              <Switch
+                value={requiresPostApproval}
+                onValueChange={setRequiresPostApproval}
+                trackColor={{ false: colors.border, true: colors.primary }}
+                thumbColor={requiresPostApproval ? '#fff' : '#f4f3f4'}
               />
             </View>
           </View>

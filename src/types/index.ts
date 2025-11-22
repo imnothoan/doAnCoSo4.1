@@ -127,7 +127,9 @@ export interface Community {
   member_count: number;
   post_count: number;
   is_private: boolean;
-  
+  requires_post_approval?: boolean;
+  requires_member_approval?: boolean;
+
   chat_conversation_id?: number | null;
 
   created_at: string;
