@@ -37,7 +37,10 @@ export default function SignupScreen() {
     try {
       // Use username as temporary full name, other fields will be null
       // User can edit these later in their profile
-      await signup(username, username, email, password, '', '', 'Male');
+      const DEFAULT_COUNTRY = '';
+      const DEFAULT_CITY = '';
+      const DEFAULT_GENDER = 'Male' as const;
+      await signup(username, username, email, password, DEFAULT_COUNTRY, DEFAULT_CITY, DEFAULT_GENDER);
       
       // Show success message and redirect to login
       Alert.alert(
