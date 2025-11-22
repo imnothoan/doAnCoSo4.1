@@ -9,22 +9,16 @@ export default function SignupScreen() {
   const router = useRouter();
   const { signup } = useAuth();
   const [username, setUsername] = useState('');
-  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [country, setCountry] = useState('');
-  const [city, setCity] = useState('');
-  // Gender defaults to Male - UI to select gender is not yet implemented
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [gender, setGender] = useState<'Male' | 'Female' | 'Other'>('Male');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSignup = async () => {
     // Validation
-    if (!username || !name || !email || !password || !confirmPassword || !country || !city) {
+    if (!username || !email || !password || !confirmPassword) {
       Alert.alert('Error', 'Please fill in all fields');
       return;
     }
@@ -41,7 +35,9 @@ export default function SignupScreen() {
 
     setIsLoading(true);
     try {
-      await signup(username, name, email, password, country, city, gender);
+      // Use username as temporary full name, other fields will be null
+      // User can edit these later in their profile
+      await signup(username, username, email, password, '', '', 'Male');
       
       // Show success message and redirect to login
       Alert.alert(
@@ -109,18 +105,6 @@ export default function SignupScreen() {
               </View>
 
               <View style={styles.inputContainer}>
-                <Ionicons name="person-outline" size={20} color="#666" style={styles.inputIcon} />
-                <TextInput
-                  style={styles.input}
-                  placeholder="Full Name"
-                  value={name}
-                  onChangeText={setName}
-                  autoCapitalize="words"
-                  placeholderTextColor="#999"
-                />
-              </View>
-
-              <View style={styles.inputContainer}>
                 <Ionicons name="mail-outline" size={20} color="#666" style={styles.inputIcon} />
                 <TextInput
                   style={styles.input}
@@ -129,30 +113,6 @@ export default function SignupScreen() {
                   onChangeText={setEmail}
                   autoCapitalize="none"
                   keyboardType="email-address"
-                  placeholderTextColor="#999"
-                />
-              </View>
-
-              <View style={styles.inputContainer}>
-                <Ionicons name="earth-outline" size={20} color="#666" style={styles.inputIcon} />
-                <TextInput
-                  style={styles.input}
-                  placeholder="Country"
-                  value={country}
-                  onChangeText={setCountry}
-                  autoCapitalize="words"
-                  placeholderTextColor="#999"
-                />
-              </View>
-
-              <View style={styles.inputContainer}>
-                <Ionicons name="location-outline" size={20} color="#666" style={styles.inputIcon} />
-                <TextInput
-                  style={styles.input}
-                  placeholder="City"
-                  value={city}
-                  onChangeText={setCity}
-                  autoCapitalize="words"
                   placeholderTextColor="#999"
                 />
               </View>
@@ -199,6 +159,13 @@ export default function SignupScreen() {
                     color="#666"
                   />
                 </TouchableOpacity>
+              </View>
+
+              <View style={styles.infoContainer}>
+                <Ionicons name="information-circle-outline" size={16} color="#007AFF" />
+                <Text style={styles.infoText}>
+                  You can add more details like country, city, and full name later in your profile.
+                </Text>
               </View>
 
               <View style={styles.termsContainer}>
@@ -304,6 +271,21 @@ const styles = StyleSheet.create({
   },
   eyeIcon: {
     padding: 8,
+  },
+  infoContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: '#f0f7ff',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 16,
+    gap: 8,
+  },
+  infoText: {
+    flex: 1,
+    fontSize: 13,
+    color: '#007AFF',
+    lineHeight: 18,
   },
   termsContainer: {
     marginBottom: 24,
