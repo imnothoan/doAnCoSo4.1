@@ -35,6 +35,8 @@ export default function CommunityScreen() {
   const [hasMore, setHasMore] = useState(true);
   const cursorRef = useRef<string | null>(null);
 
+  const [joiningLoading, setJoiningLoading] = useState(false);
+
   const [commentsVisible, setCommentsVisible] = useState(false);
   const [selectedPostId, setSelectedPostId] = useState<number | null>(null);
   const meLite = useMemo(() => {
@@ -140,7 +142,9 @@ export default function CommunityScreen() {
   }, [communityId, hasMore, loading]);
 
   const onJoinPress = useCallback(async () => {
-    if (!communityId || !me?.username) return;
+    if (!communityId || !me?.username || joiningLoading) return;
+
+    setJoiningLoading(true);
     try {
       await communityService.joinCommunity(communityId, me.username);
       setCommunity((prev) => prev ? { ...prev, is_member: true, member_count: (prev.member_count ?? 0) + 1 } : prev);
@@ -155,11 +159,13 @@ export default function CommunityScreen() {
         console.error(e);
         Alert.alert('Error', 'Failed to join community.');
       }
+    } finally {
+      setJoiningLoading(false);
     }
-  }, [communityId, me?.username]);
+  }, [communityId, me?.username, joiningLoading]);
 
   const onLeavePress = useCallback(async () => {
-    if (!communityId || !me?.username || !community) return;
+    if (!communityId || !me?.username || !community || joiningLoading) return;
 
     // Check if owner
     if (community.created_by === me.username) {
@@ -180,21 +186,24 @@ export default function CommunityScreen() {
           text: 'Leave',
           style: 'destructive',
           onPress: async () => {
+            setJoiningLoading(true);
             try {
               await communityService.leaveCommunity(communityId, me.username!);
-              setCommunity((prev) => prev ? { ...prev, is_member: false, member_count: Math.max(0, (prev.member_count ?? 0) - 1) } : prev);
+              setCommunity((prev) => prev ? { ...prev, is_member: false, member_count: Math.max(0, (prev.member_count ?? 1) - 1) } : prev);
               // Clear posts when leaving since user can no longer see them
               setPosts([]);
               setHasMore(false);
             } catch (e) {
               console.error(e);
               Alert.alert('Error', 'Failed to leave community.');
+            } finally {
+              setJoiningLoading(false);
             }
-          }
-        }
+          },
+        },
       ]
     );
-  }, [communityId, me?.username, community]);
+  }, [communityId, me?.username, community, joiningLoading]);
 
   const onLikeToggle = useCallback(async (post: CommunityPost, isCurrentlyLiked: boolean) => {
     if (!me?.username) return;
@@ -218,8 +227,8 @@ export default function CommunityScreen() {
       <View style={{ backgroundColor: colors.card }}>
         {/* TOP BANNER - Full Width 16:9 */}
         <View style={styles.bannerContainer}>
-          {community.image_url ? (
-            <Image source={{ uri: community.image_url }} style={styles.banner} resizeMode="cover" />
+          {(community.cover_image || community.image_url) ? (
+            <Image source={{ uri: community.cover_image || community.image_url || undefined }} style={styles.banner} resizeMode="cover" />
           ) : (
             <View style={[styles.banner, { backgroundColor: colors.primary, justifyContent: 'center', alignItems: 'center' }]}>
               <Ionicons name="people" size={64} color="rgba(255,255,255,0.5)" />
@@ -246,18 +255,31 @@ export default function CommunityScreen() {
           <View style={styles.actionBar}>
             {community.is_member ? (
               <>
-                <Pressable style={[styles.actionBtn, styles.joinedBtn, { borderColor: colors.border }]} onPress={onLeavePress}>
+                <Pressable
+                  style={[styles.actionBtn, { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, opacity: joiningLoading ? 0.6 : 1 }]}
+                  onPress={onLeavePress}
+                  disabled={joiningLoading}
+                >
                   <Text style={[styles.btnText, { color: colors.text }]}>Joined</Text>
                   <Ionicons name="chevron-down" size={16} color={colors.text} />
                 </Pressable>
-                <Pressable style={[styles.actionBtn, { backgroundColor: colors.primary }]} onPress={() => router.push(`/overview/post?communityId=${communityId}`)}>
-                  <Ionicons name="add" size={20} color="#fff" />
+                <Pressable
+                  style={[styles.actionBtn, { backgroundColor: colors.primary }]}
+                  onPress={() => Alert.alert('Invite', 'Invite feature is coming soon!')}
+                >
+                  <Ionicons name="person-add" size={20} color="#fff" />
                   <Text style={[styles.btnText, { color: '#fff' }]}>Invite</Text>
                 </Pressable>
               </>
             ) : (
-              <Pressable style={[styles.actionBtn, { backgroundColor: colors.primary, flex: 1 }]} onPress={onJoinPress}>
-                <Text style={[styles.btnText, { color: '#fff', fontWeight: '600' }]}>Join Group</Text>
+              <Pressable
+                style={[styles.actionBtn, { backgroundColor: colors.primary, flex: 1, opacity: joiningLoading ? 0.6 : 1 }]}
+                onPress={onJoinPress}
+                disabled={joiningLoading}
+              >
+                <Text style={[styles.btnText, { color: '#fff', fontWeight: '600' }]}>
+                  {joiningLoading ? 'Joining...' : 'Join Group'}
+                </Text>
               </Pressable>
             )}
 
@@ -291,7 +313,7 @@ export default function CommunityScreen() {
 
         {/* TABS */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={[styles.tabsContainer, { borderBottomColor: colors.border }]}>
-          {['Discussion', 'Featured', 'People', 'Events', 'Media', 'Files'].map((tab) => (
+          {['Discussion', 'People', 'Events'].map((tab) => (
             <Pressable key={tab} style={[styles.tabItem, tab === 'Discussion' && styles.activeTabItem]}>
               <Text style={[styles.tabText, { color: tab === 'Discussion' ? colors.primary : colors.textSecondary }]}>{tab}</Text>
               {tab === 'Discussion' && <View style={[styles.activeIndicator, { backgroundColor: colors.primary }]} />}

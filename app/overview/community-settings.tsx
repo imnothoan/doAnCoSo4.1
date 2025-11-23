@@ -283,7 +283,7 @@ export default function CommunitySettingsScreen() {
     if (!user?.username || !isAdmin) return;
 
     try {
-      await communityService.reviewJoinRequest(communityId, request.id, action, user.username);
+      await communityService.reviewJoinRequest(communityId, request.username, action, user.username);
       Alert.alert('Success', `Request ${action === 'approve' ? 'approved' : 'rejected'}`);
       loadJoinRequests();
       if (action === 'approve') {

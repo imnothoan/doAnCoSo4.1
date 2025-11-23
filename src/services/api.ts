@@ -53,10 +53,24 @@ class ApiService {
       },
     });
 
-    // Add request interceptor for logging and deduplication
+    // Add request interceptor for logging and token injection
     this.client.interceptors.request.use(
-      (config) => {
-
+      async (config) => {
+        // Only fetch from storage if Authorization header is missing
+        if (!config.headers.Authorization) {
+          try {
+            const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+            const token = await AsyncStorage.getItem('@auth_token');
+            if (token) {
+              config.headers.Authorization = `Bearer ${token}`;
+              console.log('🔄 Token injected from storage (length:', token.length, ')');
+            } else {
+              console.warn('⚠️ No token found in storage');
+            }
+          } catch (error) {
+            console.error('❌ Error retrieving token in interceptor:', error);
+          }
+        }
         return config;
       },
       (error) => {

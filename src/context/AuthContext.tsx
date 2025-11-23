@@ -58,8 +58,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const supabaseUser = session.user;
 
       console.log('🔑 Handling session for user:', supabaseUser?.email);
+      console.log('🎫 Token length:', token?.length);
 
+      // CRITICAL: Set token FIRST before any API calls
+      await AsyncStorage.setItem('@auth_token', token);
       ApiService.setAuthToken(token);
+      console.log('✅ Auth token set in ApiService and AsyncStorage');
 
       // Fetch user profile from our backend
       // We try to get the user from storage first to show something immediately
@@ -152,6 +156,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const handleSignOut = async () => {
     await AsyncStorage.removeItem(USER_KEY);
+    await AsyncStorage.removeItem('@auth_token');
     ApiService.removeAuthToken();
     WebSocketService.disconnect();
     setAuthState({

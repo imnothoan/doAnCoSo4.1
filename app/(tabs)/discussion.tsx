@@ -91,28 +91,28 @@ export default function DiscussionScreen() {
       );
       return;
     }
-    
+
     // Navigate to create community screen
     router.push('/overview/create-community');
   }, [isPro, router]);
 
   const renderCommunityCard = ({ item }: { item: Community }) => (
-    <TouchableOpacity 
-      style={[styles.communityCard, { 
+    <TouchableOpacity
+      style={[styles.communityCard, {
         backgroundColor: colors.card,
         shadowColor: colors.shadow,
         borderColor: colors.border,
       }]}
-      onPress={() => 
+      onPress={() =>
         router.push({
           pathname: '/overview/community',
           params: { id: String(item.id) },
         })
       }
     >
-      {item.image_url && (
-        <Image source={{ uri: item.image_url }} style={styles.communityImage} />
-      )}
+      {(item.cover_image || item.image_url) ? (
+        <Image source={{ uri: item.cover_image || item.image_url || undefined }} style={styles.communityImage} />
+      ) : null}
       <View style={styles.communityContent}>
         <Text style={[styles.communityName, { color: colors.text }]}>{item.name}</Text>
         {item.description && (
@@ -150,10 +150,10 @@ export default function DiscussionScreen() {
           ]}
           onPress={() => setActiveTab('my-communities')}
         >
-          <Ionicons 
-            name="people" 
-            size={20} 
-            color={activeTab === 'my-communities' ? colors.primary : colors.textMuted} 
+          <Ionicons
+            name="people"
+            size={20}
+            color={activeTab === 'my-communities' ? colors.primary : colors.textMuted}
           />
           <Text
             style={[
@@ -172,10 +172,10 @@ export default function DiscussionScreen() {
           ]}
           onPress={() => setActiveTab('discover')}
         >
-          <Ionicons 
-            name="compass" 
-            size={20} 
-            color={activeTab === 'discover' ? colors.primary : colors.textMuted} 
+          <Ionicons
+            name="compass"
+            size={20}
+            color={activeTab === 'discover' ? colors.primary : colors.textMuted}
           />
           <Text
             style={[
@@ -201,27 +201,27 @@ export default function DiscussionScreen() {
           />
         </View>
 
-        
+
       )}
-      
+
       {/* Create Community Button - chỉ hiển thị khi đang ở tab Discover */}
-{activeTab === 'discover' && (
-  <TouchableOpacity
-    style={[
-      styles.createButton,
-      {
-        backgroundColor: isPro ? colors.primary : colors.border,
-        borderColor: isPro ? colors.primary : colors.border,
-      },
-    ]}
-    onPress={handleCreateCommunity}
-  >
-    <Ionicons name="add-circle-outline" size={20} color={isPro ? '#fff' : colors.textMuted} />
-    <Text style={[styles.createButtonText, { color: isPro ? '#fff' : colors.textMuted }]}>
-      {isPro ? 'Create Community' : 'Create Community (PRO)'}
-    </Text>
-  </TouchableOpacity>
-)}
+      {activeTab === 'discover' && (
+        <TouchableOpacity
+          style={[
+            styles.createButton,
+            {
+              backgroundColor: isPro ? colors.primary : colors.border,
+              borderColor: isPro ? colors.primary : colors.border,
+            },
+          ]}
+          onPress={handleCreateCommunity}
+        >
+          <Ionicons name="add-circle-outline" size={20} color={isPro ? '#fff' : colors.textMuted} />
+          <Text style={[styles.createButtonText, { color: isPro ? '#fff' : colors.textMuted }]}>
+            {isPro ? 'Create Community' : 'Create Community (PRO)'}
+          </Text>
+        </TouchableOpacity>
+      )}
 
 
       {loading && !refreshing ? (
@@ -241,8 +241,8 @@ export default function DiscussionScreen() {
             <View style={styles.emptyContainer}>
               <Ionicons name="people-outline" size={64} color={colors.disabled} />
               <Text style={[styles.emptyText, { color: colors.textMuted }]}>
-                {activeTab === 'my-communities' 
-                  ? 'You haven\'t joined any communities yet' 
+                {activeTab === 'my-communities'
+                  ? 'You haven\'t joined any communities yet'
                   : 'No communities found'}
               </Text>
               {activeTab === 'my-communities' && (
