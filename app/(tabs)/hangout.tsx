@@ -117,7 +117,7 @@ export default function HangoutScreen() {
       usersRef.current = onlineUsers;
       currentIndexRef.current = 0;
     } catch (err) {
-    
+      console.error('Error loading users:', err);
       Alert.alert('Error', 'Failed to load users. Please try again.');
       setUsers([]);
       // Update refs for panResponder closure
@@ -136,7 +136,7 @@ export default function HangoutScreen() {
       const status = await ApiService.getHangoutStatus(currentUser.username);
       setIsAvailable(status.is_available || false);
     } catch (error) {
-    
+      console.error('Error loading hangout status:', error);
       setIsAvailable(false);
     }
   }, [currentUser?.username]);
@@ -170,7 +170,7 @@ export default function HangoutScreen() {
         loadOnlineUsers();
       }
     } catch (error) {
-
+      console.error('Error updating hangout status:', error);
       Alert.alert('Error', 'Failed to update hangout status. Please try again.');
     } finally {
       setUpdatingStatus(false);
