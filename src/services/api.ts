@@ -1,4 +1,5 @@
 import axios, { AxiosInstance } from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   User,
   Event,
@@ -59,7 +60,6 @@ class ApiService {
         // Only fetch from storage if Authorization header is missing
         if (!config.headers.Authorization) {
           try {
-            const AsyncStorage = require('@react-native-async-storage/async-storage').default;
             const token = await AsyncStorage.getItem('@auth_token');
             if (token) {
               config.headers.Authorization = `Bearer ${token}`;

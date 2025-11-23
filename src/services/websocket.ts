@@ -99,7 +99,7 @@ class WebSocketService {
       try {
         listener(connected);
       } catch (error) {
-      
+        console.error('Error notifying connection status:', error);
       }
     });
   }

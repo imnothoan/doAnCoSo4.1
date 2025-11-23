@@ -219,7 +219,7 @@ export default function HangoutScreen() {
                       setIsAvailable(true);
                       loadOnlineUsers(); // Reload to see available users
                     } catch (error) {
-                      
+                      console.error('Error updating hangout status:', error);
                     }
                   },
                 },
@@ -228,7 +228,7 @@ export default function HangoutScreen() {
           }, 1000); // Delay to avoid showing immediately
         }
       } catch (error) {
-
+        console.error('Error initializing hangout visibility:', error);
       }
     };
     
@@ -342,9 +342,7 @@ export default function HangoutScreen() {
    
  
       // Upload background image
-      const result = await ApiService.uploadBackgroundImage(currentUser.id, imageFile);
-      
-     
+      await ApiService.uploadBackgroundImage(currentUser.id, imageFile);
       
       Alert.alert(
         'Success', 
@@ -353,12 +351,11 @@ export default function HangoutScreen() {
       
       // Refresh user data to get new background image
       if (currentUser.username) {
-        const updatedUser = await ApiService.getUserByUsername(currentUser.username);
-     
+        await ApiService.getUserByUsername(currentUser.username);
       }
       
     } catch (error) {
-
+      console.error('Error uploading background image:', error);
       Alert.alert('Error', 'Failed to upload background image. Please try again.');
     } finally {
       setUploadingBackground(false);
