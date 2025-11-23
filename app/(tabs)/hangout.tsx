@@ -27,7 +27,7 @@ const SWIPE_THRESHOLD = 120;
 
 export default function HangoutScreen() {
   const router = useRouter();
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, refreshUser } = useAuth();
   const { colors } = useTheme();
   
   const [users, setUsers] = useState<User[]>([]);
@@ -350,9 +350,7 @@ export default function HangoutScreen() {
       );
       
       // Refresh user data to get new background image
-      if (currentUser.username) {
-        await ApiService.getUserByUsername(currentUser.username);
-      }
+      await refreshUser();
       
     } catch (error) {
       console.error('Error uploading background image:', error);
