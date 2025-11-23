@@ -160,6 +160,11 @@ class ApiService {
     };
   }
 
+  async createProfile(data: any): Promise<User> {
+    const response = await this.client.post('/users/create-profile', data);
+    return mapServerUserToClient(response.data);
+  }
+
   async logout(): Promise<void> {
     await this.client.post('/auth/logout');
   }
@@ -506,10 +511,11 @@ class ApiService {
         : undefined;
 
       // map dm -> user to match client type
-      const mappedType: 'event' | 'user' | 'group' =
+      const mappedType: 'event' | 'user' | 'group' | 'community' =
         c.type === 'group' ? 'group'
           : c.type === 'event' ? 'event'
-            : 'user';
+            : c.type === 'community' ? 'community'
+              : 'user';
 
       // For DM conversations, use other_participant from server if available
       if (mappedType === 'user' && c.other_participant) {

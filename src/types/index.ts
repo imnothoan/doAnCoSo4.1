@@ -256,6 +256,7 @@ export interface LoginCredentials {
 }
 
 export interface SignupData extends LoginCredentials {
+  id: string;
   username: string;
   name: string;
   country: string;

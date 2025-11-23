@@ -344,6 +344,7 @@ const communityService = {
   ): Promise<Community> {
     const formData = new FormData();
     formData.append('avatar', imageFile);
+    formData.append('actor', actor);
 
     const res = await ApiService.client.post(
       `/communities/${communityId}/avatar`,
@@ -360,6 +361,7 @@ const communityService = {
   ): Promise<Community> {
     const formData = new FormData();
     formData.append('cover', imageFile);
+    formData.append('actor', actor);
 
     const res = await ApiService.client.post(
       `/communities/${communityId}/cover`,

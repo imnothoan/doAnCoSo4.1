@@ -44,30 +44,30 @@ export default function SignupScreen() {
       // Use username as temporary full name, other fields will be null
       // User can edit these later in their profile
       await signup(username, username, email, password, DEFAULT_COUNTRY, DEFAULT_CITY, DEFAULT_GENDER);
-      
+
       // Show success message and redirect to login
       Alert.alert(
-        'Success!', 
+        'Success!',
         'Your account has been created successfully. Please sign in to continue.',
         [
-          { 
-            text: 'OK', 
+          {
+            text: 'OK',
             onPress: () => router.replace('/auth/login')
           }
         ]
       );
     } catch (error: any) {
       console.error('Signup error:', error);
-      
+
       // Handle specific backend errors
       let errorMessage = formatAuthError(error);
-      
+
       if (error?.response?.status === 409) {
         errorMessage = 'Email or username already registered. Please use a different one or sign in.';
       } else if (error?.response?.data?.message) {
         errorMessage = error.response.data.message;
       }
-      
+
       Alert.alert('Signup Failed', errorMessage);
     } finally {
       setIsLoading(false);
@@ -76,11 +76,11 @@ export default function SignupScreen() {
 
   return (
     <>
-      <Stack.Screen 
-        options={{ 
+      <Stack.Screen
+        options={{
           title: 'Create Account',
           headerBackTitle: 'Back',
-        }} 
+        }}
       />
       <SafeAreaView style={styles.container} edges={['bottom']}>
         <KeyboardAvoidingView
@@ -165,12 +165,6 @@ export default function SignupScreen() {
                 </TouchableOpacity>
               </View>
 
-              <View style={styles.infoContainer}>
-                <Ionicons name="information-circle-outline" size={20} color="#007AFF" />
-                <Text style={styles.infoText}>
-                  You can update your profile details (full name, country, city, etc.) after creating your account.
-                </Text>
-              </View>
 
               <View style={styles.termsContainer}>
                 <Text style={styles.termsText}>

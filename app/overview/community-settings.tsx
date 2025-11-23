@@ -13,7 +13,7 @@ import {
   FlatList,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useTheme } from '@/src/context/ThemeContext';
@@ -448,6 +448,7 @@ export default function CommunitySettingsScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <Stack.Screen options={{ headerShown: false }} />
       <View style={[styles.header, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color={colors.text} />
@@ -457,9 +458,7 @@ export default function CommunitySettingsScreen() {
       </View>
 
       {/* Tabs */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
+      <View
         style={[styles.tabs, { backgroundColor: colors.card, borderBottomColor: colors.border }]}
       >
         <TouchableOpacity
@@ -496,7 +495,7 @@ export default function CommunitySettingsScreen() {
             </Text>
           </TouchableOpacity>
         )}
-      </ScrollView>
+      </View>
 
       {/* Content */}
       {activeTab === 'settings' && (

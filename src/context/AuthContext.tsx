@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { AppState, AppStateStatus } from 'react-native';
+import { AppState, AppStateStatus, Alert } from 'react-native';
 import { User, AuthState } from '../types';
 import ApiService from '../services/api';
 import WebSocketService from '../services/websocket';
@@ -56,9 +56,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const token = session.access_token;
       const supabaseUser = session.user;
-      
+
       console.log('🔑 Handling session for user:', supabaseUser?.email);
-      
+
       ApiService.setAuthToken(token);
 
       // Fetch user profile from our backend
@@ -75,17 +75,54 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.log('✅ User profile loaded:', user.username);
       } catch (err: any) {
         console.error('❌ Error fetching user profile:', err);
-        
+
         // If backend user doesn't exist but Supabase user does,
-        // we might need to create the backend user
-        if (err?.response?.status === 401 || err?.response?.status === 404) {
-          console.warn('⚠️  User exists in Supabase but not in backend. This might happen if:');
-          console.warn('   1. Signup backend sync failed');
-          console.warn('   2. User was created directly in Supabase');
-          console.warn('   3. Backend database was reset');
-          console.log('💡 You may need to sign up again or contact support');
+        // we try to create the backend user automatically (Recovery Flow)
+        if ((err?.response?.status === 401 || err?.response?.status === 404) && supabaseUser) {
+          console.warn('⚠️  User exists in Supabase but not in backend. Attempting recovery...');
+
+          try {
+            const baseUsername = supabaseUser.user_metadata?.username || supabaseUser.email?.split('@')[0];
+            const name = supabaseUser.user_metadata?.name || supabaseUser.email?.split('@')[0];
+
+            let recoveredUser;
+            try {
+              // First try with original username
+              recoveredUser = await ApiService.createProfile({
+                id: supabaseUser.id,
+                email: supabaseUser.email,
+                username: baseUsername,
+                name: name,
+              });
+            } catch (profileErr: any) {
+              // If username taken (409), try with random suffix
+              if (profileErr?.response?.status === 409) {
+                console.log('⚠️ Username taken during recovery, trying with suffix...');
+                const newUsername = `${baseUsername}_${Math.floor(Math.random() * 10000)}`;
+                recoveredUser = await ApiService.createProfile({
+                  id: supabaseUser.id,
+                  email: supabaseUser.email,
+                  username: newUsername,
+                  name: name,
+                });
+              } else {
+                throw profileErr;
+              }
+            }
+
+            console.log('✅ Recovery successful - User profile created:', recoveredUser.username);
+            user = recoveredUser;
+            await AsyncStorage.setItem(USER_KEY, JSON.stringify(user));
+          } catch (recoveryErr) {
+            console.error('❌ Recovery failed:', recoveryErr);
+            // If recovery fails, we really can't do much else than logout or show error
+            console.warn('   1. Signup backend sync failed');
+            console.warn('   2. User was created directly in Supabase');
+            console.warn('   3. Backend database was reset');
+            console.log('💡 You may need to sign up again or contact support');
+          }
         }
-        
+
         // If we have a stored user, use it as fallback
         if (user) {
           console.log('📦 Using cached user data');
@@ -104,7 +141,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         user,
         token,
       });
-      
+
       console.log('✅ Session handled successfully');
     } catch (error) {
       console.error('❌ Error handling session:', error);
@@ -151,12 +188,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (email: string, password: string) => {
     console.log('🔐 Attempting login for:', email);
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    
+
     if (error) {
       console.error('❌ Login error:', error);
+      Alert.alert('Login Failed', error.message || 'An unexpected error occurred');
       throw error;
     }
-    
+
     console.log('✅ Supabase login successful:', data.user?.email);
     // onAuthStateChange will handle the rest
   };
@@ -164,7 +202,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signup = async (username: string, name: string, email: string, password: string, country: string, city: string, gender?: 'Male' | 'Female' | 'Other') => {
     try {
       console.log('📝 Starting signup process for:', email, 'username:', username);
-      
+
       // 1. Sign up with Supabase Auth
       // Note: Email confirmation is controlled in Supabase Dashboard, not here
       const { data, error } = await supabase.auth.signUp({
@@ -211,8 +249,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } else {
         console.log('⚠️ Email confirmation may be required');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Signup error:', error);
+      Alert.alert('Signup Failed', error.message || 'An unexpected error occurred');
       throw error;
     }
   };
