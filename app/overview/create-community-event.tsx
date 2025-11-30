@@ -9,11 +9,14 @@ import {
   Image,
   Alert,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import { format, addHours } from 'date-fns';
 import { useTheme } from '@/src/context/ThemeContext';
 import { useAuth } from '@/src/context/AuthContext';
 import communityService from '@/src/services/communityService';
@@ -31,11 +34,16 @@ export default function CreateCommunityEventScreen() {
   const [description, setDescription] = useState('');
   const [location, setLocation] = useState('');
   
-  // Use string input for date/time (simpler approach)
-  const [startDateStr, setStartDateStr] = useState('');
-  const [startTimeStr, setStartTimeStr] = useState('');
-  const [endDateStr, setEndDateStr] = useState('');
-  const [endTimeStr, setEndTimeStr] = useState('');
+  // Use Date objects for date/time
+  const [startDate, setStartDate] = useState<Date>(new Date());
+  const [endDate, setEndDate] = useState<Date | null>(null);
+  const [hasEndDate, setHasEndDate] = useState(false);
+  
+  // Picker visibility states
+  const [showStartDatePicker, setShowStartDatePicker] = useState(false);
+  const [showStartTimePicker, setShowStartTimePicker] = useState(false);
+  const [showEndDatePicker, setShowEndDatePicker] = useState(false);
+  const [showEndTimePicker, setShowEndTimePicker] = useState(false);
   
   const [coverImage, setCoverImage] = useState<ImageFile | null>(null);
   const [loading, setLoading] = useState(false);
@@ -63,31 +71,60 @@ export default function CreateCommunityEventScreen() {
     }
   };
 
-  const parseDateTime = (dateStr: string, timeStr: string): Date | null => {
-    if (!dateStr) return null;
-    
-    // Expected format: YYYY-MM-DD for date, HH:MM for time
-    const dateMatch = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-    if (!dateMatch) return null;
-    
-    const [, year, month, day] = dateMatch;
-    let hours = 12, minutes = 0;
-    
-    if (timeStr) {
-      const timeMatch = timeStr.match(/^(\d{1,2}):(\d{2})$/);
-      if (timeMatch) {
-        hours = parseInt(timeMatch[1], 10);
-        minutes = parseInt(timeMatch[2], 10);
-      }
+  const onStartDateChange = (_event: DateTimePickerEvent, selectedDate?: Date) => {
+    setShowStartDatePicker(Platform.OS === 'ios');
+    if (selectedDate) {
+      // Preserve the time from the current startDate
+      const newDate = new Date(selectedDate);
+      newDate.setHours(startDate.getHours(), startDate.getMinutes());
+      setStartDate(newDate);
     }
-    
-    return new Date(
-      parseInt(year, 10),
-      parseInt(month, 10) - 1,
-      parseInt(day, 10),
-      hours,
-      minutes
-    );
+  };
+
+  const onStartTimeChange = (_event: DateTimePickerEvent, selectedDate?: Date) => {
+    setShowStartTimePicker(Platform.OS === 'ios');
+    if (selectedDate) {
+      // Preserve the date from the current startDate
+      const newDate = new Date(startDate);
+      newDate.setHours(selectedDate.getHours(), selectedDate.getMinutes());
+      setStartDate(newDate);
+    }
+  };
+
+  const onEndDateChange = (_event: DateTimePickerEvent, selectedDate?: Date) => {
+    setShowEndDatePicker(Platform.OS === 'ios');
+    if (selectedDate) {
+      const newDate = new Date(selectedDate);
+      if (endDate) {
+        newDate.setHours(endDate.getHours(), endDate.getMinutes());
+      } else {
+        // Use addHours for safe time arithmetic (handles midnight/DST)
+        const defaultEndTime = addHours(startDate, 2);
+        newDate.setHours(defaultEndTime.getHours(), defaultEndTime.getMinutes());
+      }
+      setEndDate(newDate);
+    }
+  };
+
+  const onEndTimeChange = (_event: DateTimePickerEvent, selectedDate?: Date) => {
+    setShowEndTimePicker(Platform.OS === 'ios');
+    if (selectedDate && endDate) {
+      const newDate = new Date(endDate);
+      newDate.setHours(selectedDate.getHours(), selectedDate.getMinutes());
+      setEndDate(newDate);
+    }
+  };
+
+  const toggleEndDate = () => {
+    if (hasEndDate) {
+      setHasEndDate(false);
+      setEndDate(null);
+    } else {
+      setHasEndDate(true);
+      // Default end date is 2 hours after start using addHours for safe time arithmetic
+      const defaultEnd = addHours(startDate, 2);
+      setEndDate(defaultEnd);
+    }
   };
 
   const handleCreate = async () => {
@@ -96,21 +133,19 @@ export default function CreateCommunityEventScreen() {
       return;
     }
 
-    if (!startDateStr) {
-      Alert.alert('Error', 'Start date is required (format: YYYY-MM-DD)');
-      return;
-    }
-
-    const startDate = parseDateTime(startDateStr, startTimeStr);
-    if (!startDate) {
-      Alert.alert('Error', 'Invalid start date format. Use YYYY-MM-DD');
-      return;
-    }
-
-    const endDate = endDateStr ? parseDateTime(endDateStr, endTimeStr) : null;
-
     if (!user?.username) {
       Alert.alert('Error', 'User not authenticated');
+      return;
+    }
+
+    // Validate start date is in the future
+    if (startDate <= new Date()) {
+      Alert.alert('Warning', 'Start date should be in the future. Proceeding anyway.');
+    }
+
+    // Validate end date is after start date
+    if (endDate && endDate <= startDate) {
+      Alert.alert('Error', 'End date must be after start date');
       return;
     }
 
@@ -132,12 +167,20 @@ export default function CreateCommunityEventScreen() {
           onPress: () => router.back(),
         },
       ]);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error creating event:', error);
       Alert.alert('Error', 'Failed to create event. Please try again.');
     } finally {
       setLoading(false);
     }
+  };
+
+  const formatDisplayDate = (date: Date) => {
+    return format(date, 'EEE, MMM d, yyyy');
+  };
+
+  const formatDisplayTime = (date: Date) => {
+    return format(date, 'h:mm a');
   };
 
   return (
@@ -189,57 +232,74 @@ export default function CreateCommunityEventScreen() {
           />
         </View>
 
-        {/* Start Date */}
+        {/* Start Date & Time */}
         <View style={styles.section}>
-          <Text style={[styles.label, { color: colors.text }]}>Start Date * (YYYY-MM-DD)</Text>
-          <TextInput
-            style={[styles.input, { backgroundColor: colors.card, color: colors.text, borderColor: colors.border }]}
-            placeholder="2024-12-25"
-            placeholderTextColor={colors.textMuted}
-            value={startDateStr}
-            onChangeText={setStartDateStr}
-            maxLength={10}
-          />
+          <Text style={[styles.label, { color: colors.text }]}>Start Date & Time *</Text>
+          <View style={styles.dateTimeRow}>
+            <TouchableOpacity
+              style={[styles.dateTimeButton, { backgroundColor: colors.card, borderColor: colors.border }]}
+              onPress={() => setShowStartDatePicker(true)}
+            >
+              <Ionicons name="calendar-outline" size={20} color={colors.primary} />
+              <Text style={[styles.dateTimeText, { color: colors.text }]}>
+                {formatDisplayDate(startDate)}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.dateTimeButton, styles.timeButton, { backgroundColor: colors.card, borderColor: colors.border }]}
+              onPress={() => setShowStartTimePicker(true)}
+            >
+              <Ionicons name="time-outline" size={20} color={colors.primary} />
+              <Text style={[styles.dateTimeText, { color: colors.text }]}>
+                {formatDisplayTime(startDate)}
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
-        {/* Start Time */}
+        {/* End Date Toggle */}
         <View style={styles.section}>
-          <Text style={[styles.label, { color: colors.text }]}>Start Time (HH:MM, 24h format)</Text>
-          <TextInput
-            style={[styles.input, { backgroundColor: colors.card, color: colors.text, borderColor: colors.border }]}
-            placeholder="14:00"
-            placeholderTextColor={colors.textMuted}
-            value={startTimeStr}
-            onChangeText={setStartTimeStr}
-            maxLength={5}
-          />
+          <TouchableOpacity 
+            style={styles.toggleRow} 
+            onPress={toggleEndDate}
+          >
+            <View style={styles.toggleLeft}>
+              <Ionicons 
+                name={hasEndDate ? "checkbox" : "square-outline"} 
+                size={24} 
+                color={hasEndDate ? colors.primary : colors.textMuted} 
+              />
+              <Text style={[styles.toggleText, { color: colors.text }]}>Add end date & time</Text>
+            </View>
+          </TouchableOpacity>
         </View>
 
-        {/* End Date */}
-        <View style={styles.section}>
-          <Text style={[styles.label, { color: colors.text }]}>End Date (YYYY-MM-DD, Optional)</Text>
-          <TextInput
-            style={[styles.input, { backgroundColor: colors.card, color: colors.text, borderColor: colors.border }]}
-            placeholder="2024-12-25"
-            placeholderTextColor={colors.textMuted}
-            value={endDateStr}
-            onChangeText={setEndDateStr}
-            maxLength={10}
-          />
-        </View>
-
-        {/* End Time */}
-        <View style={styles.section}>
-          <Text style={[styles.label, { color: colors.text }]}>End Time (HH:MM, Optional)</Text>
-          <TextInput
-            style={[styles.input, { backgroundColor: colors.card, color: colors.text, borderColor: colors.border }]}
-            placeholder="18:00"
-            placeholderTextColor={colors.textMuted}
-            value={endTimeStr}
-            onChangeText={setEndTimeStr}
-            maxLength={5}
-          />
-        </View>
+        {/* End Date & Time (if enabled) */}
+        {hasEndDate && endDate && (
+          <View style={styles.section}>
+            <Text style={[styles.label, { color: colors.text }]}>End Date & Time</Text>
+            <View style={styles.dateTimeRow}>
+              <TouchableOpacity
+                style={[styles.dateTimeButton, { backgroundColor: colors.card, borderColor: colors.border }]}
+                onPress={() => setShowEndDatePicker(true)}
+              >
+                <Ionicons name="calendar-outline" size={20} color={colors.primary} />
+                <Text style={[styles.dateTimeText, { color: colors.text }]}>
+                  {formatDisplayDate(endDate)}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.dateTimeButton, styles.timeButton, { backgroundColor: colors.card, borderColor: colors.border }]}
+                onPress={() => setShowEndTimePicker(true)}
+              >
+                <Ionicons name="time-outline" size={20} color={colors.primary} />
+                <Text style={[styles.dateTimeText, { color: colors.text }]}>
+                  {formatDisplayTime(endDate)}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
 
         {/* Location */}
         <View style={styles.section}>
@@ -271,9 +331,13 @@ export default function CreateCommunityEventScreen() {
 
         {/* Create Button */}
         <TouchableOpacity
-          style={[styles.createButton, { backgroundColor: colors.primary }]}
+          style={[
+            styles.createButton, 
+            { backgroundColor: colors.primary },
+            (loading || !name.trim()) && styles.createButtonDisabled
+          ]}
           onPress={handleCreate}
-          disabled={loading || !name.trim() || !startDateStr}
+          disabled={loading || !name.trim()}
         >
           {loading ? (
             <ActivityIndicator color="#fff" />
@@ -285,6 +349,45 @@ export default function CreateCommunityEventScreen() {
           )}
         </TouchableOpacity>
       </ScrollView>
+
+      {/* Date/Time Pickers */}
+      {showStartDatePicker && (
+        <DateTimePicker
+          value={startDate}
+          mode="date"
+          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+          onChange={onStartDateChange}
+          minimumDate={new Date()}
+        />
+      )}
+
+      {showStartTimePicker && (
+        <DateTimePicker
+          value={startDate}
+          mode="time"
+          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+          onChange={onStartTimeChange}
+        />
+      )}
+
+      {showEndDatePicker && endDate && (
+        <DateTimePicker
+          value={endDate}
+          mode="date"
+          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+          onChange={onEndDateChange}
+          minimumDate={startDate}
+        />
+      )}
+
+      {showEndTimePicker && endDate && (
+        <DateTimePicker
+          value={endDate}
+          mode="time"
+          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+          onChange={onEndTimeChange}
+        />
+      )}
     </SafeAreaView>
   );
 }
@@ -365,6 +468,39 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginTop: 8,
   },
+  dateTimeRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  dateTimeButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderWidth: 1,
+    borderRadius: 8,
+    gap: 8,
+  },
+  timeButton: {
+    flex: 0.6,
+  },
+  dateTimeText: {
+    fontSize: 15,
+    fontWeight: '500',
+  },
+  toggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  toggleLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  toggleText: {
+    fontSize: 15,
+  },
   createButton: {
     flexDirection: 'row',
     justifyContent: 'center',
@@ -374,6 +510,9 @@ const styles = StyleSheet.create({
     marginTop: 8,
     marginBottom: 32,
     gap: 8,
+  },
+  createButtonDisabled: {
+    opacity: 0.6,
   },
   createButtonText: {
     color: '#fff',
