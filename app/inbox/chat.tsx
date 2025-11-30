@@ -11,6 +11,9 @@ import {
   Image,
   Alert,
   ActivityIndicator,
+  Modal,
+  Dimensions,
+  Pressable,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useLocalSearchParams } from 'expo-router';
@@ -36,9 +39,12 @@ export default function ChatScreen() {
   const [otherUserTyping, setOtherUserTyping] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [showQuickMessages, setShowQuickMessages] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   const flatListRef = useRef<FlatList<Message>>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const screenWidth = Dimensions.get('window').width;
+  const screenHeight = Dimensions.get('window').height;
 
   // Người còn lại trong DM (suy ra từ các sender khác currentUser)
   const otherUser = useMemo<User | undefined>(() => {
@@ -433,13 +439,18 @@ export default function ChatScreen() {
             </Text>
           )}
           {item.image && (
-            <Image
-              source={{ uri: item.image }}
-              style={[
-                styles.messageImage,
-                { borderColor: colors.border },
-              ]}
-            />
+            <TouchableOpacity 
+              onPress={() => setSelectedImage(item.image!)}
+              activeOpacity={0.9}
+            >
+              <Image
+                source={{ uri: item.image }}
+                style={[
+                  styles.messageImage,
+                  { borderColor: colors.border },
+                ]}
+              />
+            </TouchableOpacity>
           )}
             <Text
               style={[
@@ -628,6 +639,39 @@ export default function ChatScreen() {
           )}
         </KeyboardAvoidingView>
       </SafeAreaView>
+
+      {/* Full Image Viewer Modal */}
+      <Modal
+        visible={!!selectedImage}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setSelectedImage(null)}
+      >
+        <Pressable 
+          style={styles.imageModalOverlay}
+          onPress={() => setSelectedImage(null)}
+        >
+          <View style={styles.imageModalContent}>
+            <TouchableOpacity 
+              style={styles.imageModalClose}
+              onPress={() => setSelectedImage(null)}
+            >
+              <Ionicons name="close" size={28} color="#fff" />
+            </TouchableOpacity>
+            {selectedImage && (
+              <Image
+                source={{ uri: selectedImage }}
+                style={{
+                  width: screenWidth - 32,
+                  height: screenHeight * 0.7,
+                  borderRadius: 12,
+                }}
+                resizeMode="contain"
+              />
+            )}
+          </View>
+        </Pressable>
+      </Modal>
     </>
   );
 }
@@ -773,11 +817,12 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   messageImage: {
-    width: '100%',
+    width: 200,
     height: 200,
     borderRadius: 12,
     marginBottom: 8,
     borderWidth: 1,
+    resizeMode: 'cover',
   },
   typingIndicator: {
     position: 'absolute',
@@ -790,5 +835,21 @@ const styles = StyleSheet.create({
   typingText: {
     fontSize: 12,
     fontStyle: 'italic',
+  },
+  imageModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  imageModalContent: {
+    position: 'relative',
+  },
+  imageModalClose: {
+    position: 'absolute',
+    top: -50,
+    right: 0,
+    zIndex: 10,
+    padding: 10,
   },
 });
