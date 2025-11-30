@@ -26,6 +26,10 @@ import ApiService from '@/src/services/api';
 import { useAuth } from '@/src/context/AuthContext';
 import { useTheme } from '@/src/context/ThemeContext';
 
+// Calculate message image size based on screen width (50% of screen width, max 200px)
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const MESSAGE_IMAGE_SIZE = Math.min(Math.round(SCREEN_WIDTH * 0.5), 200);
+
 export default function ChatScreen() {
   const params = useLocalSearchParams();
   const chatId = params.id as string;
@@ -817,8 +821,8 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   messageImage: {
-    width: 200,
-    height: 200,
+    width: MESSAGE_IMAGE_SIZE,
+    height: MESSAGE_IMAGE_SIZE,
     borderRadius: 12,
     marginBottom: 8,
     borderWidth: 1,

@@ -825,13 +825,20 @@ function formatCount(num: number): string {
   return num.toString();
 }
 
+// Role badge colors - intentionally fixed colors for consistent role identification
+const ROLE_COLORS = {
+  admin: '#EF4444',     // Red for admin
+  moderator: '#F59E0B', // Orange/amber for moderator
+  member: '#10B981',    // Green for member
+} as const;
+
 function getRoleColor(role: string): string {
   switch (role) {
     case 'admin':
-      return '#EF4444';
+      return ROLE_COLORS.admin;
     case 'moderator':
-      return '#F59E0B';
+      return ROLE_COLORS.moderator;
     default:
-      return '#10B981';
+      return ROLE_COLORS.member;
   }
 }
