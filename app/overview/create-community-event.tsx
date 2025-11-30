@@ -16,7 +16,7 @@ import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
-import { format } from 'date-fns';
+import { format, addHours } from 'date-fns';
 import { useTheme } from '@/src/context/ThemeContext';
 import { useAuth } from '@/src/context/AuthContext';
 import communityService from '@/src/services/communityService';
@@ -98,7 +98,9 @@ export default function CreateCommunityEventScreen() {
       if (endDate) {
         newDate.setHours(endDate.getHours(), endDate.getMinutes());
       } else {
-        newDate.setHours(startDate.getHours() + 2, startDate.getMinutes());
+        // Use addHours for safe time arithmetic (handles midnight/DST)
+        const defaultEndTime = addHours(startDate, 2);
+        newDate.setHours(defaultEndTime.getHours(), defaultEndTime.getMinutes());
       }
       setEndDate(newDate);
     }
@@ -119,9 +121,8 @@ export default function CreateCommunityEventScreen() {
       setEndDate(null);
     } else {
       setHasEndDate(true);
-      // Default end date is 2 hours after start
-      const defaultEnd = new Date(startDate);
-      defaultEnd.setHours(defaultEnd.getHours() + 2);
+      // Default end date is 2 hours after start using addHours for safe time arithmetic
+      const defaultEnd = addHours(startDate, 2);
       setEndDate(defaultEnd);
     }
   };

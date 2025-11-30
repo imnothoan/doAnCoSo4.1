@@ -253,7 +253,7 @@ const styles = StyleSheet.create({
       position: "absolute",
       bottom: 150,
       right: 25,
-      backgroundColor: "#007AFF",
+      // backgroundColor applied dynamically via inline style using colors.primary
       width: 60,
       height: 60,
       borderRadius: 50,
@@ -320,7 +320,7 @@ const styles = StyleSheet.create({
       borderRadius: 20,
    },
    viewProfileButton: {
-      backgroundColor: "#007AFF",
+      // backgroundColor applied dynamically via inline style using colors.primary
    },
    routeButton: {
       backgroundColor: "#34C759",
