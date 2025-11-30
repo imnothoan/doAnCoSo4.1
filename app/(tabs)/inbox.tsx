@@ -255,7 +255,12 @@ export default function InboxScreen() {
     } catch (e) {
       console.warn('mark read failed:', e);
     } finally {
-      router.push(`/inbox/chat?id=${chat.id}`);
+      // Route to community chat if it's a community conversation
+      if (chat.type === 'community' && chat.communityId) {
+        router.push(`/overview/community-chat?id=${chat.communityId}&name=${encodeURIComponent(chat.name || 'Community Chat')}`);
+      } else {
+        router.push(`/inbox/chat?id=${chat.id}`);
+      }
     }
   }, [router, user?.username]);
 
