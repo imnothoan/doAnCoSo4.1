@@ -648,7 +648,7 @@ export default function CommunityScreen() {
         {activeTab === 'Discussion' && <View style={[styles.separator, { backgroundColor: colors.surfaceVariant }]} />}
       </View>
     );
-  }, [community, me?.avatar, onJoinPress, onLeavePress, onCancelRequest, router, communityId, colors, me?.username, activeTab, members]);
+  }, [community, me?.avatar, onJoinPress, onLeavePress, onCancelRequest, router, communityId, colors, me?.username, activeTab, members, events, loadingEvents]);
 
   const renderItem = useCallback(({ item }: { item: CommunityPost }) => {
     return (
