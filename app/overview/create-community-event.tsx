@@ -17,6 +17,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { useTheme } from '@/src/context/ThemeContext';
 import { useAuth } from '@/src/context/AuthContext';
 import communityService from '@/src/services/communityService';
+import { ImageFile } from '@/src/types';
 
 export default function CreateCommunityEventScreen() {
   const router = useRouter();
@@ -36,7 +37,7 @@ export default function CreateCommunityEventScreen() {
   const [endDateStr, setEndDateStr] = useState('');
   const [endTimeStr, setEndTimeStr] = useState('');
   
-  const [coverImage, setCoverImage] = useState<{ uri: string; type: string; name: string } | null>(null);
+  const [coverImage, setCoverImage] = useState<ImageFile | null>(null);
   const [loading, setLoading] = useState(false);
 
   const handlePickCoverImage = async () => {
@@ -122,7 +123,7 @@ export default function CreateCommunityEventScreen() {
         location: location.trim() || undefined,
         start_time: startDate.toISOString(),
         end_time: endDate ? endDate.toISOString() : undefined,
-        image: coverImage as any,
+        image: coverImage || undefined,
       });
 
       Alert.alert('Success', 'Event created successfully!', [

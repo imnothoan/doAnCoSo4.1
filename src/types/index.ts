@@ -122,6 +122,13 @@ export interface HangoutActivity {
    icon?: string;
 }
 
+// Image file type for uploads
+export interface ImageFile {
+   uri: string;
+   type: string;
+   name: string;
+}
+
 // Chat related types
 export interface Chat {
   id: string;

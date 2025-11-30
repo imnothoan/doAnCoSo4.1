@@ -1,5 +1,5 @@
 import ApiService from './api';
-import { Community, Post, PostMedia } from '../types';
+import { Community, Post, PostMedia, ImageFile } from '../types';
 
 export interface CommunityWithMembership extends Community {
   is_member?: boolean;
@@ -465,7 +465,7 @@ const communityService = {
       location?: string;
       start_time: string;
       end_time?: string;
-      image?: any;
+      image?: ImageFile;
     }
   ): Promise<any> {
     const formData = new FormData();
@@ -474,7 +474,7 @@ const communityService = {
     if (data.location) formData.append('location', data.location);
     formData.append('start_time', data.start_time);
     if (data.end_time) formData.append('end_time', data.end_time);
-    if (data.image) formData.append('image', data.image);
+    if (data.image) formData.append('image', data.image as any);
 
     const res = await ApiService.client.post(
       `/communities/${communityId}/events`,
