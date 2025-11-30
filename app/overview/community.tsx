@@ -11,14 +11,12 @@ import {
   Alert,
   ScrollView,
   TouchableOpacity,
-  Modal,
-  TextInput,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import ApiService from '@/src/services/api';
 import communityService, { CommunityPost } from '@/src/services/communityService';
-import type { Community, User, UserLite } from '@/src/types';
+import type { Community, User, UserLite, CommunityEvent } from '@/src/types';
 import PostItem from '@/components/posts/post_item';
 import CommentsSheet from '@/components/posts/comments_sheet';
 import { useTheme } from '@/src/context/ThemeContext';
@@ -30,7 +28,7 @@ export default function CommunityScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const communityId = useMemo(() => Number(id), [id]);
-  const { colors, isPro } = useTheme();
+  const { colors } = useTheme();
 
   const [me, setMe] = useState<User | null>(null);
   const [community, setCommunity] = useState<(Community & { is_member?: boolean; membership_status?: 'pending' | 'approved' | null }) | null>(null);
@@ -40,6 +38,8 @@ export default function CommunityScreen() {
 
   const [posts, setPosts] = useState<CommunityPost[]>([]);
   const [members, setMembers] = useState<any[]>([]);
+  const [events, setEvents] = useState<CommunityEvent[]>([]);
+  const [loadingEvents, setLoadingEvents] = useState(false);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [hasMore, setHasMore] = useState(true);
@@ -69,11 +69,28 @@ export default function CommunityScreen() {
     }
   }, [communityId]);
 
+  // Load events when Events tab is active
+  const loadEvents = useCallback(async () => {
+    if (!communityId) return;
+    try {
+      setLoadingEvents(true);
+      const data = await communityService.getCommunityEvents(communityId, me?.username);
+      setEvents(data);
+    } catch (e) {
+      console.error('load events error', e);
+      setEvents([]);
+    } finally {
+      setLoadingEvents(false);
+    }
+  }, [communityId, me?.username]);
+
   useEffect(() => {
     if (activeTab === 'People') {
       loadMembers();
+    } else if (activeTab === 'Events') {
+      loadEvents();
     }
-  }, [activeTab, loadMembers]);
+  }, [activeTab, loadMembers, loadEvents]);
 
   useEffect(() => {
     (async () => {
@@ -395,16 +412,111 @@ export default function CommunityScreen() {
       </View>
     );
 
+    // Helper function to format event date
+    const formatEventDate = (dateStr: string) => {
+      const date = new Date(dateStr);
+      return date.toLocaleDateString('en-US', {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
+      });
+    };
+
+    const formatEventTime = (dateStr: string) => {
+      const date = new Date(dateStr);
+      return date.toLocaleTimeString('en-US', {
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true,
+      });
+    };
+
     // Helper to render Events tab content  
     const renderEventsContent = () => (
       <View style={[styles.tabContentContainer, { backgroundColor: colors.background, padding: 16 }]}>
-        <View style={styles.emptyTabContainer}>
-          <Ionicons name="calendar-outline" size={48} color={colors.textMuted} />
-          <Text style={[styles.emptyTabText, { color: colors.textMuted }]}>No events scheduled</Text>
-          <Text style={[styles.emptyTabSubtext, { color: colors.textMuted }]}>
-            Events feature coming soon!
-          </Text>
-        </View>
+        {/* Create Event Button - only for members */}
+        {community.is_member && (
+          <TouchableOpacity
+            style={[styles.createEventButton, { backgroundColor: colors.primary }]}
+            onPress={() => router.push({
+              pathname: '/overview/create-community-event',
+              params: { communityId: String(communityId), communityName: community.name },
+            })}
+          >
+            <Ionicons name="add-circle-outline" size={20} color="#fff" />
+            <Text style={styles.createEventButtonText}>Create Event</Text>
+          </TouchableOpacity>
+        )}
+
+        {loadingEvents ? (
+          <View style={styles.emptyTabContainer}>
+            <ActivityIndicator size="large" color={colors.primary} />
+          </View>
+        ) : events.length === 0 ? (
+          <View style={styles.emptyTabContainer}>
+            <Ionicons name="calendar-outline" size={48} color={colors.textMuted} />
+            <Text style={[styles.emptyTabText, { color: colors.textMuted }]}>No events scheduled</Text>
+            <Text style={[styles.emptyTabSubtext, { color: colors.textMuted }]}>
+              {community.is_member 
+                ? 'Be the first to create an event!' 
+                : 'Join this community to create events'}
+            </Text>
+          </View>
+        ) : (
+          <View>
+            {events.map((event) => (
+              <TouchableOpacity
+                key={event.id}
+                style={[styles.eventCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+                onPress={() => router.push({
+                  pathname: '/overview/community-event-detail',
+                  params: { communityId: String(communityId), eventId: String(event.id) },
+                })}
+              >
+                {event.image_url && (
+                  <Image source={{ uri: event.image_url }} style={styles.eventImage} />
+                )}
+                <View style={styles.eventContent}>
+                  <View style={[styles.eventDateBadge, { backgroundColor: colors.primary + '15' }]}>
+                    <Ionicons name="calendar" size={14} color={colors.primary} />
+                    <Text style={[styles.eventDateText, { color: colors.primary }]}>
+                      {formatEventDate(event.start_time)} • {formatEventTime(event.start_time)}
+                    </Text>
+                  </View>
+                  <Text style={[styles.eventName, { color: colors.text }]} numberOfLines={2}>
+                    {event.name}
+                  </Text>
+                  {event.location && (
+                    <View style={styles.eventLocationRow}>
+                      <Ionicons name="location-outline" size={14} color={colors.textMuted} />
+                      <Text style={[styles.eventLocation, { color: colors.textMuted }]} numberOfLines={1}>
+                        {event.location}
+                      </Text>
+                    </View>
+                  )}
+                  <View style={styles.eventStatsRow}>
+                    <View style={styles.eventStatItem}>
+                      <Ionicons name="people-outline" size={14} color={colors.textMuted} />
+                      <Text style={[styles.eventStatText, { color: colors.textMuted }]}>
+                        {event.participant_count || 0} going
+                      </Text>
+                    </View>
+                    {event.is_going && (
+                      <View style={[styles.goingBadge, { backgroundColor: colors.success || '#10B981' }]}>
+                        <Text style={styles.goingBadgeText}>Going ✓</Text>
+                      </View>
+                    )}
+                    {event.is_interested && !event.is_going && (
+                      <View style={[styles.goingBadge, { backgroundColor: colors.warning || '#F59E0B' }]}>
+                        <Text style={styles.goingBadgeText}>Interested</Text>
+                      </View>
+                    )}
+                  </View>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
       </View>
     );
 
@@ -816,6 +928,87 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
     flex: 1,
+  },
+
+  // Event Tab Styles
+  createEventButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 14,
+    borderRadius: 8,
+    marginBottom: 16,
+    gap: 8,
+  },
+  createEventButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  eventCard: {
+    borderRadius: 12,
+    marginBottom: 12,
+    overflow: 'hidden',
+    borderWidth: 1,
+  },
+  eventImage: {
+    width: '100%',
+    height: 140,
+  },
+  eventContent: {
+    padding: 14,
+  },
+  eventDateBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginBottom: 8,
+    gap: 4,
+  },
+  eventDateText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  eventName: {
+    fontSize: 17,
+    fontWeight: '700',
+    marginBottom: 8,
+  },
+  eventLocationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+    gap: 4,
+  },
+  eventLocation: {
+    fontSize: 13,
+    flex: 1,
+  },
+  eventStatsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  eventStatItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  eventStatText: {
+    fontSize: 13,
+  },
+  goingBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  goingBadgeText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
   },
 });
 
