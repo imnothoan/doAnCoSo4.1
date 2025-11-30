@@ -3,6 +3,7 @@ import { Community, Post, PostMedia } from '../types';
 
 export interface CommunityWithMembership extends Community {
   is_member?: boolean;
+  membership_status?: 'pending' | 'approved' | null;
 }
 
 export type CommunityPost = Post & {

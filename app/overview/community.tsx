@@ -10,6 +10,9 @@ import {
   RefreshControl,
   Alert,
   ScrollView,
+  TouchableOpacity,
+  Modal,
+  TextInput,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -21,6 +24,8 @@ import CommentsSheet from '@/components/posts/comments_sheet';
 import { useTheme } from '@/src/context/ThemeContext';
 import { postService } from '@/src/services/postService';
 
+type TabType = 'Discussion' | 'People' | 'Events' | 'Details';
+
 export default function CommunityScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -28,11 +33,13 @@ export default function CommunityScreen() {
   const { colors, isPro } = useTheme();
 
   const [me, setMe] = useState<User | null>(null);
-  const [community, setCommunity] = useState<(Community & { is_member?: boolean }) | null>(null);
+  const [community, setCommunity] = useState<(Community & { is_member?: boolean; membership_status?: 'pending' | 'approved' | null }) | null>(null);
   const cover = community?.cover_image || community?.image_url;
   const [myRole, setMyRole] = useState<'admin' | 'moderator' | 'member' | null>(null);
+  const [activeTab, setActiveTab] = useState<TabType>('Discussion');
 
   const [posts, setPosts] = useState<CommunityPost[]>([]);
+  const [members, setMembers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [hasMore, setHasMore] = useState(true);
@@ -50,6 +57,23 @@ export default function CommunityScreen() {
     }
     return null;
   }, [me]);
+
+  // Load members when People tab is active
+  const loadMembers = useCallback(async () => {
+    if (!communityId) return;
+    try {
+      const data = await communityService.getCommunityMembers(communityId);
+      setMembers(data);
+    } catch (e) {
+      console.error('load members error', e);
+    }
+  }, [communityId]);
+
+  useEffect(() => {
+    if (activeTab === 'People') {
+      loadMembers();
+    }
+  }, [activeTab, loadMembers]);
 
   useEffect(() => {
     (async () => {
@@ -150,9 +174,22 @@ export default function CommunityScreen() {
     if (!communityId || !me?.username) return;
     try {
       await communityService.joinCommunity(communityId, me.username);
-      setCommunity((prev) => prev ? { ...prev, is_member: true, member_count: (prev.member_count ?? 0) + 1 } : prev);
+      
+      // Check if community requires approval - if so, set pending status
+      const requiresApproval = community?.requires_member_approval || community?.is_private;
+      if (requiresApproval) {
+        setCommunity((prev) => prev ? { ...prev, membership_status: 'pending' } : prev);
+        Alert.alert(
+          'Request Sent',
+          'This community requires approval. Your join request has been sent to the admins.',
+          [{ text: 'OK' }]
+        );
+      } else {
+        setCommunity((prev) => prev ? { ...prev, is_member: true, membership_status: 'approved', member_count: (prev.member_count ?? 0) + 1 } : prev);
+      }
     } catch (e: any) {
       if (e.message === 'REQUIRES_REQUEST') {
+        setCommunity((prev) => prev ? { ...prev, membership_status: 'pending' } : prev);
         Alert.alert(
           'Request Sent',
           'This community requires approval. Your join request has been sent to the admins.',
@@ -163,7 +200,7 @@ export default function CommunityScreen() {
         Alert.alert('Error', 'Failed to join community.');
       }
     }
-  }, [communityId, me?.username]);
+  }, [communityId, me?.username, community]);
 
   const onLeavePress = useCallback(async () => {
     if (!communityId || !me?.username || !community) return;
@@ -189,7 +226,7 @@ export default function CommunityScreen() {
           onPress: async () => {
             try {
               await communityService.leaveCommunity(communityId, me.username!);
-              setCommunity((prev) => prev ? { ...prev, is_member: false, member_count: Math.max(0, (prev.member_count ?? 0) - 1) } : prev);
+              setCommunity((prev) => prev ? { ...prev, is_member: false, membership_status: null, member_count: Math.max(0, (prev.member_count ?? 0) - 1) } : prev);
               // Clear posts when leaving since user can no longer see them
               setPosts([]);
               setHasMore(false);
@@ -202,6 +239,32 @@ export default function CommunityScreen() {
       ]
     );
   }, [communityId, me?.username, community]);
+
+  // Cancel pending join request
+  const onCancelRequest = useCallback(async () => {
+    if (!communityId || !me?.username) return;
+
+    Alert.alert(
+      'Cancel Request',
+      'Are you sure you want to cancel your join request?',
+      [
+        { text: 'No', style: 'cancel' },
+        {
+          text: 'Yes',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await communityService.leaveCommunity(communityId, me.username!);
+              setCommunity((prev) => prev ? { ...prev, membership_status: null } : prev);
+            } catch (e) {
+              console.error(e);
+              Alert.alert('Error', 'Failed to cancel request.');
+            }
+          }
+        }
+      ]
+    );
+  }, [communityId, me?.username]);
 
   const onLikeToggle = useCallback(
     async (post: CommunityPost, nextLiked: boolean) => {
@@ -245,6 +308,106 @@ export default function CommunityScreen() {
   const renderHeader = useMemo(() => {
     if (!community) return null;
 
+    // Helper to render People tab content
+    const renderPeopleContent = () => (
+      <View style={[styles.tabContentContainer, { backgroundColor: colors.background }]}>
+        {members.length === 0 ? (
+          <View style={styles.emptyTabContainer}>
+            <Ionicons name="people-outline" size={48} color={colors.textMuted} />
+            <Text style={[styles.emptyTabText, { color: colors.textMuted }]}>No members yet</Text>
+          </View>
+        ) : (
+          members.map((member) => (
+            <TouchableOpacity 
+              key={member.username} 
+              style={[styles.memberItem, { backgroundColor: colors.card, borderBottomColor: colors.border }]}
+              onPress={() => router.push(`/account/profile?username=${member.username}`)}
+            >
+              {member.user?.avatar ? (
+                <Image source={{ uri: member.user.avatar }} style={styles.memberAvatar} />
+              ) : (
+                <View style={[styles.memberAvatar, styles.memberAvatarPlaceholder, { backgroundColor: colors.border }]}>
+                  <Ionicons name="person" size={24} color={colors.textMuted} />
+                </View>
+              )}
+              <View style={styles.memberInfo}>
+                <Text style={[styles.memberName, { color: colors.text }]}>
+                  {member.user?.name || member.username}
+                </Text>
+                <View style={styles.memberRoleContainer}>
+                  <View style={[styles.roleBadge, { backgroundColor: getRoleColor(member.role) }]}>
+                    <Text style={styles.roleText}>{member.role}</Text>
+                  </View>
+                </View>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+            </TouchableOpacity>
+          ))
+        )}
+      </View>
+    );
+
+    // Helper to render Details tab content
+    const renderDetailsContent = () => (
+      <View style={[styles.tabContentContainer, { backgroundColor: colors.background, padding: 16 }]}>
+        <View style={[styles.detailsCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <Text style={[styles.detailsTitle, { color: colors.text }]}>About this community</Text>
+          <Text style={[styles.detailsText, { color: colors.textSecondary }]}>
+            {community.description || community.bio || 'No description available'}
+          </Text>
+          
+          <View style={[styles.detailsDivider, { backgroundColor: colors.border }]} />
+          
+          <Text style={[styles.detailsSubtitle, { color: colors.text }]}>Community Info</Text>
+          <View style={styles.detailsRow}>
+            <Ionicons name={community.is_private ? "lock-closed" : "globe"} size={18} color={colors.textSecondary} />
+            <Text style={[styles.detailsRowText, { color: colors.textSecondary }]}>
+              {community.is_private ? 'Private group' : 'Public group'}
+            </Text>
+          </View>
+          <View style={styles.detailsRow}>
+            <Ionicons name="people" size={18} color={colors.textSecondary} />
+            <Text style={[styles.detailsRowText, { color: colors.textSecondary }]}>
+              {community.member_count ?? 0} members
+            </Text>
+          </View>
+          <View style={styles.detailsRow}>
+            <Ionicons name="calendar" size={18} color={colors.textSecondary} />
+            <Text style={[styles.detailsRowText, { color: colors.textSecondary }]}>
+              Created {new Date(community.created_at).toLocaleDateString()}
+            </Text>
+          </View>
+          
+          <View style={[styles.detailsDivider, { backgroundColor: colors.border }]} />
+          
+          <Text style={[styles.detailsSubtitle, { color: colors.text }]}>Owner</Text>
+          <TouchableOpacity 
+            style={styles.ownerRow}
+            onPress={() => router.push(`/account/profile?username=${community.created_by}`)}
+          >
+            <View style={[styles.ownerAvatar, { backgroundColor: colors.primary }]}>
+              <Ionicons name="person" size={20} color="#fff" />
+            </View>
+            <Text style={[styles.ownerName, { color: colors.text }]}>{community.created_by}</Text>
+            <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+
+    // Helper to render Events tab content  
+    const renderEventsContent = () => (
+      <View style={[styles.tabContentContainer, { backgroundColor: colors.background, padding: 16 }]}>
+        <View style={styles.emptyTabContainer}>
+          <Ionicons name="calendar-outline" size={48} color={colors.textMuted} />
+          <Text style={[styles.emptyTabText, { color: colors.textMuted }]}>No events scheduled</Text>
+          <Text style={[styles.emptyTabSubtext, { color: colors.textMuted }]}>
+            Events feature coming soon!
+          </Text>
+        </View>
+      </View>
+    );
+
     return (
       <View style={{ backgroundColor: colors.card }}>
         {/* TOP BANNER - Full Width 16:9 */}
@@ -278,6 +441,11 @@ export default function CommunityScreen() {
                   <Ionicons name="chevron-down" size={16} color={colors.text} />
                 </Pressable>
               </>
+            ) : community.membership_status === 'pending' ? (
+              <Pressable style={[styles.actionBtn, styles.pendingBtn, { borderColor: colors.warning, backgroundColor: colors.highlight }]} onPress={onCancelRequest}>
+                <Ionicons name="time-outline" size={18} color={colors.warning} style={{ marginRight: 6 }} />
+                <Text style={[styles.btnText, { color: colors.warning }]}>Pending Approval</Text>
+              </Pressable>
             ) : (
               <Pressable style={[styles.actionBtn, { backgroundColor: colors.primary, flex: 1 }]} onPress={onJoinPress}>
                 <Text style={[styles.btnText, { color: '#fff', fontWeight: '600' }]}>Join Group</Text>
@@ -315,16 +483,20 @@ export default function CommunityScreen() {
 
         {/* TABS */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={[styles.tabsContainer, { borderBottomColor: colors.border }]}>
-          {['Discussion', 'People', 'Events', 'Details'].map((tab) => (
-            <Pressable key={tab} style={[styles.tabItem, tab === 'Discussion' && styles.activeTabItem]}>
-              <Text style={[styles.tabText, { color: tab === 'Discussion' ? colors.primary : colors.textSecondary }]}>{tab}</Text>
-              {tab === 'Discussion' && <View style={[styles.activeIndicator, { backgroundColor: colors.primary }]} />}
+          {(['Discussion', 'People', 'Events', 'Details'] as TabType[]).map((tab) => (
+            <Pressable 
+              key={tab} 
+              style={[styles.tabItem, activeTab === tab && styles.activeTabItem]}
+              onPress={() => setActiveTab(tab)}
+            >
+              <Text style={[styles.tabText, { color: activeTab === tab ? colors.primary : colors.textSecondary }]}>{tab}</Text>
+              {activeTab === tab && <View style={[styles.activeIndicator, { backgroundColor: colors.primary }]} />}
             </Pressable>
           ))}
         </ScrollView>
 
-        {/* COMPOSER (Only for members) */}
-        {community.is_member && (
+        {/* COMPOSER (Only for members on Discussion tab) */}
+        {community.is_member && activeTab === 'Discussion' && (
           <View style={[styles.composerBox, { backgroundColor: colors.card }]}>
             {me?.avatar ? (
               <Image source={{ uri: me.avatar }} style={styles.avatar} />
@@ -344,7 +516,7 @@ export default function CommunityScreen() {
         )}
 
         {/* Private Notice */}
-        {community.is_private && !community.is_member && (
+        {community.is_private && !community.is_member && activeTab === 'Discussion' && (
           <View style={[styles.privateNotice, { backgroundColor: colors.surface }]}>
             <View style={styles.lockIconCircle}>
               <Ionicons name="lock-closed" size={24} color={colors.text} />
@@ -356,10 +528,15 @@ export default function CommunityScreen() {
           </View>
         )}
 
-        <View style={[styles.separator, { backgroundColor: colors.surfaceVariant }]} />
+        {/* Tab Content */}
+        {activeTab === 'People' && renderPeopleContent()}
+        {activeTab === 'Events' && renderEventsContent()}
+        {activeTab === 'Details' && renderDetailsContent()}
+
+        {activeTab === 'Discussion' && <View style={[styles.separator, { backgroundColor: colors.surfaceVariant }]} />}
       </View>
     );
-  }, [community, me?.avatar, onJoinPress, onLeavePress, router, communityId, colors, me?.username]);
+  }, [community, me?.avatar, onJoinPress, onLeavePress, onCancelRequest, router, communityId, colors, me?.username, activeTab, members]);
 
   const renderItem = useCallback(({ item }: { item: CommunityPost }) => {
     return (
@@ -422,17 +599,17 @@ export default function CommunityScreen() {
     <>
       <FlatList
         style={[styles.container, { backgroundColor: colors.background }]}
-        data={posts}
+        data={activeTab === 'Discussion' ? posts : []}
         keyExtractor={(it) => String(it.id)}
         renderItem={renderItem}
         ListHeaderComponent={renderHeader}
         onEndReachedThreshold={0.3}
-        onEndReached={loadMore}
+        onEndReached={activeTab === 'Discussion' ? loadMore : undefined}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
         }
         ListFooterComponent={
-          hasMore ? (
+          activeTab === 'Discussion' && hasMore ? (
             <View style={{ paddingVertical: 16, backgroundColor: colors.background }}>
               <ActivityIndicator color={colors.primary} />
             </View>
@@ -476,6 +653,10 @@ const styles = StyleSheet.create({
   joinedBtn: { 
     borderWidth: 1, 
     backgroundColor: 'transparent',
+    flex: 1
+  },
+  pendingBtn: {
+    borderWidth: 1,
     flex: 1
   },
   btnText: { fontSize: 15, fontWeight: '600' },
@@ -525,10 +706,139 @@ const styles = StyleSheet.create({
   privateDesc: { fontSize: 14, textAlign: 'center', paddingHorizontal: 32 },
 
   separator: { height: 8, width: '100%' },
+
+  // Tab Content Styles
+  tabContentContainer: {
+    minHeight: 200,
+  },
+  emptyTabContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 60,
+  },
+  emptyTabText: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginTop: 12,
+  },
+  emptyTabSubtext: {
+    fontSize: 14,
+    marginTop: 4,
+  },
+
+  // Member List Styles
+  memberItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderBottomWidth: 1,
+  },
+  memberAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+  },
+  memberAvatarPlaceholder: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  memberInfo: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  memberName: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  memberRoleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  roleBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  roleText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#fff',
+    textTransform: 'uppercase',
+  },
+
+  // Details Tab Styles
+  detailsCard: {
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+  },
+  detailsTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 8,
+  },
+  detailsText: {
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  detailsDivider: {
+    height: 1,
+    marginVertical: 16,
+  },
+  detailsSubtitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    marginBottom: 12,
+  },
+  detailsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+    gap: 10,
+  },
+  detailsRowText: {
+    fontSize: 14,
+  },
+  ownerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  ownerAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  ownerName: {
+    fontSize: 15,
+    fontWeight: '600',
+    flex: 1,
+  },
 });
 
 function formatCount(num: number): string {
   if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
   if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
   return num.toString();
+}
+
+// Role badge colors - intentionally fixed colors for consistent role identification
+const ROLE_COLORS = {
+  admin: '#EF4444',     // Red for admin
+  moderator: '#F59E0B', // Orange/amber for moderator
+  member: '#10B981',    // Green for member
+} as const;
+
+function getRoleColor(role: string): string {
+  switch (role) {
+    case 'admin':
+      return ROLE_COLORS.admin;
+    case 'moderator':
+      return ROLE_COLORS.moderator;
+    default:
+      return ROLE_COLORS.member;
+  }
 }
