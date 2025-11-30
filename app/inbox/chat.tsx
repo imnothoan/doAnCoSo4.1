@@ -325,7 +325,7 @@ export default function ChatScreen() {
         await ApiService.sendMessageWithImage(
           chatId,
           currentUser.username,
-          inputText || '📷 Photo',
+          inputText || 'Photo',
           imageFile
         );
         setInputText('');
