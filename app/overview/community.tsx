@@ -19,6 +19,7 @@ import type { Community, User, UserLite } from '@/src/types';
 import PostItem from '@/components/posts/post_item';
 import CommentsSheet from '@/components/posts/comments_sheet';
 import { useTheme } from '@/src/context/ThemeContext';
+import { postService } from '@/src/services/postService';
 
 export default function CommunityScreen() {
   const router = useRouter();
@@ -28,14 +29,14 @@ export default function CommunityScreen() {
 
   const [me, setMe] = useState<User | null>(null);
   const [community, setCommunity] = useState<(Community & { is_member?: boolean }) | null>(null);
+  const cover = community?.cover_image || community?.image_url;
+  const [myRole, setMyRole] = useState<'admin' | 'moderator' | 'member' | null>(null);
 
   const [posts, setPosts] = useState<CommunityPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const cursorRef = useRef<string | null>(null);
-
-  const [joiningLoading, setJoiningLoading] = useState(false);
 
   const [commentsVisible, setCommentsVisible] = useState(false);
   const [selectedPostId, setSelectedPostId] = useState<number | null>(null);
@@ -50,7 +51,6 @@ export default function CommunityScreen() {
     return null;
   }, [me]);
 
-  // Load current user (để lấy avatar + username)
   useEffect(() => {
     (async () => {
       try {
@@ -62,13 +62,18 @@ export default function CommunityScreen() {
     })();
   }, []);
 
-  // Load community header
   useEffect(() => {
     if (!communityId) return;
     (async () => {
       try {
         setLoading(true);
         const viewer = me?.username;
+
+        if (me?.username) {
+          const role = await communityService.getMemberRole(communityId, me.username);
+          setMyRole(role);
+        }
+
         const c = await communityService.getCommunity(communityId, viewer);
         setCommunity(c);
 
@@ -142,9 +147,7 @@ export default function CommunityScreen() {
   }, [communityId, hasMore, loading]);
 
   const onJoinPress = useCallback(async () => {
-    if (!communityId || !me?.username || joiningLoading) return;
-
-    setJoiningLoading(true);
+    if (!communityId || !me?.username) return;
     try {
       await communityService.joinCommunity(communityId, me.username);
       setCommunity((prev) => prev ? { ...prev, is_member: true, member_count: (prev.member_count ?? 0) + 1 } : prev);
@@ -159,13 +162,11 @@ export default function CommunityScreen() {
         console.error(e);
         Alert.alert('Error', 'Failed to join community.');
       }
-    } finally {
-      setJoiningLoading(false);
     }
-  }, [communityId, me?.username, joiningLoading]);
+  }, [communityId, me?.username]);
 
   const onLeavePress = useCallback(async () => {
-    if (!communityId || !me?.username || !community || joiningLoading) return;
+    if (!communityId || !me?.username || !community) return;
 
     // Check if owner
     if (community.created_by === me.username) {
@@ -186,39 +187,60 @@ export default function CommunityScreen() {
           text: 'Leave',
           style: 'destructive',
           onPress: async () => {
-            setJoiningLoading(true);
             try {
               await communityService.leaveCommunity(communityId, me.username!);
-              setCommunity((prev) => prev ? { ...prev, is_member: false, member_count: Math.max(0, (prev.member_count ?? 1) - 1) } : prev);
+              setCommunity((prev) => prev ? { ...prev, is_member: false, member_count: Math.max(0, (prev.member_count ?? 0) - 1) } : prev);
               // Clear posts when leaving since user can no longer see them
               setPosts([]);
               setHasMore(false);
             } catch (e) {
               console.error(e);
               Alert.alert('Error', 'Failed to leave community.');
-            } finally {
-              setJoiningLoading(false);
             }
-          },
-        },
+          }
+        }
       ]
     );
-  }, [communityId, me?.username, community, joiningLoading]);
+  }, [communityId, me?.username, community]);
 
-  const onLikeToggle = useCallback(async (post: CommunityPost, isCurrentlyLiked: boolean) => {
-    if (!me?.username) return;
-    try {
-      if (isCurrentlyLiked) {
-        await communityService.unlikePost(communityId, post.id, me.username);
-        setPosts((prev) => prev.map(p => p.id === post.id ? { ...p, like_count: Math.max(0, (p.like_count || 0) - 1) } : p));
-      } else {
-        await communityService.likePost(communityId, post.id, me.username);
-        setPosts((prev) => prev.map(p => p.id === post.id ? { ...p, like_count: (p.like_count || 0) + 1 } : p));
+  const onLikeToggle = useCallback(
+    async (post: CommunityPost, nextLiked: boolean) => {
+      if (!me?.username) return;
+
+      try {
+        if (nextLiked) {
+          const res = await postService.like(post.id);
+
+          setPosts(prev =>
+            prev.map(p =>
+              p.id === post.id
+                ? {
+                    ...p,
+                    like_count: res?.like_count ?? (p.like_count || 0) + 1,
+                  }
+                : p
+            )
+          );
+        } else {
+          const res = await postService.unlike(post.id);
+
+          setPosts(prev =>
+            prev.map(p =>
+              p.id === post.id
+                ? {
+                    ...p,
+                    like_count: res?.like_count ?? Math.max(0, (p.like_count || 0) - 1),
+                  }
+                : p
+            )
+          );
+        }
+      } catch (e) {
+        console.error(e);
       }
-    } catch (e) {
-      console.error(e);
-    }
-  }, [communityId, me?.username]);
+    },
+    [me?.username]
+  );
 
   const renderHeader = useMemo(() => {
     if (!community) return null;
@@ -227,17 +249,13 @@ export default function CommunityScreen() {
       <View style={{ backgroundColor: colors.card }}>
         {/* TOP BANNER - Full Width 16:9 */}
         <View style={styles.bannerContainer}>
-          {(community.cover_image || community.image_url) ? (
-            <Image source={{ uri: community.cover_image || community.image_url || undefined }} style={styles.banner} resizeMode="cover" />
+          {cover ? (
+            <Image source={{ uri: cover }} style={styles.banner} />
           ) : (
             <View style={[styles.banner, { backgroundColor: colors.primary, justifyContent: 'center', alignItems: 'center' }]}>
               <Ionicons name="people" size={64} color="rgba(255,255,255,0.5)" />
             </View>
           )}
-          {/* Back Button Overlay */}
-          <Pressable style={styles.backButtonOverlay} onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={24} color="#fff" />
-          </Pressable>
         </View>
 
         {/* HEADER INFO */}
@@ -255,46 +273,30 @@ export default function CommunityScreen() {
           <View style={styles.actionBar}>
             {community.is_member ? (
               <>
-                <Pressable
-                  style={[styles.actionBtn, { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, opacity: joiningLoading ? 0.6 : 1 }]}
-                  onPress={onLeavePress}
-                  disabled={joiningLoading}
-                >
+                <Pressable style={[styles.actionBtn, styles.joinedBtn, { borderColor: colors.border }]} onPress={onLeavePress}>
                   <Text style={[styles.btnText, { color: colors.text }]}>Joined</Text>
                   <Ionicons name="chevron-down" size={16} color={colors.text} />
                 </Pressable>
-                <Pressable
-                  style={[styles.actionBtn, { backgroundColor: colors.primary }]}
-                  onPress={() => Alert.alert('Invite', 'Invite feature is coming soon!')}
-                >
-                  <Ionicons name="person-add" size={20} color="#fff" />
-                  <Text style={[styles.btnText, { color: '#fff' }]}>Invite</Text>
-                </Pressable>
               </>
             ) : (
-              <Pressable
-                style={[styles.actionBtn, { backgroundColor: colors.primary, flex: 1, opacity: joiningLoading ? 0.6 : 1 }]}
-                onPress={onJoinPress}
-                disabled={joiningLoading}
-              >
-                <Text style={[styles.btnText, { color: '#fff', fontWeight: '600' }]}>
-                  {joiningLoading ? 'Joining...' : 'Join Group'}
-                </Text>
+              <Pressable style={[styles.actionBtn, { backgroundColor: colors.primary, flex: 1 }]} onPress={onJoinPress}>
+                <Text style={[styles.btnText, { color: '#fff', fontWeight: '600' }]}>Join Group</Text>
               </Pressable>
             )}
 
             {/* Manage / Settings */}
-            {me?.username === community.created_by && (
-              <Pressable
-                style={[styles.iconBtn, { backgroundColor: colors.surface }]}
-                onPress={() => router.push({
-                  pathname: '/overview/community-settings',
-                  params: { id: String(communityId) },
-                })}
-              >
-                <Ionicons name="shield-checkmark" size={20} color={colors.text} />
-              </Pressable>
-            )}
+            {myRole === 'admin' || myRole === 'moderator' || me?.username === community.created_by ? (
+                <Pressable
+                  style={[styles.iconBtn, { backgroundColor: colors.surface }]}
+                  onPress={() => router.push({
+                    pathname: '/overview/community-settings',
+                    params: { id: String(communityId) },
+                  })}
+                >
+                  <Ionicons name="shield-checkmark" size={20} color={colors.text} />
+                </Pressable>
+            ) : null}
+                   
 
             {/* Chat Button */}
             {community.is_member && (
@@ -313,7 +315,7 @@ export default function CommunityScreen() {
 
         {/* TABS */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={[styles.tabsContainer, { borderBottomColor: colors.border }]}>
-          {['Discussion', 'People', 'Events'].map((tab) => (
+          {['Discussion', 'People', 'Events', 'Details'].map((tab) => (
             <Pressable key={tab} style={[styles.tabItem, tab === 'Discussion' && styles.activeTabItem]}>
               <Text style={[styles.tabText, { color: tab === 'Discussion' ? colors.primary : colors.textSecondary }]}>{tab}</Text>
               {tab === 'Discussion' && <View style={[styles.activeIndicator, { backgroundColor: colors.primary }]} />}
@@ -363,15 +365,49 @@ export default function CommunityScreen() {
     return (
       <PostItem
         post={item}
+        meUsername={me?.username ?? "user"}
+
+        onEditClick={(p) => {
+          router.push(`/overview/post?edit=1&postId=${p.id}`); 
+        }}
+
+        onDeleteClick={async (p) => {
+          Alert.alert(
+            "Delete Post",
+            "Are you sure you want to delete this post?",
+            [
+              { text: "Cancel", style: "cancel" },
+              {
+                text: "Delete",
+                style: "destructive",
+                onPress: async () => {
+                  try {
+                    await postService.delete(p.id, me?.username!);
+
+                    setPosts((prev) => prev.filter((x) => x.id !== p.id));
+
+                    Alert.alert("Success", "Post deleted.");
+                  } catch (err) {
+                    console.error(err);
+                    Alert.alert("Error", "Failed to delete post.");
+                  }
+                }
+              }
+            ]
+          );
+        }}
+
         onCommentClick={(p) => {
           setSelectedPostId(p.id);
           setCommentsVisible(true);
         }}
+
         onLikeToggle={(p, liked) => onLikeToggle(p as any, liked)}
-        initialIsLiked={false}
+        initialIsLiked={item.isLikedByViewer ?? false}
       />
     );
-  }, [onLikeToggle]);
+  }, [onLikeToggle, me?.username]);
+
 
 
   if (loading && posts.length === 0) {
@@ -437,7 +473,11 @@ const styles = StyleSheet.create({
     paddingVertical: 8, paddingHorizontal: 16, borderRadius: 8,
     gap: 6,
   },
-  joinedBtn: { borderWidth: 1, backgroundColor: 'transparent' },
+  joinedBtn: { 
+    borderWidth: 1, 
+    backgroundColor: 'transparent',
+    flex: 1
+  },
   btnText: { fontSize: 15, fontWeight: '600' },
   iconBtn: {
     width: 40, height: 40, borderRadius: 8,
@@ -450,6 +490,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   tabItem: {
+    paddingHorizontal: 8,
     paddingVertical: 12,
     marginRight: 24,
     position: 'relative',

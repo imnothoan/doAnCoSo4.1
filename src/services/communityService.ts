@@ -10,13 +10,14 @@ export type CommunityPost = Post & {
   community_name?: string;
   author_avatar?: string | null;
   author_display_name?: string | null;
-  post_media: PostMedia[]; // luôn là array (BE luôn trả [])
+  post_media: PostMedia[];
+  isLikedByViewer?: boolean;
 };
 
 export interface CommunityPostsParams {
   limit?: number;
-  before?: string; // ISO string cursor (created_at của bài cuối)
-  viewer?: string; // username of viewer for private community access check
+  before?: string;
+  viewer?: string;
 }
 
 const communityService = {
@@ -259,7 +260,15 @@ const communityService = {
     content: string,
     parentId?: number | null
   ): Promise<any> {
-    return ApiService.addPostComment(String(communityId), String(postId), authorUsername, content, parentId ? String(parentId) : undefined);
+    const res = await ApiService.client.post(
+      `/communities/${communityId}/posts/${postId}/comments`,
+      {
+        author_username: authorUsername,
+        content,
+        parent_id: parentId ?? null,
+      }
+    );
+    return res.data;
   },
 
   async getPostComments(
@@ -290,10 +299,13 @@ const communityService = {
     communityId: number | string,
     postId: number | string,
     commentId: number | string,
-    actor?: string // Deprecated
+    actor: string
   ): Promise<void> {
     await ApiService.client.delete(
-      `/communities/${communityId}/posts/${postId}/comments/${commentId}`
+      `/communities/${communityId}/posts/${postId}/comments/${commentId}`,
+      {
+        data: { actor },
+      }
     );
   },
 
@@ -302,11 +314,11 @@ const communityService = {
     postId: number | string,
     commentId: number | string,
     content: string,
-    actor?: string // Deprecated
+    actor: string
   ): Promise<any> {
     const res = await ApiService.client.patch(
       `/communities/${communityId}/posts/${postId}/comments/${commentId}`,
-      { content }
+      { actor, content }
     );
     return res.data;
   },
@@ -339,7 +351,7 @@ const communityService = {
 
   async uploadCommunityAvatar(
     communityId: number | string,
-    actor: string, // Deprecated but maybe needed for logging? Server uses token.
+    actor: string,
     imageFile: any
   ): Promise<Community> {
     const formData = new FormData();
@@ -389,32 +401,23 @@ const communityService = {
     return ApiService.getJoinRequests(String(communityId));
   },
 
-  async reviewJoinRequest(
-    communityId: number | string,
-    requestId: number | string, // We use username now
-    action: 'approve' | 'reject',
-    actor?: string // Deprecated
-  ): Promise<void> {
-    // This signature is problematic because we need username, not requestId.
-    // But existing code might pass requestId.
-    // If requestId is actually username (string), we are good.
-    // If it's a number ID, we have a problem.
-    // Let's assume it's username for now or we need to fetch request by ID.
-    // But my server implementation uses username.
-    // I should check how this is used in UI.
-    // If UI passes ID, I need to change UI.
-    // For now, I'll assume username.
-    if (action === 'approve') {
-      return ApiService.approveJoinRequest(String(communityId), String(requestId));
+  async reviewJoinRequest(communityId: number | string, username: string, action: 'approve' | 'reject') {
+    if (action === "approve") {
+      return ApiService.client.post(`/communities/${communityId}/join_requests/${username}/approve`);
     } else {
-      return ApiService.rejectJoinRequest(String(communityId), String(requestId));
+      return ApiService.client.post(`/communities/${communityId}/join_requests/${username}/reject`);
     }
   },
 
   // --------- POST APPROVAL ----------
   async getPendingPosts(communityId: number | string): Promise<CommunityPost[]> {
-    const posts = await ApiService.getPendingPosts(String(communityId));
-    return posts as CommunityPost[];
+    const res = await ApiService.client.get(`/communities/${communityId}/posts/pending`);
+    const raw = res.data || [];
+    return raw.map((post: any) => ({
+      ...post,
+      authorAvatar: post.author_avatar || post.authorAvatar,
+      authorDisplayName: post.author_display_name || post.authorDisplayName,
+    }));
   },
 
   async approvePost(communityId: number | string, postId: number | string): Promise<void> {
@@ -423,8 +426,8 @@ const communityService = {
 
   async rejectPost(communityId: number | string, postId: number | string): Promise<void> {
     return ApiService.rejectPost(String(communityId), String(postId));
-  },
-
+  }
+  
 };
 
 export default communityService;

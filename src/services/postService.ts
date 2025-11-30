@@ -17,6 +17,7 @@ class PostService {
     disable_comments?: boolean;
     hide_like_count?: boolean;
     community_id?: number | null;
+    status?: string | null;
   }) {
     const res = await ApiService.client.post("/posts", data);
     return res.data;
@@ -32,6 +33,7 @@ class PostService {
       disable_comments?: boolean;
       hide_like_count?: boolean;
       community_id?: number | null;
+      status?: string | null
     }
   ) {
     const res = await ApiService.client.put(`/posts/${postId}`, data);
@@ -91,20 +93,14 @@ class PostService {
     return ApiService.deduplicatedGet(`/posts/user/${username}`);
   }
 
-  // LIKE POST
-  async like(postId: number, username: string) {
-    const res = await ApiService.client.post(`/posts/${postId}/like`, {
-      username,
-    });
-    return res.data;
+  async like(postId: number) {
+    const res = await ApiService.client.post(`/posts/${postId}/like`, {});
+    return res.data; // { post_id, like_count }
   }
 
-  // UNLIKE POST
-  async unlike(postId: number, username: string) {
-    const res = await ApiService.client.delete(`/posts/${postId}/like`, {
-      data: { username },
-    });
-    return res.data;
+  async unlike(postId: number) {
+    const res = await ApiService.client.delete(`/posts/${postId}/like`);
+    return res.data; // { post_id, like_count }
   }
 
   // GET LIKES
