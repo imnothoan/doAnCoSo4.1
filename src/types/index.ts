@@ -34,6 +34,7 @@ export interface User {
       longitude: number;
    };
    isOnline?: boolean;
+   distance?: number; // Distance in kilometers from current user
 }
 
 export interface Language {
