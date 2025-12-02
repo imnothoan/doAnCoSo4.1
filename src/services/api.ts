@@ -203,11 +203,9 @@ class ApiService {
 
    async updateUser(userId: string, data: Partial<User>): Promise<User> {
       const response = await this.client.put(`/users/${userId}`, data);
-      // Invalidate user cache after update
-      this.invalidateCache(`/users/.*${userId}`);
-      if (data.username) {
-         this.invalidateCache(`/users/username/${data.username}`);
-      }
+      // Invalidate user cache after update with specific patterns
+      this.invalidateCache(`/users/${userId}`);
+      this.invalidateCache(`/users/username/`);
       return mapServerUserToClient(response.data);
    }
 
@@ -218,7 +216,8 @@ class ApiService {
          headers: { "Content-Type": "multipart/form-data" },
       });
       // Invalidate user cache after avatar upload
-      this.invalidateCache(`/users/.*${userId}`);
+      this.invalidateCache(`/users/${userId}`);
+      this.invalidateCache(`/users/username/`);
       return response.data;
    }
 
@@ -229,7 +228,8 @@ class ApiService {
          headers: { "Content-Type": "multipart/form-data" },
       });
       // Invalidate user cache after background upload
-      this.invalidateCache(`/users/.*${userId}`);
+      this.invalidateCache(`/users/${userId}`);
+      this.invalidateCache(`/users/username/`);
       return response.data;
    }
 

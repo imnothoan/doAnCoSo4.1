@@ -88,7 +88,8 @@ export default function HangoutScreen() {
             }
          } catch (locationError) {
             console.log("Could not get location for distance calculation:", locationError);
-            // Continue without location - will show users but without distance
+            // Continue without location - users will be shown without distance sorting
+            // User can still see and interact with all available hangout users
          }
 
          // Get users available for hangout with location for distance calculation
@@ -445,7 +446,7 @@ export default function HangoutScreen() {
                      )}
 
                      {/* Distance indicator */}
-                     {user.distance !== undefined && user.distance !== null && (
+                     {user.distance != null && (
                         <View style={styles.distanceRow}>
                            <Ionicons name="navigate-outline" size={16} color="#4ECDC4" />
                            <Text style={styles.distanceText}>

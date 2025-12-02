@@ -12,6 +12,7 @@ interface CacheEntry<T> {
 class CacheService {
    private cache: Map<string, CacheEntry<any>> = new Map();
    private defaultTTL: number = 5 * 60 * 1000; // 5 minutes default
+   private cleanupInterval: NodeJS.Timeout | null = null;
 
    /**
     * Get cached data if it exists and hasn't expired
@@ -93,13 +94,33 @@ class CacheService {
          keys: Array.from(this.cache.keys()),
       };
    }
+
+   /**
+    * Start automatic cleanup of expired entries
+    */
+   startAutoCleanup(intervalMs: number = 10 * 60 * 1000): void {
+      if (this.cleanupInterval) {
+         return; // Already running
+      }
+      this.cleanupInterval = setInterval(() => {
+         this.cleanup();
+      }, intervalMs);
+   }
+
+   /**
+    * Stop automatic cleanup
+    */
+   stopAutoCleanup(): void {
+      if (this.cleanupInterval) {
+         clearInterval(this.cleanupInterval);
+         this.cleanupInterval = null;
+      }
+   }
 }
 
 const cacheServiceInstance = new CacheService();
 
-// Auto cleanup expired entries every 10 minutes
-setInterval(() => {
-   cacheServiceInstance.cleanup();
-}, 10 * 60 * 1000);
+// Start auto cleanup (10 minutes interval)
+cacheServiceInstance.startAutoCleanup();
 
 export default cacheServiceInstance;
