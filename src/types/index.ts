@@ -47,13 +47,15 @@ export interface Event {
    id: string;
    name: string;
    image_url?: string;
+   image?: string; // For backward compatibility with mock data
    dateStart: string;
    dateEnd: string;
    address: string;
    distance?: number; // in km
    participants: User[];
    comments: Comment[];
-   hosted_by: string;
+   hosted_by?: string;
+   hostedBy?: User; // For backward compatibility with mock data
    entranceFee?: string;
    pricingMenu?: string;
    schedule?: string;
