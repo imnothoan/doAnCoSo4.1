@@ -1,4 +1,5 @@
 import * as Location from 'expo-location';
+import { formatDistance as formatDistanceUtil } from '../utils/distance';
 
 class LocationService {
   private currentLocation: Location.LocationObject | null = null;
@@ -79,33 +80,9 @@ class LocationService {
     return degrees * (Math.PI / 180);
   }
 
-  // Format distance for display
+  // Format distance for display - delegates to utility function to avoid duplication
   formatDistance(distance: number | null | undefined): string {
-    // Handle null/undefined cases
-    if (distance === null || distance === undefined || isNaN(distance)) {
-      return 'Unknown';
-    }
-    
-    // Ensure distance is a valid number
-    const distanceNum = Number(distance);
-    
-    if (distanceNum < 0.001) {
-      return 'Nearby';
-    }
-    
-    if (distanceNum < 1) {
-      // Display in meters for distances under 1km
-      const meters = Math.round(distanceNum * 1000);
-      return `${meters}m`;
-    }
-    
-    if (distanceNum < 10) {
-      // Display one decimal place for distances under 10km
-      return `${distanceNum.toFixed(1)}km`;
-    }
-    
-    // Display whole numbers for distances over 10km
-    return `${Math.round(distanceNum)}km`;
+    return formatDistanceUtil(distance);
   }
 
   // Get distance to user

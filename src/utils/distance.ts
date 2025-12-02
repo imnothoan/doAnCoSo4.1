@@ -44,26 +44,24 @@ export const formatDistance = (distance: number | null | undefined): string => {
     return 'Unknown';
   }
   
-  // Ensure distance is a valid number
-  const distanceNum = Number(distance);
-  
-  if (distanceNum < 0.001) {
+  // distance is already a number, no need for Number() conversion
+  if (distance < 0.001) {
     return 'Nearby';
   }
   
-  if (distanceNum < 1) {
+  if (distance < 1) {
     // Display in meters for distances under 1km
-    const meters = Math.round(distanceNum * 1000);
+    const meters = Math.round(distance * 1000);
     return `${meters}m`;
   }
   
-  if (distanceNum < 10) {
+  if (distance < 10) {
     // Display one decimal place for distances under 10km
-    return `${distanceNum.toFixed(1)}km`;
+    return `${distance.toFixed(1)}km`;
   }
   
   // Display whole numbers for distances over 10km
-  return `${Math.round(distanceNum)}km`;
+  return `${Math.round(distance)}km`;
 };
 
 /**
