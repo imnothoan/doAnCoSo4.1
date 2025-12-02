@@ -266,13 +266,13 @@ export default function EditProfileScreen() {
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['bottom']}>
         <ScrollView style={styles.scrollView}>
           {/* Avatar Section */}
-          <View style={styles.section}>
+          <View style={[styles.section, { backgroundColor: colors.card }]}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>Profile Photo</Text>
             <TouchableOpacity style={styles.avatarContainer} onPress={showImageOptions}>
               {avatar ? (
-                <Image source={{ uri: avatar }} style={styles.avatar} />
+                <Image source={{ uri: avatar }} style={[styles.avatar, { borderColor: colors.primary }]} />
               ) : (
-                <View style={[styles.avatar, styles.placeholderAvatar, { backgroundColor: colors.surfaceVariant }]}>
+                <View style={[styles.avatar, styles.placeholderAvatar, { backgroundColor: colors.surfaceVariant, borderColor: colors.border }]}>
                   <Ionicons name="person" size={60} color={colors.textMuted} />
                 </View>
               )}
@@ -281,7 +281,7 @@ export default function EditProfileScreen() {
                   <ActivityIndicator size="large" color="#fff" />
                 </View>
               )}
-              <View style={[styles.avatarEditBadge, { backgroundColor: colors.primary }]}>
+              <View style={[styles.avatarEditBadge, { backgroundColor: colors.primary, borderColor: colors.card }]}>
                 <Ionicons name="camera" size={20} color="#fff" />
               </View>
             </TouchableOpacity>
@@ -317,37 +317,45 @@ export default function EditProfileScreen() {
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>City *</Text>
+              <Text style={[styles.label, { color: colors.textSecondary }]}>City *</Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, { backgroundColor: colors.card, color: colors.text, borderColor: colors.border }]}
                 value={city}
                 onChangeText={setCity}
                 placeholder="Enter your city"
-                placeholderTextColor="#999"
+                placeholderTextColor={colors.textMuted}
               />
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Country *</Text>
+              <Text style={[styles.label, { color: colors.textSecondary }]}>Country *</Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, { backgroundColor: colors.card, color: colors.text, borderColor: colors.border }]}
                 value={country}
                 onChangeText={setCountry}
                 placeholder="Enter your country"
-                placeholderTextColor="#999"
+                placeholderTextColor={colors.textMuted}
               />
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Gender</Text>
+              <Text style={[styles.label, { color: colors.textSecondary }]}>Gender</Text>
               <View style={styles.genderContainer}>
                 {(['Male', 'Female', 'Other'] as const).map((g) => (
                   <TouchableOpacity
                     key={g}
-                    style={[styles.genderButton, gender === g && styles.genderButtonActive]}
+                    style={[
+                      styles.genderButton,
+                      { borderColor: colors.border },
+                      gender === g && [styles.genderButtonActive, { borderColor: colors.primary, backgroundColor: colors.highlight }]
+                    ]}
                     onPress={() => setGender(g)}
                   >
-                    <Text style={[styles.genderButtonText, gender === g && styles.genderButtonTextActive]}>
+                    <Text style={[
+                      styles.genderButtonText,
+                      { color: colors.text },
+                      gender === g && [styles.genderButtonTextActive, { color: colors.primary }]
+                    ]}>
                       {g}
                     </Text>
                   </TouchableOpacity>
@@ -356,29 +364,37 @@ export default function EditProfileScreen() {
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Age</Text>
+              <Text style={[styles.label, { color: colors.textSecondary }]}>Age</Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, { backgroundColor: colors.card, color: colors.text, borderColor: colors.border }]}
                 value={age}
                 onChangeText={setAge}
                 placeholder="Enter your age"
-                placeholderTextColor="#999"
+                placeholderTextColor={colors.textMuted}
                 keyboardType="number-pad"
               />
             </View>
           </View>
 
           {/* Status Section */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Status</Text>
+          <View style={[styles.section, { backgroundColor: colors.card }]}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Status</Text>
             <View style={styles.statusContainer}>
               {STATUS_OPTIONS.map((s) => (
                 <TouchableOpacity
                   key={s}
-                  style={[styles.statusButton, status === s && styles.statusButtonActive]}
+                  style={[
+                    styles.statusButton,
+                    { borderColor: colors.border },
+                    status === s && [styles.statusButtonActive, { borderColor: colors.primary, backgroundColor: colors.highlight }]
+                  ]}
                   onPress={() => setStatus(s)}
                 >
-                  <Text style={[styles.statusButtonText, status === s && styles.statusButtonTextActive]}>
+                  <Text style={[
+                    styles.statusButtonText,
+                    { color: colors.text },
+                    status === s && [styles.statusButtonTextActive, { color: colors.primary }]
+                  ]}>
                     {s}
                   </Text>
                 </TouchableOpacity>
@@ -387,46 +403,46 @@ export default function EditProfileScreen() {
           </View>
 
           {/* Languages Section */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Languages</Text>
+          <View style={[styles.section, { backgroundColor: colors.card }]}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Languages</Text>
             {languages.map((lang, index) => (
-              <View key={index} style={styles.languageItem}>
+              <View key={index} style={[styles.languageItem, { backgroundColor: colors.surface, borderColor: colors.border }]}>
                 <View style={styles.languageInfo}>
-                  <Text style={styles.languageName}>{lang.name}</Text>
-                  <Text style={styles.languageLevel}>{lang.level}</Text>
+                  <Text style={[styles.languageName, { color: colors.text }]}>{lang.name}</Text>
+                  <Text style={[styles.languageLevel, { color: colors.textSecondary }]}>{lang.level}</Text>
                 </View>
                 <TouchableOpacity onPress={() => removeLanguage(lang.name)}>
-                  <Ionicons name="close-circle" size={24} color="#FF3B30" />
+                  <Ionicons name="close-circle" size={24} color={colors.error} />
                 </TouchableOpacity>
               </View>
             ))}
             
             <View style={styles.addLanguageContainer}>
               <TextInput
-                style={[styles.input, styles.addLanguageInput]}
+                style={[styles.input, styles.addLanguageInput, { backgroundColor: colors.surface, color: colors.text, borderColor: colors.border }]}
                 value={newLanguage.name}
                 onChangeText={(text) => setNewLanguage({ ...newLanguage, name: text })}
                 placeholder="Language name"
-                placeholderTextColor="#999"
+                placeholderTextColor={colors.textMuted}
               />
               <TouchableOpacity
                 style={styles.addButton}
                 onPress={addLanguage}
               >
-                <Ionicons name="add-circle" size={32} color="#007AFF" />
+                <Ionicons name="add-circle" size={32} color={colors.primary} />
               </TouchableOpacity>
             </View>
           </View>
 
           {/* Interests Section */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Interests</Text>
+          <View style={[styles.section, { backgroundColor: colors.card }]}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Interests</Text>
             <View style={styles.interestsContainer}>
               {interests.map((interest, index) => (
-                <View key={index} style={styles.interestTag}>
-                  <Text style={styles.interestText}>{interest}</Text>
+                <View key={index} style={[styles.interestTag, { backgroundColor: colors.highlight, borderColor: colors.primary }]}>
+                  <Text style={[styles.interestText, { color: colors.primary }]}>{interest}</Text>
                   <TouchableOpacity onPress={() => removeInterest(interest)}>
-                    <Ionicons name="close" size={16} color="#007AFF" />
+                    <Ionicons name="close" size={16} color={colors.primary} />
                   </TouchableOpacity>
                 </View>
               ))}
@@ -434,39 +450,41 @@ export default function EditProfileScreen() {
             
             <View style={styles.addInterestContainer}>
               <TextInput
-                style={[styles.input, styles.addInterestInput]}
+                style={[styles.input, styles.addInterestInput, { backgroundColor: colors.surface, color: colors.text, borderColor: colors.border }]}
                 value={newInterest}
                 onChangeText={setNewInterest}
                 placeholder="Add an interest"
-                placeholderTextColor="#999"
+                placeholderTextColor={colors.textMuted}
                 onSubmitEditing={addInterest}
               />
               <TouchableOpacity
                 style={styles.addButton}
                 onPress={addInterest}
               >
-                <Ionicons name="add-circle" size={32} color="#007AFF" />
+                <Ionicons name="add-circle" size={32} color={colors.primary} />
               </TouchableOpacity>
             </View>
           </View>
 
           {/* Hangout Activities Section */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Hangout Activities</Text>
-            <Text style={styles.sectionSubtitle}>Select activities you&apos;d like to do</Text>
+          <View style={[styles.section, { backgroundColor: colors.card }]}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Hangout Activities</Text>
+            <Text style={[styles.sectionSubtitle, { color: colors.textSecondary }]}>Select activities you&apos;d like to do</Text>
             <View style={styles.activitiesContainer}>
               {HANGOUT_ACTIVITIES.map((activity) => (
                 <TouchableOpacity
                   key={activity}
                   style={[
                     styles.activityButton,
-                    selectedActivities.includes(activity) && styles.activityButtonActive
+                    { borderColor: colors.border, backgroundColor: colors.surface },
+                    selectedActivities.includes(activity) && [styles.activityButtonActive, { borderColor: colors.primary, backgroundColor: colors.highlight }]
                   ]}
                   onPress={() => toggleActivity(activity)}
                 >
                   <Text style={[
                     styles.activityButtonText,
-                    selectedActivities.includes(activity) && styles.activityButtonTextActive
+                    { color: colors.text },
+                    selectedActivities.includes(activity) && [styles.activityButtonTextActive, { color: colors.primary }]
                   ]}>
                     {activity.replace(/-/g, ' ')}
                   </Text>

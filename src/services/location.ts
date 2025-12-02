@@ -80,14 +80,32 @@ class LocationService {
   }
 
   // Format distance for display
-  formatDistance(distance: number): string {
-    if (distance < 1) {
-      return `${Math.round(distance * 1000)}m`;
-    } else if (distance < 10) {
-      return `${distance.toFixed(1)}km`;
-    } else {
-      return `${Math.round(distance)}km`;
+  formatDistance(distance: number | null | undefined): string {
+    // Handle null/undefined cases
+    if (distance === null || distance === undefined || isNaN(distance)) {
+      return 'Unknown';
     }
+    
+    // Ensure distance is a valid number
+    const distanceNum = Number(distance);
+    
+    if (distanceNum < 0.001) {
+      return 'Nearby';
+    }
+    
+    if (distanceNum < 1) {
+      // Display in meters for distances under 1km
+      const meters = Math.round(distanceNum * 1000);
+      return `${meters}m`;
+    }
+    
+    if (distanceNum < 10) {
+      // Display one decimal place for distances under 10km
+      return `${distanceNum.toFixed(1)}km`;
+    }
+    
+    // Display whole numbers for distances over 10km
+    return `${Math.round(distanceNum)}km`;
   }
 
   // Get distance to user

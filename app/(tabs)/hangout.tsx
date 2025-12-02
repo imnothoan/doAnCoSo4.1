@@ -445,10 +445,10 @@ export default function HangoutScreen() {
                         </View>
                      )}
 
-                     {/* Distance indicator */}
-                     {user.distance != null && (
+                     {/* Distance indicator - Always show if available */}
+                     {user.distance !== undefined && user.distance !== null && (
                         <View style={styles.distanceRow}>
-                           <Ionicons name="navigate-outline" size={16} color="#4ECDC4" />
+                           <Ionicons name="navigate-outline" size={18} color="#4ECDC4" />
                            <Text style={styles.distanceText}>
                               {formatDistance(user.distance)} away
                            </Text>
@@ -794,18 +794,24 @@ const styles = StyleSheet.create({
    distanceRow: {
       flexDirection: "row",
       alignItems: "center",
-      marginBottom: 8,
-      backgroundColor: "rgba(78, 205, 196, 0.2)",
-      paddingHorizontal: 10,
-      paddingVertical: 5,
-      borderRadius: 12,
+      marginBottom: 10,
+      backgroundColor: "rgba(78, 205, 196, 0.25)",
+      paddingHorizontal: 12,
+      paddingVertical: 7,
+      borderRadius: 16,
       alignSelf: "flex-start",
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.1,
+      shadowRadius: 2,
+      elevation: 2,
    },
    distanceText: {
       color: "#4ECDC4",
-      fontSize: 15,
-      fontWeight: "600",
-      marginLeft: 4,
+      fontSize: 16,
+      fontWeight: "700",
+      marginLeft: 5,
+      letterSpacing: 0.5,
    },
    bioText: {
       color: "#fff",
