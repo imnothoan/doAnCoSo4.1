@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/src/context/AuthContext';
+import { useTheme } from '@/src/context/ThemeContext';
 import ApiService from '@/src/services/api';
 import ImageService from '@/src/services/image';
 import { User } from '@/src/types';
@@ -28,6 +29,7 @@ const STATUS_OPTIONS = ['Traveling', 'Learning', 'Chilling', 'Open to Chat'] as 
 export default function EditProfileScreen() {
   const router = useRouter();
   const { user: currentUser, updateUser: updateAuthUser } = useAuth();
+  const { colors } = useTheme();
   
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -253,25 +255,25 @@ export default function EditProfileScreen() {
               disabled={loading}
             >
               {loading ? (
-                <ActivityIndicator size="small" color="#007AFF" />
+                <ActivityIndicator size="small" color={colors.primary} />
               ) : (
-                <Text style={styles.saveButtonText}>Save</Text>
+                <Text style={[styles.saveButtonText, { color: colors.primary }]}>Save</Text>
               )}
             </TouchableOpacity>
           ),
         }}
       />
-      <SafeAreaView style={styles.container} edges={['bottom']}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['bottom']}>
         <ScrollView style={styles.scrollView}>
           {/* Avatar Section */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Profile Photo</Text>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Profile Photo</Text>
             <TouchableOpacity style={styles.avatarContainer} onPress={showImageOptions}>
               {avatar ? (
                 <Image source={{ uri: avatar }} style={styles.avatar} />
               ) : (
-                <View style={[styles.avatar, styles.placeholderAvatar]}>
-                  <Ionicons name="person" size={60} color="#999" />
+                <View style={[styles.avatar, styles.placeholderAvatar, { backgroundColor: colors.surfaceVariant }]}>
+                  <Ionicons name="person" size={60} color={colors.textMuted} />
                 </View>
               )}
               {uploading && (
@@ -279,36 +281,36 @@ export default function EditProfileScreen() {
                   <ActivityIndicator size="large" color="#fff" />
                 </View>
               )}
-              <View style={styles.avatarEditBadge}>
+              <View style={[styles.avatarEditBadge, { backgroundColor: colors.primary }]}>
                 <Ionicons name="camera" size={20} color="#fff" />
               </View>
             </TouchableOpacity>
-            <Text style={styles.avatarHint}>Tap to change photo</Text>
+            <Text style={[styles.avatarHint, { color: colors.textSecondary }]}>Tap to change photo</Text>
           </View>
 
           {/* Basic Info Section */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Basic Information</Text>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Basic Information</Text>
             
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Name *</Text>
+              <Text style={[styles.label, { color: colors.textSecondary }]}>Name *</Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, { backgroundColor: colors.card, color: colors.text, borderColor: colors.border }]}
                 value={name}
                 onChangeText={setName}
                 placeholder="Enter your name"
-                placeholderTextColor="#999"
+                placeholderTextColor={colors.textMuted}
               />
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Bio</Text>
+              <Text style={[styles.label, { color: colors.textSecondary }]}>Bio</Text>
               <TextInput
-                style={[styles.input, styles.textArea]}
+                style={[styles.input, styles.textArea, { backgroundColor: colors.card, color: colors.text, borderColor: colors.border }]}
                 value={bio}
                 onChangeText={setBio}
                 placeholder="Tell us about yourself..."
-                placeholderTextColor="#999"
+                placeholderTextColor={colors.textMuted}
                 multiline
                 numberOfLines={4}
               />
