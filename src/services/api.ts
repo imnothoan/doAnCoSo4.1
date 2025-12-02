@@ -251,17 +251,20 @@ class ApiService {
    }
 
    async getUsers(filters?: ConnectionFilters): Promise<User[]> {
-      const data: any[] = await this.deduplicatedGet("/users", filters);
+      // Cache for 1 minute to reduce API calls
+      const data: any[] = await this.deduplicatedGet("/users", filters, 60000);
       return (data || []).map(mapServerUserToClient);
    }
 
    async getUserById(userId: string): Promise<User> {
-      const data = await this.deduplicatedGet(`/users/${userId}`);
+      // Cache for 2 minutes - user data doesn't change frequently
+      const data = await this.deduplicatedGet(`/users/${userId}`, {}, 120000);
       return mapServerUserToClient(data);
    }
 
    async searchUsers(query: string): Promise<User[]> {
-      const data: any[] = await this.deduplicatedGet("/users/search", { q: query });
+      // Cache search results for 30 seconds
+      const data: any[] = await this.deduplicatedGet("/users/search", { q: query }, 30000);
       return (data || []).map(mapServerUserToClient);
    }
 
@@ -391,18 +394,21 @@ class ApiService {
 
    // Event endpoints
    async getEvents(filters?: any): Promise<Event[]> {
-      const response = await this.client.get("/events", { params: filters });
-      return response.data;
+      // Cache events for 1 minute - events don't change frequently
+      const data = await this.deduplicatedGet("/events", filters, 60000);
+      return data;
    }
 
    async getMyEvents(username: string, type: "participating" | "created" = "participating"): Promise<Event[]> {
-      const response = await this.client.get(`/events/user/${username}/${type}`);
-      return response.data;
+      // Cache for 30 seconds
+      const data = await this.deduplicatedGet(`/events/user/${username}/${type}`, {}, 30000);
+      return data;
    }
 
    async getEventById(eventId: string, viewer?: string): Promise<Event> {
-      const response = await this.client.get(`/events/${eventId}`, { params: { viewer } });
-      return response.data;
+      // Cache event details for 1 minute
+      const data = await this.deduplicatedGet(`/events/${eventId}`, { viewer }, 60000);
+      return data;
    }
 
    async joinEvent(eventId: string, username: string, status: "going" | "interested" = "going"): Promise<void> {
@@ -475,7 +481,8 @@ class ApiService {
       current_activity?: string;
       activities?: string[];
    }> {
-      return this.deduplicatedGet(`/hangouts/status/${encodeURIComponent(username)}`);
+      // Cache for 15 seconds - status changes are infrequent
+      return this.deduplicatedGet(`/hangouts/status/${encodeURIComponent(username)}`, {}, 15000);
    }
 
    async createHangout(data: any): Promise<any> {

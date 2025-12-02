@@ -36,15 +36,15 @@ export default function HangoutMapScreen() {
       }
    };
 
-   // First load + realtime polling (increased to 30s to reduce API calls)
+   // First load + realtime polling (increased to 60s to reduce API calls)
    useEffect(() => {
       loadLocations();
 
-      // Reduced polling frequency from 5s to 30s to optimize API usage
-      // Users can manually refresh if needed
+      // Reduced polling frequency from 5s to 60s to optimize API usage
+      // Users can manually refresh if needed with the refresh button
       const interval = setInterval(() => {
          loadLocations();
-      }, 30000); // 30s instead of 5s
+      }, 60000); // 60s (1 minute) to significantly reduce API calls
 
       return () => clearInterval(interval);
    }, []);
