@@ -19,12 +19,14 @@ export default function InboxScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  // 1) Đảm bảo WebSocket kết nối khi ở Inbox
+  // 1) Đảm bảo WebSocket kết nối khi ở Inbox và setup token properly
   useEffect(() => {
     if (!user?.username) return;
     const apiUrl = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
     if (!WebSocketService.isConnected()) {
-      WebSocketService.connect(apiUrl, user.username);
+      // Use token from AuthContext if available, otherwise fallback to username
+      const token = (user as any).token || user.username;
+      WebSocketService.connect(apiUrl, token);
     }
   }, [user?.username]);
 
@@ -87,6 +89,20 @@ export default function InboxScreen() {
   // WebSocket real-time updates for new messages (both DM and Community)
   useEffect(() => {
     if (!user?.username) return;
+
+    // IMPROVED: Handle when a new community conversation is ready
+    const handleCommunityConversationReady = (data: { communityId: number; conversationId: string }) => {
+      console.log(`✅ Community conversation ready for community ${data.communityId}, conversation ${data.conversationId}`);
+      
+      // Join the community chat WebSocket room immediately
+      WebSocketService.joinCommunityChat(data.communityId);
+      WebSocketService.joinConversation(String(data.conversationId));
+      
+      // Reload conversations to get the new one in the list
+      setTimeout(() => {
+        loadChats();
+      }, 500);
+    };
 
     // Handle new messages to update conversation list
     const handleNewMessage = (message: any) => {
@@ -349,11 +365,15 @@ export default function InboxScreen() {
     
     // Listen to new community messages
     WebSocketService.onNewCommunityMessage(handleNewCommunityMessage);
+    
+    // Listen for community conversation ready events
+    WebSocketService.on('community_conversation_ready', handleCommunityConversationReady);
 
     return () => {
       // Clean up listeners
       WebSocketService.off('new_message', handleNewMessage);
       WebSocketService.off('new_community_message', handleNewCommunityMessage);
+      WebSocketService.off('community_conversation_ready', handleCommunityConversationReady);
     };
   }, [user?.username, user, loadChats]);
 
