@@ -2,7 +2,7 @@ import { useAuth } from "@/src/context/AuthContext";
 import { useTheme } from "@/src/context/ThemeContext";
 import ApiService from "@/src/services/api";
 import LocationService from "@/src/services/location";
-import { User } from "@/src/types";
+import { ConnectionFilters, User } from "@/src/types";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
@@ -93,19 +93,22 @@ export default function ConnectionScreen() {
          setLoading(true);
          
          // Build filter object to pass to API
-         const filters: any = {};
+         const filters: ConnectionFilters = {};
          if (selectedGender) {
             filters.gender = selectedGender;
          }
-         if (ageRange[0] > 18 || ageRange[1] < 65) {
+         // Only add age filters if they differ from defaults (18-65)
+         if (ageRange && (ageRange[0] > 18 || ageRange[1] < 65)) {
             filters.minAge = ageRange[0];
             filters.maxAge = ageRange[1];
          }
          
          if (searchQuery.trim()) {
+            // Search with filters
             const data = await ApiService.searchUsers(searchQuery, filters);
             setUsers(data);
          } else {
+            // Get all users with filters
             const data = await ApiService.getUsers(filters);
             setUsers(data);
          }
