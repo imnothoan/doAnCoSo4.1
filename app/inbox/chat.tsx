@@ -198,7 +198,8 @@ export default function ChatScreen() {
     const apiUrl = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
 
     if (!WebSocketService.isConnected()) {
-      const token = currentUser.username;
+      // Use token from currentUser if available, otherwise fallback to username
+      const token = (currentUser as any).token || currentUser.username;
       WebSocketService.connect(apiUrl, token);
       setTimeout(() => {
         if (WebSocketService.isConnected()) {
