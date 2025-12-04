@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { StyleSheet, View, Text, FlatList, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
+import { StyleSheet, View, Text, FlatList, TouchableOpacity, Image, ActivityIndicator, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -17,6 +17,7 @@ export default function InboxScreen() {
   const [chats, setChats] = useState<Chat[]>([]);
   const [activeTab, setActiveTab] = useState<'all' | 'communities' | 'users'>('all');
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   // 1) Đảm bảo WebSocket kết nối khi ở Inbox
   useEffect(() => {
@@ -49,6 +50,30 @@ export default function InboxScreen() {
       console.error('Error loading chats:', error);
     } finally {
       setLoading(false);
+    }
+  }, [user?.username]);
+
+  // Pull-to-refresh handler
+  const onRefresh = useCallback(async () => {
+    if (!user?.username) return;
+    try {
+      setRefreshing(true);
+      const data = await ApiService.getConversations(user.username);
+      setChats(data);
+
+      // Re-join all conversation rooms
+      data.forEach(c => {
+        if (c?.id != null) {
+          WebSocketService.joinConversation(String(c.id));
+        }
+        if (c?.type === 'community' && c?.communityId) {
+          WebSocketService.joinCommunityChat(c.communityId);
+        }
+      });
+    } catch (error) {
+      console.error('Error refreshing chats:', error);
+    } finally {
+      setRefreshing(false);
     }
   }, [user?.username]);
 
@@ -499,6 +524,14 @@ export default function InboxScreen() {
           data={filteredChats}
           renderItem={renderChatItem}
           keyExtractor={(item) => item.id}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={[colors.primary]}
+              tintColor={colors.primary}
+            />
+          }
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <Ionicons name="chatbubbles-outline" size={64} color="#ccc" />
