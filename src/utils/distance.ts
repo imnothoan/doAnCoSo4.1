@@ -55,7 +55,8 @@ export const formatDistance = (distance: number | null | undefined): string => {
   }
   
   // Very close (less than 10 meters)
-  if (distance < 0.01) {
+  const TEN_METERS_IN_KM = 0.01;
+  if (distance < TEN_METERS_IN_KM) {
     return 'Nearby';
   }
   

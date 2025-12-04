@@ -2,7 +2,7 @@ import { useAuth } from "@/src/context/AuthContext";
 import { useTheme } from "@/src/context/ThemeContext";
 import ApiService from "@/src/services/api";
 import { User } from "@/src/types";
-import { formatDistance } from "@/src/utils/distance";
+import { calculateDistance, formatDistance } from "@/src/utils/distance";
 import { Ionicons } from "@expo/vector-icons";
 import * as Linking from "expo-linking";
 import { useRouter } from "expo-router";
@@ -57,29 +57,6 @@ export default function HangoutMapScreen() {
       if (currentUser?.location) return currentUser.location;
       return null;
    }, [users, currentUser]);
-
-   // Helper: Haversine distance in km (great-circle/straight-line distance)
-   const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
-      const toRad = (deg: number) => (deg * Math.PI) / 180;
-      // WGS84 Earth radius - more accurate than simple 6371
-      const R = 6371.0088;
-
-      const dLat = toRad(lat2 - lat1);
-      const dLon = toRad(lon2 - lon1);
-      
-      const lat1Rad = toRad(lat1);
-      const lat2Rad = toRad(lat2);
-
-      const a =
-         Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-         Math.cos(lat1Rad) *
-            Math.cos(lat2Rad) *
-            Math.sin(dLon / 2) *
-            Math.sin(dLon / 2);
-
-      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-      return R * c;
-   };
 
    // Sort users by distance (closest first)
    const sortedUsers = useMemo(() => {

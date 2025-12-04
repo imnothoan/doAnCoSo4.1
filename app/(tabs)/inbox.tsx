@@ -38,7 +38,7 @@ export default function InboxScreen() {
 
       // Join tất cả conversation rooms (quan trọng để Inbox realtime)
       data.forEach(c => {
-        if (c?.id != null) {
+        if (c?.id) {
           WebSocketService.joinConversation(String(c.id));
         }
         // Also join community chat rooms for community conversations
@@ -63,7 +63,7 @@ export default function InboxScreen() {
 
       // Re-join all conversation rooms
       data.forEach(c => {
-        if (c?.id != null) {
+        if (c?.id) {
           WebSocketService.joinConversation(String(c.id));
         }
         if (c?.type === 'community' && c?.communityId) {
