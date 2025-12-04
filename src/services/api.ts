@@ -262,9 +262,22 @@ class ApiService {
       return mapServerUserToClient(data);
    }
 
-   async searchUsers(query: string): Promise<User[]> {
+   async searchUsers(query: string, filters?: ConnectionFilters): Promise<User[]> {
       // Cache search results for 30 seconds
-      const data: any[] = await this.deduplicatedGet("/users/search", { q: query }, 30000);
+      const params: any = { q: query };
+      
+      // Add filter parameters if provided
+      if (filters?.gender) {
+         params.gender = filters.gender;
+      }
+      if (filters?.minAge !== undefined) {
+         params.min_age = filters.minAge;
+      }
+      if (filters?.maxAge !== undefined) {
+         params.max_age = filters.maxAge;
+      }
+      
+      const data: any[] = await this.deduplicatedGet("/users/search", params, 30000);
       return (data || []).map(mapServerUserToClient);
    }
 

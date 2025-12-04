@@ -90,10 +90,17 @@ export default function InboxScreen() {
 
     // Handle new messages to update conversation list
     const handleNewMessage = (message: any) => {
-      
-      
       const conversationId = String(message.chatId || message.conversation_id || message.conversationId);
       const senderId = message.senderId || message.sender_username || message.sender?.username;
+      
+      // CRITICAL: Always use server timestamp
+      const messageTimestamp = message.timestamp || message.created_at;
+      
+      // Exit early if no valid timestamp - prevents corrupting the list order
+      if (!messageTimestamp) {
+        console.warn('⚠️ Received message without timestamp, skipping update:', message);
+        return;
+      }
       
       setChats(prevChats => {
         // Find existing conversation
@@ -185,20 +192,19 @@ export default function InboxScreen() {
             }
           }
           
-          // Create updated chat object and move to top
-          // CRITICAL: Always use server timestamp, never generate current time
-          const messageTimestamp = message.timestamp || message.created_at;
+          // Create updated chat object with guaranteed message ID
+          const messageId = message.id ? String(message.id) : `temp_${Date.now()}_${Math.random()}`;
           
           const updatedChat = {
             ...existingChat,
             participants: updatedParticipants,
             lastMessage: {
-              id: String(message.id || Date.now()),
+              id: messageId,
               chatId: conversationId,
               senderId: senderId || 'unknown',
               sender: senderInfo,
               content: message.content || '',
-              timestamp: messageTimestamp || '',
+              timestamp: messageTimestamp,
               read: false,
             },
             // Increment unread count if message is from someone else
@@ -212,15 +218,13 @@ export default function InboxScreen() {
           updatedChats.unshift(updatedChat);
           
           return updatedChats;
-                } else {
-          // New conversation first message (we got it because server emitted directly to our socket)
-         
-
-          // Tạo minimal sender
+        } else {
+          // New conversation first message
+          // Build minimal sender info
           const minimalSender = message.sender || {
             id: senderId || 'unknown',
             username: senderId || 'unknown',
-            name: senderId || senderId || 'Unknown User',
+            name: senderId || 'Unknown User',
             email: `${senderId || 'unknown'}@example.com`,
             avatar: '',
             country: '',
@@ -230,8 +234,7 @@ export default function InboxScreen() {
             interests: [],
           };
 
-          // CRITICAL: Always use server timestamp
-          const messageTimestamp = message.timestamp || message.created_at;
+          const messageId = message.id ? String(message.id) : `temp_${Date.now()}_${Math.random()}`;
 
           const minimalChat: Chat = {
             id: conversationId,
@@ -239,27 +242,27 @@ export default function InboxScreen() {
             name: minimalSender.name || minimalSender.username,
             participants: [minimalSender],
             lastMessage: {
-              id: String(message.id || Date.now()),
+              id: messageId,
               chatId: conversationId,
               senderId: senderId || 'unknown',
               sender: minimalSender,
               content: message.content || '',
-              timestamp: messageTimestamp || '',
+              timestamp: messageTimestamp,
               read: false,
             },
             unreadCount: senderId !== user.username ? 1 : 0,
           };
 
-          // Join room ngay (sẽ không lỗi nếu đã join)
+          // Join room immediately
           WebSocketService.joinConversation(conversationId);
 
-          // Thêm vào đầu danh sách
+          // Add to top of list
           const newList = [minimalChat, ...prevChats];
 
-          // Gọi loadChats nền để enrich (avatar, participants đầy đủ)
+          // Enrich conversation data in background (debounced to avoid multiple calls)
           setTimeout(() => {
             loadChats();
-          }, 300);
+          }, 1000);
 
           return newList;
         }
@@ -272,6 +275,15 @@ export default function InboxScreen() {
       if (!communityId) return;
 
       const senderId = message.sender_username || message.senderId || message.sender?.username;
+      
+      // CRITICAL: Always use server timestamp
+      const messageTimestamp = message.timestamp || message.created_at;
+      
+      // Exit early if no valid timestamp - prevents corrupting the list order
+      if (!messageTimestamp) {
+        console.warn('⚠️ Received community message without timestamp, skipping update:', message);
+        return;
+      }
       
       setChats(prevChats => {
         // Find the community conversation
@@ -298,18 +310,17 @@ export default function InboxScreen() {
             interests: [],
           };
           
-          // CRITICAL: Always use server timestamp
-          const messageTimestamp = message.timestamp || message.created_at;
+          const messageId = message.id ? String(message.id) : `temp_${Date.now()}_${Math.random()}`;
           
           const updatedChat = {
             ...existingChat,
             lastMessage: {
-              id: String(message.id || Date.now()),
+              id: messageId,
               chatId: String(existingChat.id),
               senderId: senderId || 'unknown',
               sender: senderInfo,
               content: message.content || '',
-              timestamp: messageTimestamp || '',
+              timestamp: messageTimestamp,
               read: false,
             },
             // Increment unread count if message is from someone else
@@ -324,10 +335,10 @@ export default function InboxScreen() {
           
           return updatedChats;
         } else {
-          // New community conversation - reload to get proper data
+          // New community conversation - reload to get proper data (debounced)
           setTimeout(() => {
             loadChats();
-          }, 300);
+          }, 1000);
           return prevChats;
         }
       });

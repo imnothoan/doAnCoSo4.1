@@ -91,11 +91,22 @@ export default function ConnectionScreen() {
    const loadUsers = useCallback(async () => {
       try {
          setLoading(true);
+         
+         // Build filter object to pass to API
+         const filters: any = {};
+         if (selectedGender) {
+            filters.gender = selectedGender;
+         }
+         if (ageRange[0] > 18 || ageRange[1] < 65) {
+            filters.minAge = ageRange[0];
+            filters.maxAge = ageRange[1];
+         }
+         
          if (searchQuery.trim()) {
-            const data = await ApiService.searchUsers(searchQuery);
+            const data = await ApiService.searchUsers(searchQuery, filters);
             setUsers(data);
          } else {
-            const data = await ApiService.getUsers();
+            const data = await ApiService.getUsers(filters);
             setUsers(data);
          }
       } catch (error) {
@@ -103,13 +114,13 @@ export default function ConnectionScreen() {
       } finally {
          setLoading(false);
       }
-   }, [searchQuery]);
+   }, [searchQuery, selectedGender, ageRange]);
 
-   // Apply filters to users
+   // Apply client-side filters (distance only, since gender and age are handled by API)
    useEffect(() => {
       let result = [...users];
 
-      // Filter by distance
+      // Filter by distance (must be done client-side as it requires location calculation)
       if (selectedDistance && currentLocation) {
          result = result.filter((user) => {
             if (!user.location) return false;
@@ -123,24 +134,13 @@ export default function ConnectionScreen() {
          });
       }
 
-      // Filter by gender
-      if (selectedGender) {
-         result = result.filter((user) => user.gender === selectedGender);
-      }
-
-      // Filter by age
-      result = result.filter((user) => {
-         if (!user.age) return true; // Include users without age
-         return user.age >= ageRange[0] && user.age <= ageRange[1];
-      });
-
       // Sort by distance if location is available
       if (currentLocation) {
          result = LocationService.sortByDistance(result, currentLocation.latitude, currentLocation.longitude);
       }
 
       setFilteredUsers(result);
-   }, [users, selectedDistance, selectedGender, ageRange, currentLocation]);
+   }, [users, selectedDistance, currentLocation]);
 
    useEffect(() => {
       const timeoutId = setTimeout(() => {
