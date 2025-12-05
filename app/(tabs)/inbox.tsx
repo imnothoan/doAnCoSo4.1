@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { StyleSheet, View, Text, FlatList, TouchableOpacity, Image, ActivityIndicator, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -13,6 +13,9 @@ import WebSocketService from '@/src/services/websocket';
 // Delay before refreshing conversation list after WebSocket event (ms)
 const CONVERSATION_REFRESH_DELAY = 500;
 
+// Time to keep processed messages in memory (5 minutes)
+const MESSAGE_CACHE_DURATION = 5 * 60 * 1000;
+
 export default function InboxScreen() {
   const router = useRouter();
   const { user, token } = useAuth();
@@ -21,6 +24,33 @@ export default function InboxScreen() {
   const [activeTab, setActiveTab] = useState<'all' | 'communities' | 'users'>('all');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  
+  // Track processed messages to prevent duplicate counting
+  const processedMessagesRef = useRef<Map<string, number>>(new Map());
+
+  // Cleanup old processed messages periodically
+  useEffect(() => {
+    const cleanupInterval = setInterval(() => {
+      const now = Date.now();
+      const messagesToRemove: string[] = [];
+      
+      processedMessagesRef.current.forEach((timestamp, messageId) => {
+        if (now - timestamp > MESSAGE_CACHE_DURATION) {
+          messagesToRemove.push(messageId);
+        }
+      });
+      
+      messagesToRemove.forEach(messageId => {
+        processedMessagesRef.current.delete(messageId);
+      });
+      
+      if (messagesToRemove.length > 0) {
+        console.log(`🧹 Cleaned up ${messagesToRemove.length} old processed messages`);
+      }
+    }, 60000); // Check every minute
+    
+    return () => clearInterval(cleanupInterval);
+  }, []);
 
   // 1) Đảm bảo WebSocket kết nối khi ở Inbox và setup token properly
   useEffect(() => {
@@ -111,6 +141,18 @@ export default function InboxScreen() {
     const handleNewMessage = (message: any) => {
       const conversationId = String(message.chatId || message.conversation_id || message.conversationId);
       const senderId = message.senderId || message.sender_username || message.sender?.username;
+      const messageId = message.id || message.message_id;
+      
+      // CRITICAL: Check for duplicate messages to prevent double counting
+      if (messageId) {
+        const messageKey = `${conversationId}-${messageId}`;
+        if (processedMessagesRef.current.has(messageKey)) {
+          console.log('⚠️ Duplicate message detected, skipping:', messageKey);
+          return;
+        }
+        // Mark as processed
+        processedMessagesRef.current.set(messageKey, Date.now());
+      }
       
       // CRITICAL: Always use server timestamp
       const messageTimestamp = message.timestamp || message.created_at;
@@ -294,6 +336,18 @@ export default function InboxScreen() {
       if (!communityId) return;
 
       const senderId = message.sender_username || message.senderId || message.sender?.username;
+      const messageId = message.id || message.message_id;
+      
+      // CRITICAL: Check for duplicate messages to prevent double counting
+      if (messageId) {
+        const messageKey = `community-${communityId}-${messageId}`;
+        if (processedMessagesRef.current.has(messageKey)) {
+          console.log('⚠️ Duplicate community message detected, skipping:', messageKey);
+          return;
+        }
+        // Mark as processed
+        processedMessagesRef.current.set(messageKey, Date.now());
+      }
       
       // CRITICAL: Always use server timestamp
       const messageTimestamp = message.timestamp || message.created_at;
