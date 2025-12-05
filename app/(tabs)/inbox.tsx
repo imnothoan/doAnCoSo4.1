@@ -10,23 +10,28 @@ import { useTheme } from '@/src/context/ThemeContext';
 import ApiService from '@/src/services/api';
 import WebSocketService from '@/src/services/websocket';
 
+// Delay before refreshing conversation list after WebSocket event (ms)
+const CONVERSATION_REFRESH_DELAY = 500;
+
 export default function InboxScreen() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const { colors } = useTheme();
   const [chats, setChats] = useState<Chat[]>([]);
   const [activeTab, setActiveTab] = useState<'all' | 'communities' | 'users'>('all');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  // 1) Đảm bảo WebSocket kết nối khi ở Inbox
+  // 1) Đảm bảo WebSocket kết nối khi ở Inbox và setup token properly
   useEffect(() => {
     if (!user?.username) return;
     const apiUrl = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
     if (!WebSocketService.isConnected()) {
-      WebSocketService.connect(apiUrl, user.username);
+      // Use token from AuthContext if available, otherwise fallback to username
+      const authToken = token || user.username;
+      WebSocketService.connect(apiUrl, authToken);
     }
-  }, [user?.username]);
+  }, [user?.username, token]);
 
   // 2) Load chats và JOIN tất cả room để nhận realtime
   const loadChats = useCallback(async () => {
@@ -87,6 +92,20 @@ export default function InboxScreen() {
   // WebSocket real-time updates for new messages (both DM and Community)
   useEffect(() => {
     if (!user?.username) return;
+
+    // IMPROVED: Handle when a new community conversation is ready
+    const handleCommunityConversationReady = (data: { communityId: number; conversationId: string }) => {
+      console.log(`✅ Community conversation ready for community ${data.communityId}, conversation ${data.conversationId}`);
+      
+      // Join the community chat WebSocket room immediately
+      WebSocketService.joinCommunityChat(data.communityId);
+      WebSocketService.joinConversation(String(data.conversationId));
+      
+      // Reload conversations to get the new one in the list
+      setTimeout(() => {
+        loadChats();
+      }, CONVERSATION_REFRESH_DELAY);
+    };
 
     // Handle new messages to update conversation list
     const handleNewMessage = (message: any) => {
@@ -262,7 +281,7 @@ export default function InboxScreen() {
           // Enrich conversation data in background (debounced to avoid multiple calls)
           setTimeout(() => {
             loadChats();
-          }, 1000);
+          }, CONVERSATION_REFRESH_DELAY * 2); // Use 2x delay for debouncing
 
           return newList;
         }
@@ -338,7 +357,7 @@ export default function InboxScreen() {
           // New community conversation - reload to get proper data (debounced)
           setTimeout(() => {
             loadChats();
-          }, 1000);
+          }, CONVERSATION_REFRESH_DELAY * 2); // Use 2x delay for debouncing
           return prevChats;
         }
       });
@@ -349,11 +368,15 @@ export default function InboxScreen() {
     
     // Listen to new community messages
     WebSocketService.onNewCommunityMessage(handleNewCommunityMessage);
+    
+    // Listen for community conversation ready events
+    WebSocketService.on('community_conversation_ready', handleCommunityConversationReady);
 
     return () => {
       // Clean up listeners
       WebSocketService.off('new_message', handleNewMessage);
       WebSocketService.off('new_community_message', handleNewCommunityMessage);
+      WebSocketService.off('community_conversation_ready', handleCommunityConversationReady);
     };
   }, [user?.username, user, loadChats]);
 
@@ -419,7 +442,7 @@ export default function InboxScreen() {
         setTimeout(() => {
           console.log('Reloading chats due to missing user data');
           loadChats();
-        }, 500);
+        }, CONVERSATION_REFRESH_DELAY);
       }
     } else {
       displayName = item.name || 'Group Chat';

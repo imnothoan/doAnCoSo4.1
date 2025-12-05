@@ -408,19 +408,19 @@ class ApiService {
    // Event endpoints
    async getEvents(filters?: any): Promise<Event[]> {
       // Cache events for 1 minute - events don't change frequently
-      const data = await this.deduplicatedGet("/events", filters, 60000);
+      const data = await this.deduplicatedGet<Event[]>("/events", filters, 60000);
       return data;
    }
 
    async getMyEvents(username: string, type: "participating" | "created" = "participating"): Promise<Event[]> {
       // Cache for 30 seconds
-      const data = await this.deduplicatedGet(`/events/user/${username}/${type}`, {}, 30000);
+      const data = await this.deduplicatedGet<Event[]>(`/events/user/${username}/${type}`, {}, 30000);
       return data;
    }
 
    async getEventById(eventId: string, viewer?: string): Promise<Event> {
       // Cache event details for 1 minute
-      const data = await this.deduplicatedGet(`/events/${eventId}`, { viewer }, 60000);
+      const data = await this.deduplicatedGet<Event>(`/events/${eventId}`, { viewer }, 60000);
       return data;
    }
 
