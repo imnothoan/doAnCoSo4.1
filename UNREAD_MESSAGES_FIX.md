@@ -17,7 +17,7 @@ The database view `v_conversation_overview` was counting ALL messages that haven
 **Problem**: The view was filtering messages only by whether they've been read, but NOT checking if the message sender is the same as the viewer.
 
 ```sql
--- OLD (BUGGY) CODE:
+-- BEFORE (INCORRECT) CODE:
 COUNT(m.id) FILTER (
   WHERE NOT EXISTS (
     SELECT 1 FROM message_reads mr 
@@ -35,7 +35,7 @@ When the view is not available, the code falls back to calculating unread counts
 **Problem**: The query was fetching ALL messages in the conversations without filtering out messages sent by the viewer.
 
 ```javascript
-// OLD (BUGGY) CODE:
+// BEFORE (INCORRECT) CODE:
 const { data: allConvMsgs, error: allMsgErr } = await supabase
   .from("messages")
   .select("id, conversation_id")
@@ -48,7 +48,7 @@ const { data: allConvMsgs, error: allMsgErr } = await supabase
 Add a condition to exclude messages where the sender is the same as the viewer.
 
 ```sql
--- NEW (FIXED) CODE:
+-- AFTER (CORRECTED) CODE:
 COUNT(m.id) FILTER (
   WHERE m.sender_username != cm.username  -- ✅ NEW: Exclude own messages
   AND NOT EXISTS (
@@ -63,7 +63,7 @@ COUNT(m.id) FILTER (
 Filter out messages sent by the viewer when fetching messages for unread count calculation.
 
 ```javascript
-// NEW (FIXED) CODE:
+// AFTER (CORRECTED) CODE:
 const { data: allConvMsgs, error: allMsgErr } = await supabase
   .from("messages")
   .select("id, conversation_id, sender_username")  // ✅ Added sender_username
