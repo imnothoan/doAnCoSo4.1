@@ -1,370 +1,228 @@
-# ConnectSphere - Social Networking Mobile App
+# Smart Exam - Nền tảng Khảo thí Thông minh
 
-A comprehensive React Native mobile application built with Expo that replicates the core functionality of the UniVini social networking app. Connect with people, attend events, join communities, and make new friends around the world.
+Ứng dụng di động React Native cho phép tổ chức và quản lý kỳ thi trực tuyến với hệ thống chống gian lận tích hợp.
 
-## 🎯 Project Overview
+**🌐 Hỗ trợ: Tiếng Việt | English**
 
-ConnectSphere is a feature-rich social networking app designed to help users:
-- Find and connect with people nearby or globally
-- Discover and join events
-- Participate in community discussions
-- Chat with other users in real-time
-- Manage their social profile and connections
+## 🎯 Tổng quan
 
-## 🚀 Tech Stack
+Smart Exam là nền tảng khảo thí thông minh được thiết kế cho:
+- **Giảng viên**: Tạo đề thi, quản lý câu hỏi, quản lý lớp học
+- **Sinh viên**: Làm bài thi trực tuyến với giám sát AI
+- **Quản trị viên**: Xem kết quả và thống kê
 
-- **React Native** with **Expo** (~54.0.20)
-- **TypeScript** for type safety
-- **Expo Router** for file-based navigation
-- **React Navigation** for bottom tabs and stack navigation
-- **AsyncStorage** for local data persistence
-- **Axios** for API communication
-- **date-fns** for date formatting
-- **React Native Paper** for UI components
-- **Expo Location** for geolocation features
-- **@expo/vector-icons** (Ionicons) for icons
+### Tính năng chính:
+- ✅ Tạo và quản lý đề thi (trắc nghiệm, đúng/sai, tự luận)
+- ✅ Quản lý lớp học và sinh viên
+- ✅ Hệ thống chống gian lận (Anti-cheat) với AI
+- ✅ Hỗ trợ đa ngôn ngữ (Tiếng Việt/English)
+- ✅ Thông báo lỗi thân thiện người dùng
+- ✅ Bảo mật với Row Level Security
 
-## ✨ Features Implemented
+## 🚀 Công nghệ sử dụng
 
-### Authentication
-- ✅ Login screen with email/password
-- ✅ Signup screen with validation
-- ✅ Social login UI (Google, Facebook, Apple)
-- ✅ Protected routes based on auth state
-- ✅ Token management with AsyncStorage
+- **React Native** với **Expo** (~54.0.20)
+- **TypeScript** cho type safety
+- **Supabase** cho backend và xác thực
+- **Expo Router** cho navigation
+- **MediaPipe Face Mesh** cho nhận diện khuôn mặt
+- **YOLO ONNX Model** cho phát hiện đối tượng
+- **AsyncStorage** cho lưu trữ local
 
-### Main Tabs
+## ✨ Tính năng chi tiết
 
-#### 1. Hang Out Tab
-- Toggle availability to hang out
-- Display status with selected activities
-- Sliding tabs for "Open hangouts" and "My hangouts"
-- Notification icon with badge in header
+### Xác thực (Authentication)
+- ✅ Đăng nhập với email/mật khẩu
+- ✅ Đăng ký tài khoản
+- ✅ Đổi ngôn ngữ (Tiếng Việt/English)
+- ✅ Thông báo lỗi chi tiết và thân thiện
+- ✅ Token management với AsyncStorage
 
-#### 2. My Events Tab
-- Event cards with images, distance, and details
-- Event detail screen with:
-  - Full event information
-  - Participants list
-  - Comments section
-  - Join/interested functionality
-  - Chat and invite buttons
+### Quản lý Đề thi
+- ✅ Tạo đề thi với nhiều cài đặt:
+  - Thời gian làm bài
+  - Điểm đạt
+  - Xáo trộn câu hỏi/đáp án
+  - Số lần làm tối đa
+- ✅ Các loại câu hỏi:
+  - Trắc nghiệm (Multiple choice)
+  - Đúng/Sai (True/False)
+  - Trả lời ngắn (Short answer)
+  - Tự luận (Essay)
+- ✅ Xuất bản/Hủy xuất bản đề thi
+- ✅ Xem trước đề thi
 
-#### 3. Discussion Tab
-- Browse communities
-- Search communities
-- Upload to communities
-- Community cards with member counts
+### Quản lý Lớp học
+- ✅ Tạo lớp học với mã lớp
+- ✅ Mã mời tự động
+- ✅ Thêm sinh viên theo email
+- ✅ Quản lý danh sách sinh viên
+- ✅ Gán đề thi cho lớp
 
-#### 4. Connection Tab
-- User cards with complete profiles
-- Availability badges
-- Interest tags
-- Search functionality
-- View mode toggle (Users/Events)
-- Navigate to user profiles
+### Hệ thống Chống gian lận (Anti-cheat)
+- ✅ Phát hiện không có khuôn mặt
+- ✅ Phát hiện nhiều người
+- ✅ Phát hiện nhìn đi chỗ khác
+- ✅ Phát hiện điện thoại (YOLO)
+- ✅ Phát hiện tai nghe (YOLO)
+- ✅ Đếm cảnh báo và tự động hủy bài thi
 
-#### 5. Inbox Tab
-- Chat list with avatars
-- Last message preview
-- Unread message counts and badges
-- Filter tabs (All/Events/Users)
-- Navigate to chat screens
+### Kết quả và Thống kê
+- ✅ Xem điểm và tỷ lệ đúng
+- ✅ Xem lại đáp án
+- ✅ Thống kê lớp học
+- ✅ Xuất báo cáo
 
-#### 6. Account Tab
-- Profile header with avatar
-- Profile completion progress bar
-- Bio, languages, and summary statistics
-- Interests display
-- Settings menu
-- Sign out functionality
-
-### Additional Screens
-
-- **Notification Screen**: View all notifications with type-based icons
-- **Event Detail Screen**: Complete event information and interactions with image upload for comments
-- **Chat Screen**: Full messaging UI with quick messages, real-time updates via WebSocket, typing indicators, and image sharing
-- **Profile Screen**: View other users' profiles with all details
-- **Edit Profile Screen**: Comprehensive profile editing with avatar upload, languages, interests, and hangout activities
-- **Settings Screen**: Full app settings including notifications, privacy, account management, and logout
-
-## 📁 Project Structure
+## 📁 Cấu trúc dự án
 
 ```
 doAnCoSo4.1/
-├── app/                          # App screens (Expo Router)
+├── app/                          # Screens (Expo Router)
 │   ├── (tabs)/                   # Bottom tab screens
-│   │   ├── hangout.tsx
-│   │   ├── my-events.tsx
-│   │   ├── discussion.tsx
-│   │   ├── connection.tsx
-│   │   ├── inbox.tsx
-│   │   └── account.tsx
-│   ├── index.tsx                 # Auth router
-│   ├── login.tsx                 # Login screen
-│   ├── signup.tsx                # Signup screen
-│   ├── notification.tsx          # Notifications
-│   ├── event-detail.tsx          # Event details
-│   ├── chat.tsx                  # Chat/messaging
-│   ├── profile.tsx               # User profile
-│   ├── edit-profile.tsx          # Edit profile
-│   ├── settings.tsx              # App settings
-│   └── _layout.tsx               # Root layout
+│   ├── auth/                     # Login, Signup
+│   ├── exam/                     # Exam management
+│   │   ├── create.tsx           # Create exam
+│   │   ├── [id].tsx             # Exam detail
+│   │   └── edit/[id].tsx        # Edit exam
+│   ├── class/                    # Class management
+│   │   ├── create.tsx           # Create class
+│   │   ├── [id].tsx             # Class detail
+│   │   └── students/[id].tsx    # Manage students
+│   └── _layout.tsx              # Root layout
 ├── src/
-│   ├── constants/                # App constants
-│   │   └── options.ts
-│   ├── context/                  # React Context
-│   │   └── AuthContext.tsx
-│   ├── services/                 # API and services
-│   │   ├── api.ts
-│   │   ├── websocket.ts         # WebSocket service
-│   │   ├── location.ts          # Location service
-│   │   ├── image.ts             # Image upload service
-│   │   └── mockData.ts
-│   ├── types/                    # TypeScript types
-│   │   └── index.ts
-│   └── utils/                    # Utility functions
-│       ├── distance.ts
-│       └── date.ts
-├── components/                   # Reusable components
-├── constants/                    # Theme and colors
-├── assets/                       # Images and fonts
-├── app.json                      # Expo configuration
-├── package.json                  # Dependencies
-└── tsconfig.json                 # TypeScript config
+│   ├── constants/
+│   │   └── translations.ts      # Vietnamese/English translations
+│   ├── context/
+│   │   ├── AuthContext.tsx      # Authentication state
+│   │   └── LanguageContext.tsx  # Language state
+│   ├── services/
+│   │   ├── examService.ts       # Exam API calls
+│   │   └── yoloDetectionService.ts # YOLO detection
+│   ├── types/
+│   │   └── exam.ts              # Exam types
+│   └── utils/
+│       └── auth-helper.ts       # Auth utilities
+├── components/
+│   └── anticheat/
+│       └── AntiCheatMonitor.tsx # Anti-cheat component
+├── supabase/
+│   └── schema.sql               # Database schema
+└── assets/
+    └── models/                  # AI models (ONNX)
 ```
 
-## 🛠️ Installation & Setup
+## 🛠️ Cài đặt
 
-### Prerequisites
-- Node.js (v16 or higher)
-- npm or yarn
+### Yêu cầu
+- Node.js (v16 trở lên)
+- npm hoặc yarn
 - Expo CLI (`npm install -g expo-cli`)
-- iOS Simulator (for Mac) or Android Emulator
+- Tài khoản Supabase
 
-### Installation Steps
+### Các bước cài đặt
 
-1. **Clone the repository**
+1. **Clone repository**
    ```bash
    git clone https://github.com/imnothoan/doAnCoSo4.1.git
    cd doAnCoSo4.1
    ```
 
-2. **Install dependencies**
+2. **Cài đặt dependencies**
    ```bash
    npm install
    ```
 
-3. **Start the development server**
+3. **Cấu hình Supabase**
+   - Tạo project mới tại [supabase.com](https://supabase.com)
+   - Chạy SQL schema trong `supabase/schema.sql`
+   - Cập nhật `.env` với credentials của bạn:
+   ```env
+   EXPO_PUBLIC_SUPABASE_URL=your_supabase_url
+   EXPO_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
+   ```
+
+4. **Khởi chạy ứng dụng**
    ```bash
    npx expo start
    ```
 
-4. **Run on device/emulator**
-   - Press `i` for iOS Simulator
-   - Press `a` for Android Emulator
-   - Scan QR code with Expo Go app on physical device
+5. **Chạy trên thiết bị**
+   - Nhấn `i` để mở iOS Simulator
+   - Nhấn `a` để mở Android Emulator
+   - Quét QR code với Expo Go app
 
-## 📱 Usage
+## 📱 Hướng dẫn sử dụng
 
-### Running the App
+### Dành cho Giảng viên
 
-```bash
-# Start development server
-npm start
+1. **Đăng nhập** với tài khoản giảng viên
+2. **Tạo lớp học**:
+   - Vào tab Classes > Create Class
+   - Nhập tên lớp và mã lớp
+3. **Thêm sinh viên**:
+   - Chọn lớp > Manage Students
+   - Nhập email sinh viên để thêm
+4. **Tạo đề thi**:
+   - Vào tab Exams > Create Exam
+   - Nhập thông tin đề thi
+   - Thêm câu hỏi (Step 2)
+5. **Gán đề thi cho lớp**:
+   - Mở đề thi > Assign to Class
 
-# Run on iOS
-npm run ios
+### Dành cho Sinh viên
 
-# Run on Android
-npm run android
+1. **Đăng nhập** với tài khoản sinh viên
+2. **Tham gia lớp học** (được giảng viên thêm vào)
+3. **Làm bài thi**:
+   - Xem đề thi được gán
+   - Nhấn "Start Exam"
+   - Trả lời các câu hỏi
+   - Nộp bài
 
-# Run on web
-npm run web
+## 🔒 Bảo mật
 
-# Lint code
-npm run lint
-```
+- Row Level Security (RLS) cho tất cả tables
+- Mã hóa token và session
+- Validation đầu vào ở cả client và server
+- Chống SQL Injection và XSS
 
-### Mock Data
+## 🌍 Đa ngôn ngữ
 
-The app currently uses mock data defined in `src/services/mockData.ts`. This includes:
-- Mock users with complete profiles
-- Mock events with participants and details
-- Mock chats and messages
-- Mock communities
-- Mock notifications
+Ứng dụng hỗ trợ 2 ngôn ngữ:
+- **Tiếng Việt** (mặc định)
+- **English**
 
-### Services Architecture
+Để đổi ngôn ngữ: Nhấn nút ngôn ngữ ở màn hình đăng nhập hoặc trong Settings.
 
-The app uses a service-oriented architecture with the following services:
+## 📝 Database Schema
 
-#### API Service (`src/services/api.ts`)
-- Axios-based HTTP client
-- Automatic token management
-- RESTful API endpoints for all features
-- Error handling and request/response interceptors
+Xem chi tiết trong `supabase/schema.sql`:
+- `exams` - Thông tin đề thi
+- `exam_questions` - Câu hỏi
+- `question_options` - Đáp án trắc nghiệm
+- `exam_classes` - Lớp học
+- `class_members` - Thành viên lớp
+- `exam_attempts` - Lần làm bài
+- `student_answers` - Câu trả lời
+- `anticheat_violations` - Vi phạm chống gian lận
 
-#### WebSocket Service (`src/services/websocket.ts`)
-- Socket.IO client for real-time features
-- Auto-reconnection with exponential backoff
-- Room-based messaging
-- Typing indicators and presence tracking
-- Event-driven architecture
+## 🤝 Đóng góp
 
-#### Location Service (`src/services/location.ts`)
-- GPS permission handling
-- Current location tracking
-- Distance calculation (Haversine formula)
-- Location-based filtering and sorting
-- Position watching for real-time updates
+Mọi đóng góp đều được chào đón! Vui lòng:
+1. Fork repository
+2. Tạo branch mới (`git checkout -b feature/TinhNangMoi`)
+3. Commit changes (`git commit -m 'Thêm tính năng mới'`)
+4. Push to branch (`git push origin feature/TinhNangMoi`)
+5. Mở Pull Request
 
-#### Image Service (`src/services/image.ts`)
-- expo-image-picker integration
-- Camera and gallery access
-- Image validation (size, format)
-- FormData creation for uploads
-- Multiple image selection support
+## 📄 Giấy phép
 
-### Authentication Flow
+Dự án này là một phần của đồ án cơ sở.
 
-1. App starts at `index.tsx` which checks auth state
-2. If not authenticated → redirects to `login.tsx`
-3. After login/signup → redirects to main tabs and initializes WebSocket
-4. All tab screens are protected and require authentication
-5. On logout → disconnects WebSocket and clears local storage
+## 👥 Tác giả
 
-## 🔧 Configuration
-
-### Location Permissions
-
-Location permissions are configured in `app.json`:
-- iOS: `NSLocationWhenInUseUsageDescription`
-- Android: `ACCESS_FINE_LOCATION`, `ACCESS_COARSE_LOCATION`
-
-### API Configuration
-
-Update the API base URL in `src/services/api.ts`:
-```typescript
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://api.example.com';
-```
-
-## 📝 Key Features Details
-
-### Real-Time Chat with WebSocket
-- Real-time message delivery via Socket.IO
-- Typing indicators showing when other users are typing
-- Online/offline status tracking
-- Auto-reconnection on network issues
-- Message read receipts
-- Support for text and image messages
-
-### Image Upload
-- Camera and gallery support via expo-image-picker
-- Image size validation (max 5MB)
-- Preview before upload
-- FormData multipart uploads
-- Support for:
-  - Profile avatars
-  - Chat messages
-  - Event comments
-  - Community posts
-
-### Location Features
-- GPS permission handling
-- Real-time location tracking
-- Haversine formula for accurate distance calculation
-- Distance-based filtering (1km, 2km, 5km, 10km, 20km, 50km)
-- Location-based user sorting
-- Distance display on user cards
-- Auto-request permissions on first use
-
-### Quick Messages in Chat
-- Type `/x` for "Xin chào"
-- Type `/h` for "Hello!"
-- Type `/t` for "Thank you!"
-- Type `/s` for "See you soon!"
-
-### Distance Calculation
-- Uses Haversine formula for accurate distance
-- Filters: Under 1km, 2km, 5km, 10km, 20km, 50km
-- Displays distance in meters (<1km) or kilometers
-
-### Event Management
-- Join/leave events
-- View participants
-- Add comments with images
-- See event details and schedule
-
-## 🎨 Design & UI
-
-- **Primary Color**: #007AFF (iOS Blue)
-- **Success**: #4CAF50 (Green)
-- **Error**: #FF3B30 (Red)
-- **Background**: #f5f5f5 (Light Gray)
-- **Cards**: White with subtle shadows
-- **Icons**: Ionicons from @expo/vector-icons
-
-## 🔐 Security
-
-- Passwords are handled securely (ready for backend integration)
-- Tokens stored in AsyncStorage
-- Protected routes with auth guards
-- Input validation on all forms
-
-## 🚧 Next Steps / Roadmap
-
-### Completed Features
-- ✅ Connect to real backend API
-- ✅ Implement WebSocket for real-time chat
-- ✅ Add image upload functionality
-- ✅ Implement filters (languages, distance, age)
-- ✅ Create edit profile screen
-- ✅ Build settings screens
-- ✅ Add location permissions and distance filtering
-- ✅ Implement typing indicators in chat
-- ✅ Add image upload to event comments
-- ✅ Auto-connect WebSocket on authentication
-
-### High Priority
-- [ ] Add pull-to-refresh on lists (partially implemented)
-- [ ] Implement pagination for large data sets
-- [ ] Add skeleton loading states
-- [ ] Push notifications integration
-- [ ] Complete backend integration testing
-
-### Medium Priority
-- [ ] Offline support with local caching
-- [ ] Dark mode implementation
-- [ ] Multi-language support
-- [ ] Advanced search and filters
-- [ ] User blocking and reporting
-
-### Future Enhancements
-- [ ] AI-based user matching
-- [ ] Message translation
-- [ ] Video/voice calls
-- [ ] Real-time location sharing
-- [ ] AI Gemini integration
-- [ ] Story/status features
-
-## 🤝 Contributing
-
-This is a client-side repository. The server-side code is at:
-https://github.com/imnothoan/doAnCoSo4.1.server
-
-## 📄 License
-
-This project is part of a university thesis project.
-
-## 👥 Credits
-
-Built as a client app for the UniVini-like social networking platform.
-
-## 📞 Support
-
-For issues or questions, please open an issue on GitHub.
+Được xây dựng bởi sinh viên.
 
 ---
 
-**Status**: ✅ MVP Complete - Ready for API integration and deployment!
+**Trạng thái**: ✅ Sẵn sàng cho production testing!
