@@ -33,7 +33,7 @@ export default function ExamDetailScreen() {
       setExam(data);
     } catch (error) {
       console.error('Load exam error:', error);
-      Alert.alert(t.common.error, 'Failed to load exam');
+      Alert.alert(t.common.error, t.exam.loadExamError);
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
@@ -69,7 +69,7 @@ export default function ExamDetailScreen() {
               router.back();
             } catch (error) {
               console.error('Delete exam error:', error);
-              Alert.alert(t.common.error, 'Failed to delete exam');
+              Alert.alert(t.common.error, t.exam.deleteExamError);
             }
           },
         },
@@ -87,7 +87,7 @@ export default function ExamDetailScreen() {
       loadExam();
     } catch (error) {
       console.error('Publish exam error:', error);
-      Alert.alert(t.common.error, 'Failed to update exam status');
+      Alert.alert(t.common.error, t.exam.updateExamError);
     }
   };
 

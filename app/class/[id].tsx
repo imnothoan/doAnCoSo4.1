@@ -34,7 +34,7 @@ export default function ClassDetailScreen() {
       setClassData(data);
     } catch (error) {
       console.error('Load class error:', error);
-      Alert.alert(t.common.error, 'Failed to load class');
+      Alert.alert(t.common.error, t.class.loadClassError);
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
@@ -77,7 +77,7 @@ export default function ClassDetailScreen() {
               router.back();
             } catch (error) {
               console.error('Delete class error:', error);
-              Alert.alert(t.common.error, 'Failed to delete class');
+              Alert.alert(t.common.error, t.class.deleteClassError);
             }
           },
         },

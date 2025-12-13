@@ -100,7 +100,7 @@ export default function ManageStudentsScreen() {
               loadStudents();
             } catch (error) {
               console.error('Remove student error:', error);
-              Alert.alert(t.common.error, 'Failed to remove student');
+              Alert.alert(t.common.error, t.class.removeStudentError);
             }
           },
         },

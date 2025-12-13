@@ -149,6 +149,10 @@ export interface Translations {
     invalidPoints: string;
     examTitleRequired: string;
     durationRequired: string;
+    loadExamError: string;
+    deleteExamError: string;
+    deleteQuestionError: string;
+    updateExamError: string;
   };
 
   // Class Management
@@ -200,6 +204,9 @@ export interface Translations {
     addByEmail: string;
     addByCode: string;
     studentEmail: string;
+    loadClassError: string;
+    deleteClassError: string;
+    removeStudentError: string;
   };
 
   // Student Management
@@ -473,6 +480,10 @@ export const translations: Record<Language, Translations> = {
       invalidPoints: 'Điểm số không hợp lệ',
       examTitleRequired: 'Vui lòng nhập tên đề thi',
       durationRequired: 'Vui lòng nhập thời gian làm bài',
+      loadExamError: 'Không thể tải đề thi',
+      deleteExamError: 'Không thể xóa đề thi',
+      deleteQuestionError: 'Không thể xóa câu hỏi',
+      updateExamError: 'Không thể cập nhật đề thi',
     },
 
     class: {
@@ -523,6 +534,9 @@ export const translations: Record<Language, Translations> = {
       addByEmail: 'Thêm theo email',
       addByCode: 'Thêm theo mã sinh viên',
       studentEmail: 'Email sinh viên',
+      loadClassError: 'Không thể tải thông tin lớp học',
+      deleteClassError: 'Không thể xóa lớp học',
+      removeStudentError: 'Không thể xóa sinh viên khỏi lớp',
     },
 
     student: {
@@ -789,6 +803,10 @@ export const translations: Record<Language, Translations> = {
       invalidPoints: 'Invalid points',
       examTitleRequired: 'Please enter exam title',
       durationRequired: 'Please enter duration',
+      loadExamError: 'Failed to load exam',
+      deleteExamError: 'Failed to delete exam',
+      deleteQuestionError: 'Failed to delete question',
+      updateExamError: 'Failed to update exam',
     },
 
     class: {
@@ -839,6 +857,9 @@ export const translations: Record<Language, Translations> = {
       addByEmail: 'Add by Email',
       addByCode: 'Add by Student ID',
       studentEmail: 'Student Email',
+      loadClassError: 'Failed to load class',
+      deleteClassError: 'Failed to delete class',
+      removeStudentError: 'Failed to remove student',
     },
 
     student: {

@@ -87,7 +87,7 @@ export default function EditExamScreen() {
       setMaxAttempts(data.max_attempts.toString());
     } catch (error) {
       console.error('Load exam error:', error);
-      Alert.alert(t.common.error, 'Failed to load exam');
+      Alert.alert(t.common.error, t.exam.loadExamError);
     } finally {
       setIsLoading(false);
     }
@@ -241,7 +241,7 @@ export default function EditExamScreen() {
               loadExam();
             } catch (error) {
               console.error('Delete question error:', error);
-              Alert.alert(t.common.error, 'Failed to delete question');
+              Alert.alert(t.common.error, t.exam.deleteQuestionError);
             }
           },
         },
