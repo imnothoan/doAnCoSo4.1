@@ -626,7 +626,7 @@ class ExamService {
       let isCorrect = false;
 
       if (question.question_type === 'multiple_choice') {
-        const correctOption = question.options?.find((o: QuestionOption) => o.is_correct);
+        const correctOption = question.options?.find((o: QuestionOption) => o.isCorrect);
         isCorrect = answer.selected_option_id === correctOption?.id;
       } else if (question.question_type === 'true_false') {
         isCorrect = answer.answer_text?.toLowerCase() === question.correct_answer?.toLowerCase();
