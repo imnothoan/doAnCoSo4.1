@@ -4,30 +4,37 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/src/context/AuthContext';
+import { useLanguage } from '@/src/context/LanguageContext';
 import { formatAuthError } from '@/src/utils/auth-helper';
 
 export default function LoginScreen() {
   const router = useRouter();
   const { login } = useAuth();
+  const { t, language, toggleLanguage } = useLanguage();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   const handleLogin = async () => {
-    if (!email || !password) {
-      Alert.alert('Error', 'Please fill in all fields');
+    // Validate with specific field messages
+    if (!email.trim()) {
+      Alert.alert(t.common.error, t.auth.emailRequired);
+      return;
+    }
+    if (!password) {
+      Alert.alert(t.common.error, t.auth.passwordRequired);
       return;
     }
 
     setIsLoading(true);
     try {
-      await login(email, password);
+      await login(email.trim(), password);
       router.replace('/(tabs)/hangout');
     } catch (error: any) {
       console.error('Login error:', error);
-      const errorMessage = formatAuthError(error);
-      Alert.alert('Login Failed', errorMessage);
+      const errorMessage = formatAuthError(error, language);
+      Alert.alert(t.auth.loginFailed, errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -42,25 +49,37 @@ export default function LoginScreen() {
           style={styles.keyboardView}
         >
           <ScrollView contentContainerStyle={styles.scrollContent}>
+            {/* Language Toggle */}
+            <TouchableOpacity style={styles.languageToggle} onPress={toggleLanguage}>
+              <Ionicons name="language" size={20} color="#007AFF" />
+              <Text style={styles.languageText}>
+                {language === 'vi' ? 'English' : 'Tiếng Việt'}
+              </Text>
+            </TouchableOpacity>
+
             {/* Logo/Header */}
             <View style={styles.header}>
               <View style={styles.logoContainer}>
-                <Ionicons name="people-circle" size={80} color="#007AFF" />
+                <Ionicons name="school" size={80} color="#007AFF" />
               </View>
-              <Text style={styles.appName}>Flat Sphere</Text>
-              <Text style={styles.tagline}>Connect with people around the world</Text>
+              <Text style={styles.appName}>Smart Exam</Text>
+              <Text style={styles.tagline}>
+                {language === 'vi' 
+                  ? 'Nền tảng khảo thí thông minh' 
+                  : 'Smart Examination Platform'}
+              </Text>
             </View>
 
             {/* Login Form */}
             <View style={styles.formContainer}>
-              <Text style={styles.formTitle}>Welcome Back</Text>
-              <Text style={styles.formSubtitle}>Sign in to continue</Text>
+              <Text style={styles.formTitle}>{t.auth.welcomeBack}</Text>
+              <Text style={styles.formSubtitle}>{t.auth.signInToContinue}</Text>
 
               <View style={styles.inputContainer}>
                 <Ionicons name="mail-outline" size={20} color="#666" style={styles.inputIcon} />
                 <TextInput
                   style={styles.input}
-                  placeholder="Email"
+                  placeholder={t.auth.email}
                   value={email}
                   onChangeText={setEmail}
                   autoCapitalize="none"
@@ -73,7 +92,7 @@ export default function LoginScreen() {
                 <Ionicons name="lock-closed-outline" size={20} color="#666" style={styles.inputIcon} />
                 <TextInput
                   style={styles.input}
-                  placeholder="Password"
+                  placeholder={t.auth.password}
                   value={password}
                   onChangeText={setPassword}
                   secureTextEntry={!showPassword}
@@ -92,7 +111,7 @@ export default function LoginScreen() {
               </View>
 
               <TouchableOpacity style={styles.forgotPassword}>
-                <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+                <Text style={styles.forgotPasswordText}>{t.auth.forgotPassword}</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -101,14 +120,14 @@ export default function LoginScreen() {
                 disabled={isLoading}
               >
                 <Text style={styles.loginButtonText}>
-                  {isLoading ? 'Signing In...' : 'Sign In'}
+                  {isLoading ? t.auth.signingIn : t.auth.login}
                 </Text>
               </TouchableOpacity>
 
               {/* Social Login Options */}
               <View style={styles.divider}>
                 <View style={styles.dividerLine} />
-                <Text style={styles.dividerText}>OR</Text>
+                <Text style={styles.dividerText}>{language === 'vi' ? 'HOẶC' : 'OR'}</Text>
                 <View style={styles.dividerLine} />
               </View>
 
@@ -126,9 +145,9 @@ export default function LoginScreen() {
 
               {/* Sign Up Link */}
               <View style={styles.signupContainer}>
-                <Text style={styles.signupText}>Don&apos;t have an account? </Text>
+                <Text style={styles.signupText}>{t.auth.dontHaveAccount} </Text>
                 <TouchableOpacity onPress={() => router.push('/auth/signup')}>
-                  <Text style={styles.signupLink}>Sign Up</Text>
+                  <Text style={styles.signupLink}>{t.auth.signup}</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -151,9 +170,25 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     padding: 20,
   },
+  languageToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-end',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    backgroundColor: '#f0f8ff',
+    borderRadius: 20,
+    marginBottom: 8,
+  },
+  languageText: {
+    fontSize: 14,
+    color: '#007AFF',
+    marginLeft: 6,
+    fontWeight: '500',
+  },
   header: {
     alignItems: 'center',
-    marginTop: 40,
+    marginTop: 20,
     marginBottom: 40,
   },
   logoContainer: {

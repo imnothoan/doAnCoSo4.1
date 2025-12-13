@@ -131,40 +131,132 @@ export async function getAuthStatus(): Promise<AuthStatus> {
 }
 
 /**
- * Format error message for user display
+ * Format error message for user display (Bilingual: Vietnamese & English)
  */
-export function formatAuthError(error: Error | { message?: string } | string | unknown): string {
-  if (!error) return 'An unknown error occurred';
+export function formatAuthError(
+  error: Error | { message?: string } | string | unknown,
+  language: 'vi' | 'en' = 'en'
+): string {
+  if (!error) {
+    return language === 'vi' ? 'Đã xảy ra lỗi không xác định' : 'An unknown error occurred';
+  }
 
   const message = typeof error === 'string' 
     ? error 
     : (error as any).message || String(error);
 
-  // Map common errors to user-friendly messages
-  if (message.includes('Invalid login credentials')) {
-    return 'Invalid email or password. Please check your credentials and try again.\n\nIf you don\'t have an account yet, please sign up first.';
+  // Error message mappings for Vietnamese and English
+  const errorMappings: Record<string, { vi: string; en: string }> = {
+    'Invalid login credentials': {
+      vi: 'Email hoặc mật khẩu không chính xác. Vui lòng kiểm tra lại thông tin đăng nhập.\n\nNếu bạn chưa có tài khoản, vui lòng đăng ký.',
+      en: 'Invalid email or password. Please check your credentials and try again.\n\nIf you don\'t have an account yet, please sign up first.',
+    },
+    'Email not confirmed': {
+      vi: 'Vui lòng xác nhận địa chỉ email trước khi đăng nhập. Kiểm tra hộp thư của bạn để nhận liên kết xác nhận.',
+      en: 'Please confirm your email address before logging in. Check your inbox for a confirmation link.',
+    },
+    'User already registered': {
+      vi: 'Email này đã được đăng ký. Vui lòng đăng nhập hoặc sử dụng email khác.',
+      en: 'This email is already registered. Please try logging in instead.',
+    },
+    'Password should be at least': {
+      vi: 'Mật khẩu phải có ít nhất 6 ký tự.',
+      en: 'Password must be at least 6 characters long.',
+    },
+    'network': {
+      vi: 'Lỗi kết nối mạng. Vui lòng kiểm tra kết nối internet và thử lại.',
+      en: 'Network error. Please check your internet connection and try again.',
+    },
+    'Network': {
+      vi: 'Lỗi kết nối mạng. Vui lòng kiểm tra kết nối internet và thử lại.',
+      en: 'Network error. Please check your internet connection and try again.',
+    },
+    'timeout': {
+      vi: 'Yêu cầu đã hết thời gian chờ. Vui lòng kiểm tra kết nối internet và thử lại.',
+      en: 'Request timed out. Please check your internet connection and try again.',
+    },
+    'Invalid email': {
+      vi: 'Địa chỉ email không hợp lệ.',
+      en: 'Invalid email address.',
+    },
+    'Email address is invalid': {
+      vi: 'Địa chỉ email không hợp lệ.',
+      en: 'Invalid email address.',
+    },
+    'User not found': {
+      vi: 'Không tìm thấy tài khoản với email này. Vui lòng kiểm tra lại hoặc đăng ký tài khoản mới.',
+      en: 'No account found with this email. Please check again or sign up for a new account.',
+    },
+    'Too many requests': {
+      vi: 'Quá nhiều yêu cầu. Vui lòng đợi một lát rồi thử lại.',
+      en: 'Too many requests. Please wait a moment and try again.',
+    },
+    'rate limit': {
+      vi: 'Quá nhiều yêu cầu. Vui lòng đợi một lát rồi thử lại.',
+      en: 'Too many requests. Please wait a moment and try again.',
+    },
+    'Session expired': {
+      vi: 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.',
+      en: 'Session expired. Please log in again.',
+    },
+    'Unauthorized': {
+      vi: 'Bạn không có quyền thực hiện thao tác này.',
+      en: 'You are not authorized to perform this action.',
+    },
+    'Server error': {
+      vi: 'Lỗi máy chủ. Vui lòng thử lại sau.',
+      en: 'Server error. Please try again later.',
+    },
+    'Internal server error': {
+      vi: 'Lỗi máy chủ nội bộ. Vui lòng thử lại sau.',
+      en: 'Internal server error. Please try again later.',
+    },
+  };
+
+  // Check for matching error patterns
+  for (const [pattern, translations] of Object.entries(errorMappings)) {
+    if (message.toLowerCase().includes(pattern.toLowerCase())) {
+      return translations[language];
+    }
   }
 
-  if (message.includes('Email not confirmed')) {
-    return 'Please confirm your email address before logging in. Check your inbox for a confirmation link.';
+  // For unrecognized errors, provide a generic user-friendly message
+  // instead of exposing raw error messages
+  if (message.includes('Error') || message.includes('error') || message.includes('Exception')) {
+    return language === 'vi'
+      ? 'Đã xảy ra lỗi. Vui lòng thử lại sau.'
+      : 'An error occurred. Please try again later.';
   }
 
-  if (message.includes('User already registered')) {
-    return 'This email is already registered. Please try logging in instead.';
-  }
-
-  if (message.includes('Password should be at least')) {
-    return 'Password must be at least 6 characters long.';
-  }
-
-  if (message.includes('network') || message.includes('Network')) {
-    return 'Network error. Please check your internet connection and try again.';
-  }
-
-  if (message.includes('timeout')) {
-    return 'Request timed out. Please check your internet connection and try again.';
-  }
-
-  // Return original message if no match
+  // Return original message if it seems user-friendly enough
   return message;
+}
+
+/**
+ * Get validation error message
+ */
+export function getValidationError(
+  field: 'email' | 'password' | 'username' | 'name',
+  language: 'vi' | 'en' = 'en'
+): string {
+  const validationMessages: Record<string, { vi: string; en: string }> = {
+    email: {
+      vi: 'Vui lòng nhập địa chỉ email hợp lệ',
+      en: 'Please enter a valid email address',
+    },
+    password: {
+      vi: 'Vui lòng nhập mật khẩu (ít nhất 6 ký tự)',
+      en: 'Please enter a password (at least 6 characters)',
+    },
+    username: {
+      vi: 'Vui lòng nhập tên đăng nhập',
+      en: 'Please enter a username',
+    },
+    name: {
+      vi: 'Vui lòng nhập họ và tên',
+      en: 'Please enter your full name',
+    },
+  };
+
+  return validationMessages[field]?.[language] || '';
 }
