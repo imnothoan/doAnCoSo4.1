@@ -59,14 +59,14 @@ export default function ConnectionScreen() {
       }
    };
 
-   // Smart friend suggestions based on:
-   // 1. Common interests - Ưu tiên người có cùng sở thích
-   // 2. Exclude users already following - Không hiển thị người đã follow
+   // Smart friend suggestions:
+   // 1. Prioritize users with common interests
+   // 2. Exclude users already following
    const loadSuggestedUsers = useCallback(async () => {
       if (!currentUser?.username) return;
       
       try {
-         // Get all users
+         // Get users (API limits results, no need for client-side pagination)
          const allUsers = await ApiService.getUsers();
          
          // Filter out current user and users already following
@@ -80,17 +80,13 @@ export default function ConnectionScreen() {
 
          // Score each user based on common interests
          const scoredUsers = candidates.map((user: User) => {
-            let score = 0;
-
-            // Common interests scoring
             const currentInterests = currentUser.interests || [];
             const userInterests = user.interests || [];
             const commonInterests = currentInterests.filter(
                (interest: string) => userInterests.includes(interest)
             );
-            score = commonInterests.length; // 1 point per common interest
-
-            return { user, score, commonInterests: commonInterests.length };
+            // Score = number of common interests
+            return { user, score: commonInterests.length };
          });
 
          // Sort by score (highest first = most common interests) and take top 10
@@ -200,8 +196,8 @@ export default function ConnectionScreen() {
 
    const onRefresh = useCallback(async () => {
       setRefreshing(true);
+      // Refresh users and following list; suggestions auto-update when followingUsers changes
       await Promise.all([loadUsers(), loadFollowingUsers()]);
-      // loadSuggestedUsers will be called automatically via useEffect when followingUsers changes
       setRefreshing(false);
    }, [loadUsers]);
 
