@@ -1,0 +1,59 @@
+From: GitHub Copilot Agent
+Subject: [PATCH] Fix: Add creator to conversation_members when creating community
+
+This patch fixes the issue where a user creates a community but the chat
+doesn't appear in their Inbox until they restart the app.
+
+Root cause: When creating a community, the server creates a conversation
+for the community chat but does NOT add the creator to the 
+conversation_members table. This means the getConversations API doesn't
+return this conversation for the creator.
+
+Solution: After creating the community conversation, also add the creator
+to the conversation_members table.
+
+---
+ routes/community.routes.js | 23 ++++++++++++++++++++++-
+ 1 file changed, 22 insertions(+), 1 deletion(-)
+
+diff --git a/routes/community.routes.js b/routes/community.routes.js
+index 1234567..abcdefg 100644
+--- a/routes/community.routes.js
++++ b/routes/community.routes.js
+@@ -159,14 +159,35 @@ router.post("/", requireAuth, async (req, res) => {
+ 
+     // Create a conversation for community chat
+     try {
+-      await supabase
++      const { data: convData, error: convError } = await supabase
+         .from("conversations")
+         .insert([{
+           type: "community",
+           community_id: data.id,
+           created_by: created_by,
+-        }]);
++        }])
++        .select("id")
++        .single();
++
++      if (convError) {
++        console.error("Error creating community conversation:", convError);
++      } else if (convData) {
++        // IMPORTANT: Add the creator to conversation_members
++        // This ensures the community chat appears in the creator's Inbox immediately
++        const { error: memberError } = await supabase
++          .from("conversation_members")
++          .upsert(
++            [{ conversation_id: convData.id, username: created_by }],
++            { onConflict: "conversation_id,username" }
++          );
++
++        if (memberError) {
++          console.error("Error adding creator to conversation_members:", memberError);
++        } else {
++          console.log(`Added creator ${created_by} to community ${data.id} conversation ${convData.id}`);
++        }
++      }
+     } catch (convErr) {
+       console.error("Error creating community conversation:", convErr);
+       // Don't fail the whole operation if conversation creation fails
