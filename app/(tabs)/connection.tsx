@@ -43,21 +43,72 @@ export default function ConnectionScreen() {
    useEffect(() => {
       // Request location permission on mount
       requestLocation();
-      // Load suggested users for friend suggestions
-      loadSuggestedUsers();
+      // Load following users to exclude from suggestions
+      loadFollowingUsers();
    }, []);
 
-   const loadSuggestedUsers = async () => {
+   // Load users that current user is following
+   const loadFollowingUsers = async () => {
+      if (!currentUser?.username) return;
       try {
-         // Get users as suggestions (limited to 10 for horizontal scroll)
-         const data = await ApiService.getUsers({ limit: 10 });
-         // Filter out current user
-         const filtered = data.filter((u: User) => u.username !== currentUser?.username);
-         setSuggestedUsers(filtered.slice(0, 10));
+         const following = await ApiService.getFollowing(currentUser.username);
+         const followingSet = new Set(following.map((u: User) => u.id));
+         setFollowingUsers(followingSet);
+      } catch (error) {
+         console.log("Error loading following users:", error);
+      }
+   };
+
+   // Smart friend suggestions based on:
+   // 1. Common interests - Ưu tiên người có cùng sở thích
+   // 2. Exclude users already following - Không hiển thị người đã follow
+   const loadSuggestedUsers = useCallback(async () => {
+      if (!currentUser?.username) return;
+      
+      try {
+         // Get all users
+         const allUsers = await ApiService.getUsers();
+         
+         // Filter out current user and users already following
+         let candidates = allUsers.filter((u: User) => {
+            // Exclude current user
+            if (u.username === currentUser.username) return false;
+            // Exclude users already following
+            if (followingUsers.has(u.id)) return false;
+            return true;
+         });
+
+         // Score each user based on common interests
+         const scoredUsers = candidates.map((user: User) => {
+            let score = 0;
+
+            // Common interests scoring
+            const currentInterests = currentUser.interests || [];
+            const userInterests = user.interests || [];
+            const commonInterests = currentInterests.filter(
+               (interest: string) => userInterests.includes(interest)
+            );
+            score = commonInterests.length; // 1 point per common interest
+
+            return { user, score, commonInterests: commonInterests.length };
+         });
+
+         // Sort by score (highest first = most common interests) and take top 10
+         scoredUsers.sort((a, b) => b.score - a.score);
+         const topSuggestions = scoredUsers.slice(0, 10).map(s => s.user);
+
+         setSuggestedUsers(topSuggestions);
       } catch (error) {
          console.log("Error loading suggested users:", error);
       }
-   };
+   }, [currentUser, followingUsers]);
+
+   // Load suggestions when dependencies are ready
+   useEffect(() => {
+      if (currentUser?.username) {
+         loadSuggestedUsers();
+      }
+   }, [currentUser?.username, followingUsers, loadSuggestedUsers]);
 
    const requestLocation = async () => {
       const hasPermission = await LocationService.hasPermissions();
@@ -149,7 +200,8 @@ export default function ConnectionScreen() {
 
    const onRefresh = useCallback(async () => {
       setRefreshing(true);
-      await Promise.all([loadUsers(), loadSuggestedUsers()]);
+      await Promise.all([loadUsers(), loadFollowingUsers()]);
+      // loadSuggestedUsers will be called automatically via useEffect when followingUsers changes
       setRefreshing(false);
    }, [loadUsers]);
 
